@@ -26,12 +26,20 @@ export default function Menu() {
   // Filter the food items based on the current filters
   const filteredItems = purchaseItems?.filter((item) => {
     // Filter by cuisine type
-    if (filters.cuisine && item.cuisine_type !== filters.cuisine) {
+    if (
+      filters.cuisine &&
+      item?.purchase_items?.[0]?.menu_packages?.restaurant?.cuisine_type !==
+        filters.cuisine
+    ) {
       return false;
     }
 
     // Filter by category
-    if (filters.category && item.food_category !== filters.category) {
+    if (
+      filters.category &&
+      item?.purchase_items?.[0]?.menu_packages?.restaurant?.food_category !==
+        filters.category
+    ) {
       return false;
     }
 
@@ -56,9 +64,13 @@ export default function Menu() {
       case "price_low":
         return a.price - b.price;
       case "name_asc":
-        return a.name.localeCompare(b.name);
+        return (
+          a?.purchase_items?.[0]?.menu_packages?.name || ""
+        ).localeCompare(b?.purchase_items?.[0]?.menu_packages?.name || "");
       case "name_desc":
-        return b.name.localeCompare(a.name);
+        return (
+          b?.purchase_items?.[0]?.menu_packages?.name || ""
+        ).localeCompare(a?.purchase_items?.[0]?.menu_packages?.name || "");
       default:
         return 0;
     }
@@ -71,7 +83,7 @@ export default function Menu() {
           <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
             <Search className="w-8 h-8 text-primary" />
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+          <h3 className="text-lg text-center font-semibold text-gray-900 mb-2">
             {filters.category
               ? `No ${filters.category} purchased treats by Treaters found`
               : "No purchased treats by Treaters yet!"}

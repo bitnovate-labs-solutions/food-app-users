@@ -1,51 +1,66 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Calendar, Heart, User, User2 } from "lucide-react";
+import { Calendar, Heart, Users } from "lucide-react";
 import { useImageCache } from "@/hooks/useImageCache";
 import { useState } from "react";
+import ImageWithFallback from "@/components/ImageWithFallback";
 
-export default function TreateeCard({ item, onLike, isLiked, additionalInfo }) {
+export default function TreateeCard({ item, onLike, isLiked }) {
   const [showAllUsers, setShowAllUsers] = useState(false);
   const [hasRequested, setHasRequested] = useState(false);
   const [interestedCount, setInterestedCount] = useState(item.likes || 0);
-  const cachedImageUrl = useImageCache(
-    item.image_url || item.restaurants?.image_url
-  );
+  const cachedImageUrl = useImageCache(item.image_url || []);
 
-  const allUsers = item.purchased_by || [];
+  console.log("TREATEECARD: ", item);
+
+  // Get all users based on item.user_profiles
+  const allUsers = item.user_profiles || [];
   const displayedUsers = showAllUsers ? allUsers : allUsers.slice(0, 4);
   const remainingCount = allUsers.length - 4;
 
+  // HANDLE JOIN
   const handleJoinClick = () => {
     setHasRequested(true);
     setInterestedCount((prev) => prev + 1);
   };
 
   return (
-    <Card className="overflow-hidden bg-white border-gray-200 shadow-md">
+    <Card className="overflow-hidden bg-white border-gray-200 shadow-md rounded-2xl">
       {/* CARD HEADER */}
-      <div className="relative w-full h-[130px] overflow-hidden">
+      <div className="relative w-full h-[145px] overflow-hidden">
         {/* CARD IMAGE */}
-        <img
+        <ImageWithFallback
           src={cachedImageUrl}
           alt={item.name}
           className="absolute inset-0 w-full h-full object-cover"
         />
 
         {/* IMAGE OVERLAY */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/10" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-black/40" />
 
         <div className="absolute top-4 right-4 flex gap-2">
           {/* CARD LABEL */}
-          <span className="flex items-center bg-primary text-white px-3 py-auto rounded-lg text-sm">
-            {item.cuisine_type} | SET A
+          <span className="flex items-center bg-primary/90 text-white font-light px-4 h-8 rounded-lg text-xs">
+            <p className="mr-3">
+              {
+                item?.purchase_items?.[0].menu_packages?.restaurant
+                  ?.cuisine_type
+              }{" "}
+            </p>
+            |
+            <p className="ml-3">
+              {
+                item?.purchase_items?.[0].menu_packages?.restaurant
+                  ?.food_category
+              }
+            </p>
           </span>
 
           {/* CARD LIKE BUTTON */}
           <Button
             variant="ghost"
             size="icon"
-            className="bg-secondary/80 rounded-lg"
+            className="bg-secondary/80 rounded-lg h-8 w-8"
             onClick={() => onLike(item.id)}
           >
             <Heart
@@ -56,41 +71,45 @@ export default function TreateeCard({ item, onLike, isLiked, additionalInfo }) {
         </div>
 
         {/* CARD LABEL - Food, Location and Date */}
-        <div className="w-full absolute bottom-0 flex justify-between mb-2 px-4 text-white">
+        <div className="w-full absolute bottom-6 flex flex-col px-5 text-white">
           <div>
-            <h3 className="text-xl font-semibold">{item.name}</h3>
-            <p className="text-sm text-white/80">
-              {item.name}, {item.location}
-            </p>
-          </div>
-          <div className="text-xs text-gray-300 flex items-center">
-            <span className="mr-2">
-              <Calendar size={15} />
-            </span>
-            {item.purchase_date || item.booked_at
-              ? new Date(
-                  item.purchase_date || item.booked_at
-                ).toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "2-digit",
-                  year: "numeric",
-                })
-              : new Date(item.created_at).toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "2-digit",
-                  year: "numeric",
-                })}
+            <h3 className="text-base font-bold mb-0.5">
+              {item?.purchase_items?.[0].menu_packages?.name}
+            </h3>
+            <div className="grid grid-cols-3">
+              <p className="text-xs text-gray-200 col-span-2">
+                {item?.purchase_items?.[0].menu_packages?.restaurant?.name},
+                {<br />}
+                {item?.purchase_items?.[0].menu_packages?.restaurant?.location}
+              </p>
+              <div className="text-xs text-gray-200 flex items-center justify-end">
+                <span className="mr-2">
+                  <Calendar size={18} />
+                </span>
+                {item.purchase_at
+                  ? new Date(item.purchase_at).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "2-digit",
+                      year: "numeric",
+                    })
+                  : new Date(item.created_at).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "2-digit",
+                      year: "numeric",
+                    })}
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       {/* CARD CONTENT */}
-      <CardContent className="py-2 px-4">
+      <CardContent className="px-4 pb-3 mt-2">
         <div className="grid grid-cols-3">
-          <div className="space-y-2 col-span-2">
+          <div className="space-y-3 col-span-2">
             {/* Treators section */}
-            <div>
-              <p className="text-sm font-semibold mb-2">Treators</p>
+            <div className="mb-2">
+              <p className="text-sm font-semibold">Treaters</p>
               {/* Avatar stack */}
               <div className="flex items-center">
                 <div className="flex -space-x-2">
@@ -100,15 +119,15 @@ export default function TreateeCard({ item, onLike, isLiked, additionalInfo }) {
                       className="relative w-10 h-10 rounded-xl bg-gray-200 border-2 border-white overflow-hidden"
                     >
                       <img
-                        src={user.user_profiles.avatar_url}
-                        alt={user.user_profiles.display_name}
+                        src={user.avatar_url}
+                        alt={user.display_name}
                         className="w-full h-full object-cover"
                       />
                       <div
                         className={`absolute bottom-0 right-0 w-2.5 h-2.5 border-2 border-white rounded-full ${
-                          user.user_profiles.status === "online"
+                          user.status === "online"
                             ? "bg-green-500"
-                            : user.user_profiles.status === "away"
+                            : user.status === "away"
                             ? "bg-yellow-500"
                             : "bg-red-500"
                         }`}
@@ -127,12 +146,12 @@ export default function TreateeCard({ item, onLike, isLiked, additionalInfo }) {
             </div>
 
             {/* Interested count */}
-            <div className="flex items-center gap-1 px-3 py-1.5 bg-secondary rounded-lg w-fit">
+            <div className="flex items-center gap-1 px-3 bg-secondary rounded-lg w-fit h-8 shadow-md">
               <span className="text-sm text-rose-500 flex">
                 {interestedCount}
               </span>
-              <span className="text-sm text-rose-500 flex">
-                <User2 className="h-4 w-4 text-primary mr-1" />
+              <span className="text-xs text-rose-500 flex">
+                <Users className="h-4 w-4 text-primary mr-1" />
                 <p>interested</p>
               </span>
             </div>

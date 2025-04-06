@@ -25,7 +25,7 @@ function PurchaseCard({ item, onShowQR, onShowDetails }) {
 
   return (
     <>
-      <Card className="overflow-hidden transition-all duration-300 bg-white border border-gray-200 rounded-xl shadow-xl">
+      <Card className="overflow-hidden transition-all duration-300 bg-white border border-gray-200 rounded-2xl shadow-xl">
         {/* CARD HEADER */}
         <div className="relative w-full h-[110px] overflow-hidden">
           {/* CARD IMAGE */}

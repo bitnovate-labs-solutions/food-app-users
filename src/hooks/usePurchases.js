@@ -2,7 +2,8 @@ import { supabase } from "@/lib/supabase";
 import { useQuery } from "@tanstack/react-query";
 
 const getPurchases = async () => {
-  const { data, error } = await supabase
+  // First get all purchases
+  const { data: purchases, error: purchasesError } = await supabase
     .from("purchases")
     .select(
       `*, 
@@ -24,7 +25,9 @@ const getPurchases = async () => {
                 location,
                 address,
                 phone_number,
-                image_url
+                image_url, 
+                cuisine_type,
+                food_category
               )
             )
         )
@@ -32,8 +35,24 @@ const getPurchases = async () => {
     )
     .order("created_at", { ascending: false });
 
-  if (error) throw new Error(error.message);
-  return data;
+  if (purchasesError) throw new Error(purchasesError.message);
+
+  // Then get all user profiles of the Treaters for these purchases based on the user_id under purchases table
+  const userIds = purchases.map((purchase) => purchase.user_id);
+  const { data: userProfiles, error: profilesError } = await supabase
+    .from("user_profiles")
+    .select("*")
+    .in("user_id", userIds);
+
+  if (profilesError) throw new Error(profilesError.message);
+
+  // Combine the data
+  return purchases.map((purchase) => ({
+    ...purchase,
+    user_profiles: userProfiles.filter(
+      (profile) => profile.user_id === purchase.user_id
+    ),
+  }));
 };
 
 export const usePurchasedItems = () => {
@@ -47,16 +66,20 @@ export const usePurchasedItems = () => {
     refetchOnWindowFocus: false, // Disable refetch on window focus
     select: (data) => {
       // Transform and filter data if needed
-      return data?.map(purchase => ({
-        ...purchase,
-        purchase_items: purchase.purchase_items?.map(item => ({
-          ...item,
-          menu_packages: item.menu_packages ? {
-            ...item.menu_packages,
-            menu_images: item.menu_packages.menu_images || []
-          } : null
-        }))
-      })) || [];
-    }
+      return (
+        data?.map((purchase) => ({
+          ...purchase,
+          purchase_items: purchase.purchase_items?.map((item) => ({
+            ...item,
+            menu_packages: item.menu_packages
+              ? {
+                  ...item.menu_packages,
+                  menu_images: item.menu_packages.menu_images || [],
+                }
+              : null,
+          })),
+        })) || []
+      );
+    },
   });
 };

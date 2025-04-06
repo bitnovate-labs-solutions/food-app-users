@@ -32,6 +32,8 @@ export default function UserProfileCard({
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
+  console.log(user);
+
   // Reset mainImageIndex when user changes
   useEffect(() => {
     setMainImageIndex(0);
@@ -72,7 +74,9 @@ export default function UserProfileCard({
   };
 
   const handleNextImage = () => {
-    setSelectedImageIndex((prev) => (prev < images.length - 1 ? prev + 1 : prev));
+    setSelectedImageIndex((prev) =>
+      prev < images.length - 1 ? prev + 1 : prev
+    );
   };
 
   return (
@@ -81,7 +85,7 @@ export default function UserProfileCard({
         className={`overflow-hidden border-none shadow-2xl rounded-2xl ${className}`}
       >
         {/* PROFILE IMAGE */}
-        <motion.div 
+        <motion.div
           className="relative"
           drag="x"
           dragConstraints={{ left: 0, right: 0 }}
@@ -154,14 +158,14 @@ export default function UserProfileCard({
         {/* USER DETAILS - COLLAPSIBLE */}
         <AnimatePresence mode="wait">
           {isDetailsShown && (
-            <motion.div 
+            <motion.div
               className="p-6 space-y-2"
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: "auto" }}
               exit={{ opacity: 0, height: 0 }}
-              transition={{ 
+              transition={{
                 duration: 0.2,
-                ease: "easeInOut"
+                ease: "easeInOut",
               }}
             >
               {/* Thumbnail Strip */}
@@ -185,7 +189,9 @@ export default function UserProfileCard({
                 </div>
               )}
               <div className="flex justify-center items-center gap-2 mb-4 text-darkgray">
-                <p className="text-center text-xs">Scroll down for more details</p>
+                <p className="text-center text-xs">
+                  Scroll down for more details
+                </p>
                 <ChevronDown className="h-4 w-4" />
               </div>
 

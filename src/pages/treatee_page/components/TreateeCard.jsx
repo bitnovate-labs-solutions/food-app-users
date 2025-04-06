@@ -27,7 +27,7 @@ export default function TreateeCard({ item, onLike, isLiked }) {
   };
 
   return (
-    <Card className="overflow-hidden bg-white border-gray-200 shadow-md rounded-2xl pb-1">
+    <Card className="overflow-hidden bg-white border-gray-200 shadow-lg rounded-2xl pb-0.5">
       {/* CARD HEADER */}
       <div className="relative w-full h-[145px] overflow-hidden">
         {/* CARD IMAGE */}
@@ -42,15 +42,16 @@ export default function TreateeCard({ item, onLike, isLiked }) {
 
         <div className="absolute top-4 right-4 flex gap-2">
           {/* CARD LABEL */}
-          <span className="flex justify-center items-center bg-primary/90 text-white font-light px-4 rounded-sm text-xs h-6">
-            <p className="mr-3">
+          <span className="flex justify-center items-center bg-blue-50/90 text-white font-semibold px-3 rounded-sm text-xs h-6">
+            <p className="text-blue-600">
               {
                 item?.purchase_items?.[0].menu_packages?.restaurant
                   ?.cuisine_type
-              }{" "}
+              }
             </p>
-            |
-            <p className="ml-3">
+          </span>
+          <span className="flex justify-center items-center bg-primary/90 text-white font-semibold px-3 rounded-sm text-xs h-6">
+            <p>
               {
                 item?.purchase_items?.[0].menu_packages?.restaurant
                   ?.food_category
@@ -73,7 +74,7 @@ export default function TreateeCard({ item, onLike, isLiked }) {
         </div>
 
         {/* CARD LABEL - Food, Location and Date */}
-        <div className="w-full absolute bottom-6 flex flex-col px-5 text-white">
+        <div className="w-full absolute bottom-3 flex flex-col px-5 text-white">
           <div>
             <h3 className="text-base font-bold mb-0.5">
               {item?.purchase_items?.[0].menu_packages?.name}
@@ -116,19 +117,18 @@ export default function TreateeCard({ item, onLike, isLiked }) {
 
       {/* CARD CONTENT */}
       <CardContent className="px-4 pb-3 mt-2">
-        <div className="grid grid-cols-3">
+        <div className="grid grid-cols-3 gap-4">
           <div className="space-y-3 col-span-2">
             {/* Treaters section */}
             <div className="mb-2">
-              <div
-                className="flex items-center gap-2 mb-2 cursor-pointer hover:text-primary transition-colors"
-                onClick={() => setShowTreaters(true)}
-              >
+              <div className="flex items-center gap-2 mb-1">
                 <p className="text-sm font-semibold">Treaters</p>
-                <Users className="h-4 w-4" />
               </div>
               {/* Avatar stack */}
-              <div className="flex items-center">
+              <div
+                className="flex items-center cursor-pointer hover:opacity-80 transition-opacity"
+                onClick={() => setShowTreaters(true)}
+              >
                 <div className="flex -space-x-2">
                   {displayedUsers.map((user) => (
                     <div
@@ -140,7 +140,8 @@ export default function TreateeCard({ item, onLike, isLiked }) {
                         alt={user.display_name}
                         className="w-full h-full object-cover"
                       />
-                      <div
+                      {/* CODE FOR POTENTIAL FUTURE USE ------------------------ */}
+                      {/* <div
                         className={`absolute bottom-0 right-0 w-2.5 h-2.5 border-2 border-white rounded-full ${
                           user.status === "online"
                             ? "bg-green-500"
@@ -148,15 +149,12 @@ export default function TreateeCard({ item, onLike, isLiked }) {
                             ? "bg-yellow-500"
                             : "bg-red-500"
                         }`}
-                      />
+                      /> */}
                     </div>
                   ))}
                 </div>
                 {!showAllUsers && remainingCount > 0 && (
-                  <div
-                    onClick={() => setShowTreaters(true)}
-                    className="ml-2 h-10 rounded-xl bg-secondary/30 flex items-center justify-center px-4 cursor-pointer hover:bg-secondary/40 transition-colors"
-                  >
+                  <div className="ml-2 h-10 rounded-xl bg-secondary/30 flex items-center justify-center px-4 cursor-pointer hover:bg-secondary/40 transition-colors">
                     <span className="text-sm text-primary">
                       +{remainingCount}
                     </span>
@@ -166,7 +164,7 @@ export default function TreateeCard({ item, onLike, isLiked }) {
             </div>
 
             {/* INTERESTED COUNT */}
-            <div className="flex items-center gap-1 px-3 bg-secondary rounded-lg w-fit h-8 shadow-md">
+            <div className="flex items-center gap-1 px-3 bg-secondary rounded-lg w-fit h-7 shadow-md">
               <span className="text-sm text-rose-500 flex">
                 {interestedCount}
               </span>

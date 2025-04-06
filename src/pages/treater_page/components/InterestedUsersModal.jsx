@@ -42,7 +42,7 @@ export default function InterestedUsersModal({
   const handleChatClick = (e, userId) => {
     e.stopPropagation(); // Prevent card click event
     onClose(); // Close the modal
-    navigate('/messages'); // Navigate to messages page
+    navigate("/messages"); // Navigate to messages page
   };
 
   return (
@@ -70,7 +70,7 @@ export default function InterestedUsersModal({
               interestedUsers.map((user, index) => (
                 <Card
                   key={user.id}
-                  className="h-20 p-4 border border-gray-200 shadow-lg cursor-pointer hover:bg-gray-50"
+                  className="h-20 p-4 border border-gray-200 shadow-xl"
                   onClick={() => {
                     setSelectedUser(user);
                     setSelectedUserIndex(index);
@@ -95,7 +95,7 @@ export default function InterestedUsersModal({
                         </div>
 
                         {/* CHAT BUTTON */}
-                        <Button 
+                        <Button
                           className="rounded-xl text-white"
                           onClick={(e) => handleChatClick(e, user.id)}
                         >

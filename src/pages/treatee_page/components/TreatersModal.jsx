@@ -37,7 +37,9 @@ export default function TreatersModal({ isOpen, onClose, users }) {
         <DialogContent className="sm:max-w-[425px] p-2 py-5 bg-white border border-white/20 shadow-xl rounded-2xl">
           {/* MODAL TITLE */}
           <DialogHeader>
-            <DialogTitle className="text-primary text-base">Treaters</DialogTitle>
+            <DialogTitle className="text-primary text-base">
+              Treaters
+            </DialogTitle>
           </DialogHeader>
 
           {/* MODAL CONTENT */}
@@ -54,7 +56,7 @@ export default function TreatersModal({ isOpen, onClose, users }) {
               users?.map((user, index) => (
                 <Card
                   key={user.id}
-                  className="h-20 p-4 border border-gray-200 shadow-lg cursor-pointer hover:bg-gray-50"
+                  className="h-20 p-4 border border-gray-200 shadow-xl"
                   onClick={() => {
                     setSelectedUser(user);
                     setSelectedUserIndex(index);
@@ -72,7 +74,9 @@ export default function TreatersModal({ isOpen, onClose, users }) {
                       <div className="flex items-center justify-between">
                         {/* USER NAME AND OCCUPATION */}
                         <div>
-                          <h3 className="font-semibold">{user.display_name}</h3>
+                          <h3 className="font-semibold">
+                            {user.display_name}, {user.age}
+                          </h3>
                           <p className="text-sm text-lightgray">
                             {user.occupation || "Occupation not specified"}
                           </p>
@@ -112,4 +116,4 @@ export default function TreatersModal({ isOpen, onClose, users }) {
       </Dialog>
     </>
   );
-} 
+}

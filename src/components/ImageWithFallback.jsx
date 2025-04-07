@@ -3,7 +3,7 @@ import { useState } from "react";
 import { CircleAlert } from "lucide-react";
 import { motion } from "framer-motion";
 
-const ImageWithFallback = ({ src, alt, className, ...props }) => {
+const ImageWithFallback = ({ src, alt, className, style, ...props }) => {
   const [error, setError] = useState(false);
 
   return error ? (
@@ -15,6 +15,7 @@ const ImageWithFallback = ({ src, alt, className, ...props }) => {
       src={src}
       alt={alt}
       className={className}
+      style={style}
       onError={() => setError(true)}
       {...props}
     />

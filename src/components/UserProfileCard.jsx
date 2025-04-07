@@ -38,10 +38,7 @@ export default function UserProfileCard({
   }, [user]);
 
   // Combine avatar with additional images
-  const images = [
-    user.user_profile_images?.[0].image_url,
-    ...(user.additional_images || []),
-  ];
+  const images = user.user_profile_images?.map(img => img.image_url) || [];
 
   // TOGGLE DETAILS
   const toggleDetails = () => {
@@ -97,11 +94,19 @@ export default function UserProfileCard({
           whileDrag={{ scale: 0.95 }}
         >
           <div className="h-[620px] w-full relative">
-            <ImageWithFallback
-              src={images[mainImageIndex]}
-              alt="Profile"
-              className="w-full h-full object-cover"
-            />
+            <div className="w-full h-full overflow-hidden">
+              <ImageWithFallback
+                src={images[mainImageIndex]}
+                alt="Profile"
+                className="w-full h-full object-cover"
+                style={{
+                  objectPosition: `${user.user_profile_images?.[mainImageIndex]?.position?.x || 50}% ${user.user_profile_images?.[mainImageIndex]?.position?.y || 50}%`,
+                  transform: `scale(${user.user_profile_images?.[mainImageIndex]?.scale || 1}) rotate(${user.user_profile_images?.[mainImageIndex]?.rotation || 0}deg)`,
+                  transformOrigin: 'center',
+                  transition: 'transform 0.2s ease-out'
+                }}
+              />
+            </div>
             <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/5 to-black/10" />
 
             {/* USER NAME, AGE */}
@@ -182,7 +187,6 @@ export default function UserProfileCard({
                           : "hover:scale-105 hover:ring-2 hover:ring-primary/50"
                       }`}
                       onClick={() => {
-                        setMainImageIndex(index);
                         openImageViewer(index);
                       }}
                     >
@@ -190,6 +194,11 @@ export default function UserProfileCard({
                         src={image}
                         alt={`Image ${index + 1}`}
                         className="w-full h-full object-cover"
+                        style={user.user_profile_images?.[index] ? {
+                          objectPosition: `${user.user_profile_images[index].position?.x || 50}% ${user.user_profile_images[index].position?.y || 50}%`,
+                          transform: `scale(${user.user_profile_images[index].scale || 1}) rotate(${user.user_profile_images[index].rotation || 0}deg)`,
+                          transformOrigin: 'center'
+                        } : undefined}
                       />
                     </div>
                   ))}
@@ -374,6 +383,11 @@ export default function UserProfileCard({
         currentImageIndex={selectedImageIndex}
         onPrevious={handlePreviousImage}
         onNext={handleNextImage}
+        imageTransforms={user.user_profile_images?.map(img => ({
+          position: img.position,
+          scale: img.scale,
+          rotation: img.rotation
+        }))}
       />
     </>
   );

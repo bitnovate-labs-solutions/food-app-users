@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import ReactCrop, { centerCrop, makeAspectCrop } from "react-image-crop";
+import "react-image-crop/dist/ReactCrop.css";
 import {
   User,
   MapPin,
@@ -24,6 +26,10 @@ import {
   ZoomOut,
   ZoomIn,
   RotateCw,
+  Crop,
+  Check,
+  X,
+  Trash2,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/lib/supabase";
@@ -41,6 +47,32 @@ import { toast } from "sonner";
 import { editProfileSchema } from "@/lib/zod_schema";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useGesture } from "@use-gesture/react";
+
+function getImageUrlWithCors(fileName) {
+  const {
+    data: { publicUrl },
+  } = supabase.storage.from("user-avatars").getPublicUrl(fileName);
+
+  // Create a URL object to modify the URL
+  const url = new URL(publicUrl);
+
+  // Add a timestamp to bust cache
+  url.searchParams.set("t", Date.now());
+
+  return url.toString();
+}
+
+// Add this helper function to extract filename from URL
+function getFileNameFromUrl(url) {
+  try {
+    const urlObj = new URL(url);
+    const pathParts = urlObj.pathname.split("/");
+    return pathParts[pathParts.length - 1];
+  } catch (e) {
+    console.error("Error parsing URL:", e);
+    return null;
+  }
+}
 
 export default function EditProfile() {
   const navigate = useNavigate();
@@ -61,6 +93,11 @@ export default function EditProfile() {
   const [rotation, setRotation] = useState(0);
   const imageRef = useRef(null);
   const [initialPosition, setInitialPosition] = useState({ x: 50, y: 50 });
+  const [crop, setCrop] = useState();
+  const [isCropping, setIsCropping] = useState(false);
+  const [completedCrop, setCompletedCrop] = useState(null);
+  const imgRef = useRef(null);
+  const [editingThumbnail, setEditingThumbnail] = useState(null);
 
   // FORM INITIALIZATION
   const form = useForm({
@@ -118,17 +155,20 @@ export default function EditProfile() {
       });
       setProfileImage(profile?.user_profile_images?.[0]?.image_url);
       // Set additional images from non-primary images
-      const additionalImages = profile.user_profile_images
-        ?.filter(img => !img.is_primary)
-        ?.sort((a, b) => a.order - b.order)
-        ?.map(img => img.image_url) || [];
+      const additionalImages =
+        profile.user_profile_images
+          ?.filter((img) => !img.is_primary)
+          ?.sort((a, b) => a.order - b.order)
+          ?.map((img) => img.image_url) || [];
       setAdditionalImages(additionalImages);
       setSelectedInterests(profile.interests || []);
       setSelectedLanguages(profile.languages || []);
-      
+
       // Set image transformation values
       if (profile.user_profile_images?.[0]) {
-        setImagePosition(profile.user_profile_images[0].position || { x: 50, y: 50 });
+        setImagePosition(
+          profile.user_profile_images[0].position || { x: 50, y: 50 }
+        );
         setScale(profile.user_profile_images[0].scale || 1);
         setRotation(profile.user_profile_images[0].rotation || 0);
       }
@@ -136,25 +176,56 @@ export default function EditProfile() {
   }, [profile, form]);
 
   // HANDLE IMAGE UPLOAD
-  const handleImageUpload = async (e, isAdditional = false) => {
+  const handleImageUpload = async (
+    e,
+    isAdditional = false,
+    replaceIndex = -1
+  ) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Only check for maximum images if we're adding new, not replacing
+      if (isAdditional && replaceIndex === -1 && additionalImages.length >= 3) {
+        toast.error("Maximum 3 additional images allowed");
+        return;
+      }
+
       const fileExt = file.name.split(".").pop();
       const fileName = `${user.id}-${Math.random()}.${fileExt}`;
 
       try {
+        // If replacing, delete the old image from user_profile_images
+        if (replaceIndex >= 0 && profile?.user_profile_images) {
+          const imageToReplace = profile.user_profile_images.find(
+            (img) => !img.is_primary && img.order === replaceIndex + 1
+          );
+          if (imageToReplace) {
+            const { error: deleteError } = await supabase
+              .from("user_profile_images")
+              .delete()
+              .eq("id", imageToReplace.id);
+
+            if (deleteError) throw deleteError;
+          }
+        }
+
         const { error: uploadError } = await supabase.storage
           .from("user-avatars")
           .upload(fileName, file);
 
         if (uploadError) throw uploadError;
 
-        const {
-          data: { publicUrl },
-        } = supabase.storage.from("user-avatars").getPublicUrl(fileName);
+        const publicUrl = getImageUrlWithCors(fileName);
 
         if (isAdditional) {
-          setAdditionalImages((prev) => [...prev, publicUrl]);
+          if (replaceIndex >= 0) {
+            // Replace existing image
+            setAdditionalImages((prev) =>
+              prev.map((img, idx) => (idx === replaceIndex ? publicUrl : img))
+            );
+          } else {
+            // Add new image
+            setAdditionalImages((prev) => [...prev, publicUrl]);
+          }
         } else {
           setProfileImage(publicUrl);
           setImagePosition({ x: 50, y: 50 }); // Reset position when new image is uploaded
@@ -165,42 +236,41 @@ export default function EditProfile() {
     }
   };
 
-  // HANDLE IMAGE POSITION
-  const moveImage = (direction) => {
-    const step = 10; // Move by 10% each time
-    const max = 100;
-    const min = 0;
+  // HANDLE REMOVE ADDITIONAL IMAGE
+  const handleRemoveAdditionalImage = async (index) => {
+    try {
+      // Find the image in the profile data
+      if (profile?.user_profile_images) {
+        const imageToDelete = profile.user_profile_images.find(
+          (img) => !img.is_primary && img.order === index + 1
+        );
 
-    setImagePosition(prev => {
-      let newX = prev.x;
-      let newY = prev.y;
+        if (imageToDelete) {
+          // Delete from user_profile_images table
+          const { error: deleteError } = await supabase
+            .from("user_profile_images")
+            .delete()
+            .eq("id", imageToDelete.id);
 
-      switch(direction) {
-        case 'up':
-          newY = Math.max(min, prev.y - step);
-          break;
-        case 'down':
-          newY = Math.min(max, prev.y + step);
-          break;
-        case 'left':
-          newX = Math.max(min, prev.x - step);
-          break;
-        case 'right':
-          newX = Math.min(max, prev.x + step);
-          break;
-        case 'center':
-          newX = 50;
-          newY = 50;
-          break;
+          if (deleteError) throw deleteError;
+
+          // Also delete the file from storage
+          const fileName = imageToDelete.image_url.split("/").pop();
+          const { error: storageError } = await supabase.storage
+            .from("user-avatars")
+            .remove([fileName]);
+
+          if (storageError) {
+            console.error("Error deleting file from storage:", storageError);
+          }
+        }
       }
 
-      return { x: newX, y: newY };
-    });
-  };
-
-  // HANDLE REMOVE ADDITIONAL IMAGE
-  const handleRemoveAdditionalImage = (index) => {
-    setAdditionalImages((prev) => prev.filter((_, i) => i !== index));
+      // Update local state
+      setAdditionalImages((prev) => prev.filter((_, i) => i !== index));
+    } catch (error) {
+      toast.error("Error removing image: " + error.message);
+    }
   };
 
   const bind = useGesture({
@@ -209,28 +279,144 @@ export default function EditProfile() {
         // Store initial position when drag starts
         setInitialPosition({
           x: imagePosition.x,
-          y: imagePosition.y
+          y: imagePosition.y,
         });
       }
-      
+
       // Convert pixel movement to percentage (using the smaller container dimension for consistent movement)
       const containerSize = 450;
       const deltaX = -(mx / containerSize) * 100; // Invert X movement for more intuitive control
       const deltaY = -(my / containerSize) * 100; // Invert Y movement for more intuitive control
-      
+
       // Update position, keeping it within 0-100 range
       setImagePosition({
         x: Math.min(100, Math.max(0, initialPosition.x + deltaX)),
-        y: Math.min(100, Math.max(0, initialPosition.y + deltaY))
+        y: Math.min(100, Math.max(0, initialPosition.y + deltaY)),
       });
     },
     onPinch: ({ offset: [d] }) => {
-      setScale(1 + d / 100);
+      setScale(Math.max(1, Math.min(3, 1 + d / 100)));
     },
-    onWheel: ({ delta: [dx, dy] }) => {
-      setScale(prev => Math.max(1, Math.min(3, prev + dy * 0.01)));
-    }
+    onWheel: ({ delta: [_, dy] }) => {
+      setScale((prev) => Math.max(1, Math.min(3, prev + dy * 0.01)));
+    },
   });
+
+  function centerAspectCrop(mediaWidth, mediaHeight) {
+    return centerCrop(
+      makeAspectCrop(
+        {
+          unit: "%",
+          width: 90,
+          height: 90,
+        },
+        undefined,
+        mediaWidth,
+        mediaHeight
+      ),
+      mediaWidth,
+      mediaHeight
+    );
+  }
+
+  function onImageLoad(e) {
+    const { width, height } = e.currentTarget;
+    setCrop(centerAspectCrop(width, height));
+  }
+
+  // Add this new function to handle image loading errors
+  function handleImageError(e) {
+    console.error("Error loading image:", e);
+    toast.error("Error loading image. Please try again.");
+  }
+
+  async function cropImage() {
+    if (!imgRef.current || !completedCrop) return;
+
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    const image = imgRef.current;
+
+    const scaleX = image.naturalWidth / image.width;
+    const scaleY = image.naturalHeight / image.height;
+
+    canvas.width = completedCrop.width * scaleX;
+    canvas.height = completedCrop.height * scaleY;
+
+    ctx.drawImage(
+      image,
+      completedCrop.x * scaleX,
+      completedCrop.y * scaleY,
+      completedCrop.width * scaleX,
+      completedCrop.height * scaleY,
+      0,
+      0,
+      completedCrop.width * scaleX,
+      completedCrop.height * scaleY
+    );
+
+    try {
+      // Get the old image URL before we update it
+      const oldImageUrl = profileImage;
+
+      // Get the old filename to delete later
+      const oldFileName = getFileNameFromUrl(oldImageUrl);
+
+      // Convert canvas to blob
+      const blob = await new Promise((resolve, reject) => {
+        canvas.toBlob(resolve, "image/jpeg", 1);
+      });
+
+      if (!blob) {
+        throw new Error("Failed to create blob");
+      }
+
+      // Create a File object
+      const file = new File([blob], "cropped-image.jpg", {
+        type: "image/jpeg",
+      });
+
+      // Upload the cropped image
+      const fileName = `${user.id}-${Math.random()}.jpg`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("user-avatars")
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      // Get the public URL after successful upload
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("user-avatars").getPublicUrl(fileName);
+
+      // Delete the old image from storage if it exists
+      if (oldFileName) {
+        const { error: deleteError } = await supabase.storage
+          .from("user-avatars")
+          .remove([oldFileName]);
+
+        if (deleteError) {
+          console.error("Error deleting old image:", deleteError);
+        }
+      }
+
+      // Update main profile image
+      setProfileImage(publicUrl);
+      setImagePosition({ x: 50, y: 50 });
+      setScale(1);
+      setRotation(0);
+
+      setIsCropping(false);
+      toast.success("Image cropped successfully!");
+
+      // Invalidate profile cache to trigger a refetch
+      await queryClient.invalidateQueries(["profile", user.id]);
+    } catch (error) {
+      console.error("Crop error:", error);
+      toast.error("Error cropping image: " + error.message);
+    }
+  }
 
   //   HANDLE SUBMIT
   const onSubmit = async (data) => {
@@ -277,16 +463,16 @@ export default function EditProfile() {
 
         // Insert new images
         const imagesToInsert = [
-          { 
-            user_profile_id: profileData.id, 
-            image_url: profileImage, 
+          {
+            user_profile_id: profileData.id,
+            image_url: profileImage,
             is_primary: true,
             position: imagePosition,
             scale: scale,
             rotation: rotation,
             order: 0,
             created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
+            updated_at: new Date().toISOString(),
           },
           ...additionalImages.map((url, index) => ({
             user_profile_id: profileData.id,
@@ -297,8 +483,8 @@ export default function EditProfile() {
             rotation: 0,
             order: index + 1,
             created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          }))
+            updated_at: new Date().toISOString(),
+          })),
         ];
 
         const { error: insertError } = await supabase
@@ -315,7 +501,7 @@ export default function EditProfile() {
         description: "Your profile has been updated successfully",
       });
 
-      navigate("/profile");
+      navigate("/profile", { state: { scrollToTop: true } });
     } catch (error) {
       toast.error("Error", {
         description: error.message,
@@ -327,7 +513,7 @@ export default function EditProfile() {
 
   return (
     <div className="min-h-screen bg-white w-full max-w-sm mx-auto">
-      <div className="px-4 py-4 border-b border-b-gray-300">
+      <div className="sticky top-0 z-50 px-4 py-4 border-b border-b-gray-300 bg-white shadow-sm">
         <div className="flex items-center">
           {/* LEFT CHEVRON */}
           <ChevronLeft onClick={() => navigate(-1)} className="text-gray-400" />
@@ -346,80 +532,143 @@ export default function EditProfile() {
 
             {/* MAIN PROFILE PHOTO */}
             <div className="mb-2">
-              <h3 className="text-sm text-gray-500 mb-2">Main profile photo</h3>
+              <h3 className="text-sm text-gray-500 mb-2">
+                {editingThumbnail !== null
+                  ? "Edit Additional Photo"
+                  : "Main Profile Photo"}
+              </h3>
               <div className="flex justify-center">
-                {profileImage ? (
+                {profileImage || editingThumbnail !== null ? (
                   <div className="h-[450px] aspect-square bg-lightgray/20 border border-gray-200 rounded-2xl overflow-hidden relative shadow-lg">
-                    <div 
-                      className="w-full h-full touch-none"
-                      {...bind()}
-                    >
-                      <img
-                        ref={imageRef}
-                        src={profileImage}
-                        alt="Profile"
-                        className="w-full h-full object-cover rounded-2xl touch-none"
-                        style={{
-                          objectPosition: `${imagePosition.x}% ${imagePosition.y}%`,
-                          transform: `scale(${scale}) rotate(${rotation}deg)`,
-                          transformOrigin: 'center',
-                          touchAction: 'none',
-                          userSelect: 'none',
-                          WebkitUserSelect: 'none',
-                          WebkitTouchCallout: 'none'
-                        }}
-                      />
-                    </div>
-                    <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/50 to-transparent">
-                      <div className="flex justify-between items-center">
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setScale(prev => Math.max(1, prev - 0.1))}
-                            className="text-white p-2 rounded-full bg-white/20 hover:bg-white/30"
-                          >
-                            <ZoomOut className="w-4 h-4" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setScale(prev => Math.min(3, prev + 0.1))}
-                            className="text-white p-2 rounded-full bg-white/20 hover:bg-white/30"
-                          >
-                            <ZoomIn className="w-4 h-4" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setRotation(prev => (prev + 90) % 360)}
-                            className="text-white p-2 rounded-full bg-white/20 hover:bg-white/30"
-                          >
-                            <RotateCw className="w-4 h-4" />
-                          </button>
-                        </div>
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setScale(1);
-                              setRotation(0);
-                              setImagePosition({ x: 50, y: 50 });
-                            }}
-                            className="text-white text-sm hover:text-gray-200"
-                          >
-                            Reset
-                          </button>
-                          <label className="text-white text-sm cursor-pointer hover:text-gray-200">
-                            Change Photo
-                            <input
-                              type="file"
-                              accept="image/*"
-                              ref={fileInputRef}
-                              onChange={(e) => handleImageUpload(e, false)}
-                              className="hidden"
-                            />
-                          </label>
+                    {isCropping ? (
+                      <div className="w-full h-full">
+                        <ReactCrop
+                          crop={crop}
+                          onChange={(_, percentCrop) => setCrop(percentCrop)}
+                          onComplete={(c) => setCompletedCrop(c)}
+                          className="h-full"
+                        >
+                          <img
+                            ref={imgRef}
+                            src={
+                              editingThumbnail !== null
+                                ? additionalImages[editingThumbnail]
+                                : profileImage
+                            }
+                            alt="Crop me"
+                            className="w-full h-full object-contain"
+                            onLoad={onImageLoad}
+                            onError={handleImageError}
+                            crossOrigin="anonymous"
+                          />
+                        </ReactCrop>
+                        <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/50 to-transparent">
+                          <div className="flex justify-between items-center">
+                            <div className="text-white text-sm">
+                              Drag to crop image
+                            </div>
+                            <div className="flex gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setIsCropping(false)}
+                                className="text-white p-2 rounded-full bg-white/20 hover:bg-white/30"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={cropImage}
+                                className="text-white p-2 rounded-full bg-white/20 hover:bg-white/30"
+                              >
+                                <Check className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    ) : (
+                      <>
+                        <div
+                          className="w-full h-full touch-none"
+                          {...bind()}
+                          style={{ touchAction: "none" }}
+                        >
+                          <img
+                            ref={imageRef}
+                            src={
+                              editingThumbnail !== null
+                                ? additionalImages[editingThumbnail]
+                                : profileImage
+                            }
+                            alt="Profile"
+                            className="w-full h-full object-cover rounded-2xl touch-none"
+                            crossOrigin="anonymous"
+                            style={{
+                              objectPosition: `${imagePosition.x}% ${imagePosition.y}%`,
+                              transform: `scale(${scale}) rotate(${rotation}deg)`,
+                              transformOrigin: "center",
+                              touchAction: "none",
+                              userSelect: "none",
+                              WebkitUserSelect: "none",
+                              WebkitTouchCallout: "none",
+                            }}
+                          />
+                        </div>
+                        <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/50 to-transparent">
+                          <div className="flex justify-between items-center">
+                            <div className="flex gap-2">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setScale((prev) => Math.max(1, prev - 0.1))
+                                }
+                                className="text-white p-2 rounded-full bg-white/20 hover:bg-white/30"
+                              >
+                                <ZoomOut className="w-4 h-4" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setScale((prev) => Math.min(3, prev + 0.1))
+                                }
+                                className="text-white p-2 rounded-full bg-white/20 hover:bg-white/30"
+                              >
+                                <ZoomIn className="w-4 h-4" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setRotation((prev) => (prev + 90) % 360)
+                                }
+                                className="text-white p-2 rounded-full bg-white/20 hover:bg-white/30"
+                              >
+                                <RotateCw className="w-4 h-4" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setIsCropping(true)}
+                                className="text-white p-2 rounded-full bg-white/20 hover:bg-white/30"
+                              >
+                                <Crop className="w-4 h-4" />
+                              </button>
+                            </div>
+                            <div className="flex gap-2">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setScale(1);
+                                  setRotation(0);
+                                  setImagePosition({ x: 50, y: 50 });
+                                }}
+                                className="text-white text-sm hover:text-gray-200"
+                              >
+                                Reset
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </div>
                 ) : (
                   <label className="h-[450px] aspect-square bg-lightgray/20 border border-gray-200 rounded-2xl overflow-hidden relative shadow-lg cursor-pointer">
@@ -440,9 +689,8 @@ export default function EditProfile() {
                 )}
               </div>
               {profileImage && (
-                <div className="mt-4 flex justify-center gap-4">
-                  <button
-                    type="button"
+                <div className="my-4 flex justify-around">
+                  <Button
                     onClick={() => {
                       setProfileImage(null);
                       setImagePosition({ x: 50, y: 50 });
@@ -450,59 +698,85 @@ export default function EditProfile() {
                         fileInputRef.current.value = "";
                       }
                     }}
-                    className="text-sm text-primary hover:text-red-600"
+                    className="text-sm text-darkgray bg-lightgray/20 rounded-lg"
                   >
-                    Remove photo
-                  </button>
-                  <span className="text-sm text-gray-500">
-                    Use arrows to reposition image
-                  </span>
+                    <Trash2 />
+                    Remove
+                  </Button>
+
+                  <label className="flex items-center gap-2 text-sm text-darkgray bg-lightgray/20 rounded-lg px-4">
+                    <RotateCw className="w-4 h-4" />
+                    Change
+                    <input
+                      type="file"
+                      accept="image/*"
+                      ref={fileInputRef}
+                      onChange={(e) => handleImageUpload(e, false)}
+                      className="hidden"
+                    />
+                  </label>
                 </div>
               )}
             </div>
 
             {/* ADDITIONAL PHOTOS */}
             <div>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-3 gap-4 my-4">
                 {[...Array(3)].map((_, index) => (
                   <div key={index} className="relative">
-                    <label className="h-[100px] aspect-square bg-lightgray/20 rounded-lg overflow-hidden relative block">
+                    <label className="block cursor-pointer">
                       {additionalImages[index] ? (
-                        <img
-                          src={additionalImages[index]}
-                          alt={`Additional ${index + 1}`}
-                          className="w-full h-full object-cover"
-                        />
+                        <div className="relative aspect-square group">
+                          <img
+                            src={additionalImages[index]}
+                            alt={`Additional ${index + 1}`}
+                            className="w-full h-full object-cover rounded-2xl"
+                          />
+                          <div className="absolute inset-0 bg-black/40 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <Camera className="w-6 h-6 text-white" />
+                          </div>
+                        </div>
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <div className="flex flex-col items-center gap-1">
-                            <Camera className="w-6 h-6 text-gray-400" />
-                            <span className="text-xs text-gray-500">
-                              Add photo
-                            </span>
+                        <div className="h-[100px] aspect-square bg-lightgray/20 rounded-2xl overflow-hidden relative">
+                          <div className="w-full h-full flex items-center justify-center">
+                            <div className="flex flex-col items-center gap-1">
+                              <Camera className="w-6 h-6 text-gray-400" />
+                              <span className="text-xs text-gray-500">
+                                Add photo
+                              </span>
+                            </div>
                           </div>
                         </div>
                       )}
                       <input
                         type="file"
                         accept="image/*"
-                        onChange={(e) => handleImageUpload(e, true)}
+                        onChange={(e) =>
+                          handleImageUpload(
+                            e,
+                            true,
+                            additionalImages[index] ? index : -1
+                          )
+                        }
                         className="absolute inset-0 opacity-0"
                       />
                     </label>
                     {additionalImages[index] && (
                       <button
                         type="button"
-                        onClick={() => handleRemoveAdditionalImage(index)}
-                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRemoveAdditionalImage(index);
+                        }}
+                        className="absolute -top-2 -right-2 z-10 bg-red-500 text-white rounded-full w-6 h-6 flex justify-center items-center p-2"
                       >
-                        ×
+                        x
                       </button>
                     )}
                   </div>
                 ))}
               </div>
-              <h3 className="text-sm text-center text-gray-400 mt-3">
+              <h3 className="text-sm text-center text-darkgray font-medium">
                 Additional photos (up to 3)
               </h3>
             </div>
@@ -510,7 +784,7 @@ export default function EditProfile() {
 
           {/* DISPLAY NAME */}
           <div>
-            <h2 className="text-xl font-semibold mb-4">Display Name</h2>
+            <h2 className="text-lg font-semibold mb-2">Display Name</h2>
             <p className="text-sm text-gray-500 mb-4">
               This is how you&apos;ll appear to others on the platform.
             </p>
@@ -531,7 +805,7 @@ export default function EditProfile() {
 
           {/* ABOUT ME SECTION ------------------------------ */}
           <div>
-            <h2 className="text-xl font-semibold mb-4">About me</h2>
+            <h2 className="text-lg font-semibold mb-2">About me</h2>
             <p className="text-sm text-gray-500 mb-4">
               Make it easy for others to get a sense of who you are.
             </p>
@@ -546,7 +820,7 @@ export default function EditProfile() {
 
           {/* MY DETAILS SECTION ------------------------------ */}
           <div>
-            <h2 className="text-xl font-semibold mb-4">My details</h2>
+            <h2 className="text-lg font-semibold mb-2">My details</h2>
             <div className="space-y-3">
               {/* AGE FIELD */}
               <div className="flex items-center justify-between rounded-lg">
@@ -832,7 +1106,7 @@ export default function EditProfile() {
 
           {/* I ENJOY SECTION ------------------- */}
           <div>
-            <h2 className="text-xl font-semibold mb-4">I enjoy</h2>
+            <h2 className="text-lg font-semibold mb-2">I enjoy</h2>
             <div className="space-y-3">
               {/* INTEREST SELECTION DROPDOWN */}
               <Select
@@ -903,7 +1177,7 @@ export default function EditProfile() {
 
           {/* LANGUAGE SECTION ------------------- */}
           <div>
-            <h2 className="text-xl font-semibold mb-4">I communicate in</h2>
+            <h2 className="text-lg font-semibold mb-2">I communicate in</h2>
             <div className="space-y-3">
               {/* LANGUAGE SELECTION DROPDOWN */}
               <Select
@@ -975,7 +1249,7 @@ export default function EditProfile() {
 
           {/* LINKED ACCOUNTS SECTION */}
           <div>
-            <h2 className="text-xl font-semibold mb-4">Linked accounts</h2>
+            <h2 className="text-lg font-semibold mb-2">Linked accounts</h2>
             <div className="space-y-3">
               {/* INSTAGRAM */}
               <div className="flex items-center justify-between rounded-lg">

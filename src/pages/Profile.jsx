@@ -1,8 +1,8 @@
-import { Suspense, useState } from "react";
+import { Suspense, useState, useEffect } from "react";
 // import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useImageCache } from "@/hooks/useImageCache";
 import { ErrorFallback } from "@/components/ErrorFallback";
 import { ErrorBoundary } from "react-error-boundary";
@@ -40,6 +40,14 @@ function UserProfile() {
   const { user } = useAuth();
   const { data: profile, isLoading, error } = useUserProfile(user); // Fetch data from user_profiles
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Scroll to top when navigating from edit profile
+  useEffect(() => {
+    if (location.state?.scrollToTop) {
+      window.scrollTo(0, 0);
+    }
+  }, [location]);
 
   // Use custom caching hook
   const cachedImageUrl = useImageCache(
@@ -440,6 +448,11 @@ function UserProfile() {
         currentImageIndex={selectedImageIndex}
         onPrevious={handlePreviousImage}
         onNext={handleNextImage}
+        imageTransforms={profile?.user_profile_images?.map(img => ({
+          position: img.position,
+          scale: img.scale,
+          rotation: img.rotation
+        }))}
       />
     </div>
   );

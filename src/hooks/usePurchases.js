@@ -47,7 +47,11 @@ const getPurchases = async () => {
         user_profile_images!inner(
           id, 
           image_url,
-          is_primary
+          is_primary,
+          position,
+          scale,
+          rotation,
+          order
         )
       `
     )

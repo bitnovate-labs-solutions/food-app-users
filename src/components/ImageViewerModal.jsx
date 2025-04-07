@@ -11,6 +11,7 @@ export default function ImageViewerModal({
   currentImageIndex,
   onPrevious,
   onNext,
+  imageTransforms
 }) {
   const [dragStart, setDragStart] = useState(0);
 
@@ -57,6 +58,12 @@ export default function ImageViewerModal({
             src={images[currentImageIndex]}
             alt={`Image ${currentImageIndex + 1}`}
             className="max-w-full max-h-full object-contain pointer-events-none"
+            style={imageTransforms?.[currentImageIndex] ? {
+              objectPosition: `${imageTransforms[currentImageIndex].position?.x || 50}% ${imageTransforms[currentImageIndex].position?.y || 50}%`,
+              transform: `scale(${imageTransforms[currentImageIndex].scale || 1}) rotate(${imageTransforms[currentImageIndex].rotation || 0}deg)`,
+              transformOrigin: 'center',
+              transition: 'transform 0.2s ease-out'
+            } : undefined}
           />
         </motion.div>
 

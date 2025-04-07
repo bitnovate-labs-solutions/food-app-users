@@ -21,6 +21,9 @@ import {
   Facebook,
   Twitter,
   ChevronLeft,
+  ZoomOut,
+  ZoomIn,
+  RotateCw,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/lib/supabase";
@@ -37,6 +40,7 @@ import {
 import { toast } from "sonner";
 import { editProfileSchema } from "@/lib/zod_schema";
 import { useUserProfile } from "@/hooks/useUserProfile";
+import { useGesture } from "@use-gesture/react";
 
 export default function EditProfile() {
   const navigate = useNavigate();
@@ -53,6 +57,9 @@ export default function EditProfile() {
   const [selectedInterests, setSelectedInterests] = useState([]);
   const [selectedLanguages, setSelectedLanguages] = useState([]);
   const [selectedLanguage, setSelectedLanguage] = useState("");
+  const [scale, setScale] = useState(1);
+  const [rotation, setRotation] = useState(0);
+  const imageRef = useRef(null);
 
   // FORM INITIALIZATION
   const form = useForm({
@@ -188,6 +195,18 @@ export default function EditProfile() {
     setAdditionalImages((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const bind = useGesture({
+    onDrag: ({ offset: [x, y] }) => {
+      setImagePosition({ x: x, y: y });
+    },
+    onPinch: ({ offset: [d] }) => {
+      setScale(1 + d / 100);
+    },
+    onWheel: ({ delta: [dx, dy] }) => {
+      setScale(prev => Math.max(1, Math.min(3, prev + dy * 0.01)));
+    }
+  });
+
   //   HANDLE SUBMIT
   const onSubmit = async (data) => {
     setIsLoading(true);
@@ -302,63 +321,75 @@ export default function EditProfile() {
               <div className="flex justify-center">
                 {profileImage ? (
                   <div className="h-[450px] aspect-square bg-lightgray/20 border border-gray-200 rounded-2xl overflow-hidden relative shadow-lg">
-                    <img
-                      src={profileImage}
-                      alt="Profile"
-                      className="w-full h-full object-cover rounded-2xl"
-                      style={{
-                        objectPosition: `${imagePosition.x}% ${imagePosition.y}%`,
-                      }}
-                    />
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="grid grid-cols-3 gap-2 p-4">
-                        <button
-                          type="button"
-                          onClick={() => moveImage('up')}
-                          className="col-start-2 bg-white/80 rounded-full p-2 hover:bg-white"
-                        >
-                          ↑
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => moveImage('left')}
-                          className="col-start-1 bg-white/80 rounded-full p-2 hover:bg-white"
-                        >
-                          ←
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => moveImage('center')}
-                          className="col-start-2 bg-white/80 rounded-full p-2 hover:bg-white"
-                        >
-                          ⊙
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => moveImage('right')}
-                          className="col-start-3 bg-white/80 rounded-full p-2 hover:bg-white"
-                        >
-                          →
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => moveImage('down')}
-                          className="col-start-2 bg-white/80 rounded-full p-2 hover:bg-white"
-                        >
-                          ↓
-                        </button>
+                    <div 
+                      className="w-full h-full touch-none"
+                      {...bind()}
+                    >
+                      <img
+                        ref={imageRef}
+                        src={profileImage}
+                        alt="Profile"
+                        className="w-full h-full object-cover rounded-2xl touch-none"
+                        style={{
+                          transform: `scale(${scale}) rotate(${rotation}deg)`,
+                          transformOrigin: 'center',
+                          touchAction: 'none',
+                          userSelect: 'none',
+                          WebkitUserSelect: 'none',
+                          WebkitTouchCallout: 'none'
+                        }}
+                      />
+                    </div>
+                    <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/50 to-transparent">
+                      <div className="flex justify-between items-center">
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setScale(prev => Math.max(1, prev - 0.1))}
+                            className="text-white p-2 rounded-full bg-white/20 hover:bg-white/30"
+                          >
+                            <ZoomOut className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setScale(prev => Math.min(3, prev + 0.1))}
+                            className="text-white p-2 rounded-full bg-white/20 hover:bg-white/30"
+                          >
+                            <ZoomIn className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setRotation(prev => (prev + 90) % 360)}
+                            className="text-white p-2 rounded-full bg-white/20 hover:bg-white/30"
+                          >
+                            <RotateCw className="w-4 h-4" />
+                          </button>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setScale(1);
+                              setRotation(0);
+                              setImagePosition({ x: 50, y: 50 });
+                            }}
+                            className="text-white text-sm hover:text-gray-200"
+                          >
+                            Reset
+                          </button>
+                          <label className="text-white text-sm cursor-pointer hover:text-gray-200">
+                            Change Photo
+                            <input
+                              type="file"
+                              accept="image/*"
+                              ref={fileInputRef}
+                              onChange={(e) => handleImageUpload(e, false)}
+                              className="hidden"
+                            />
+                          </label>
+                        </div>
                       </div>
                     </div>
-                    <label className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-white/90 text-gray-700 px-4 py-2 rounded-full cursor-pointer">
-                      Change Photo
-                      <input
-                        type="file"
-                        accept="image/*"
-                        ref={fileInputRef}
-                        onChange={(e) => handleImageUpload(e, false)}
-                        className="hidden"
-                      />
-                    </label>
                   </div>
                 ) : (
                   <label className="h-[450px] aspect-square bg-lightgray/20 border border-gray-200 rounded-2xl overflow-hidden relative shadow-lg cursor-pointer">

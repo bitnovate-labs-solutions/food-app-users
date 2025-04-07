@@ -298,6 +298,7 @@ export default function EditProfile() {
                   onMouseMove={handleMouseMove}
                   onMouseUp={handleMouseUp}
                   onMouseLeave={handleMouseUp}
+                  style={{ touchAction: "none" }}
                 >
                   {profileImage ? (
                     <img
@@ -306,6 +307,7 @@ export default function EditProfile() {
                       className="w-full h-full object-cover rounded-2xl"
                       style={{
                         objectPosition: `${imagePosition.x}% ${imagePosition.y}%`,
+                        pointerEvents: "none"
                       }}
                     />
                   ) : (

@@ -160,21 +160,20 @@ function UserProfile() {
           {/* ADDITIONAL PHOTOS THUMBNAILS */}
           {profile?.user_profile_images?.length > 1 && (
             <div className="mt-4">
-              <h3 className="text-lg font-bold mb-4">Additional Photos</h3>
               <div className="grid grid-cols-3 gap-4">
                 {profile.user_profile_images
                   .filter((img) => !img.is_primary)
                   .sort((a, b) => a.order - b.order)
                   .map((image, index) => (
-                    <div 
-                      key={index} 
+                    <div
+                      key={index}
                       className="relative aspect-square cursor-pointer"
                       onClick={() => openImageViewer(index + 1)} // +1 because we skip the primary image
                     >
                       <img
                         src={image.image_url}
                         alt={`Additional photo ${index + 1}`}
-                        className="w-full h-full rounded-lg object-cover border border-gray-200 shadow-md hover:shadow-lg transition-shadow"
+                        className="w-full h-26 rounded-lg object-cover border border-gray-200 shadow-md hover:shadow-lg transition-shadow"
                       />
                     </div>
                   ))}
@@ -430,7 +429,7 @@ function UserProfile() {
       <ImageViewerModal
         isOpen={isImageViewerOpen}
         onClose={() => setIsImageViewerOpen(false)}
-        images={profile?.user_profile_images?.map(img => img.image_url) || []}
+        images={profile?.user_profile_images?.map((img) => img.image_url) || []}
         currentImageIndex={selectedImageIndex}
         onPrevious={handlePreviousImage}
         onNext={handleNextImage}

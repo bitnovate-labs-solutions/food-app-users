@@ -95,7 +95,7 @@ export default function UserProfileCard({
           onDragEnd={handleDragEnd}
           whileDrag={{ scale: 0.95 }}
         >
-          <div className="h-[620px] w-full relative">
+          <div className="aspect-[3/4] w-full relative">
             <ImageWithFallback
               src={images[mainImageIndex]}
               alt="Profile"

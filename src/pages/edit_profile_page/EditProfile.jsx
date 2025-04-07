@@ -152,17 +152,19 @@ export default function EditProfile() {
   };
 
   // HANDLE IMAGE DRAG
-  const handleMouseDown = (e) => {
+  const handleDragStart = (e) => {
     setIsDragging(true);
   };
 
-  const handleMouseMove = (e) => {
+  const handleDragMove = (e) => {
     if (!isDragging || !profileImage) return;
 
     const container = e.currentTarget;
     const rect = container.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    const clientX = e.clientX || e.touches[0].clientX;
+    const clientY = e.clientY || e.touches[0].clientY;
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
 
     // Calculate percentage position
     const xPercent = (x / rect.width) * 100;
@@ -171,7 +173,7 @@ export default function EditProfile() {
     setImagePosition({ x: xPercent, y: yPercent });
   };
 
-  const handleMouseUp = () => {
+  const handleDragEnd = () => {
     setIsDragging(false);
   };
 
@@ -294,10 +296,13 @@ export default function EditProfile() {
               <div className="flex justify-center">
                 <label
                   className="h-[450px] aspect-square bg-lightgray/20 border border-gray-200 rounded-2xl overflow-hidden relative cursor-move shadow-lg"
-                  onMouseDown={handleMouseDown}
-                  onMouseMove={handleMouseMove}
-                  onMouseUp={handleMouseUp}
-                  onMouseLeave={handleMouseUp}
+                  onMouseDown={handleDragStart}
+                  onMouseMove={handleDragMove}
+                  onMouseUp={handleDragEnd}
+                  onMouseLeave={handleDragEnd}
+                  onTouchStart={handleDragStart}
+                  onTouchMove={handleDragMove}
+                  onTouchEnd={handleDragEnd}
                   style={{ touchAction: "none" }}
                 >
                   {profileImage ? (

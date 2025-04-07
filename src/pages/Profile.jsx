@@ -173,7 +173,7 @@ function UserProfile() {
                       <img
                         src={image.image_url}
                         alt={`Additional photo ${index + 1}`}
-                        className="w-full h-26 rounded-lg object-cover border border-gray-200 shadow-md hover:shadow-lg transition-shadow"
+                        className="w-full h-26 rounded-2xl object-cover border border-gray-200 shadow-md transition-shadow"
                       />
                     </div>
                   ))}

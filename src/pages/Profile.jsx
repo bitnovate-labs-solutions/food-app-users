@@ -114,10 +114,16 @@ function UserProfile() {
                 alt="Profile"
                 className="w-full h-full object-cover"
                 style={{
-                  objectPosition: `${profile?.user_profile_images?.[0]?.position?.x || 50}% ${profile?.user_profile_images?.[0]?.position?.y || 50}%`,
-                  transform: `scale(${profile?.user_profile_images?.[0]?.scale || 1}) rotate(${profile?.user_profile_images?.[0]?.rotation || 0}deg)`,
-                  transformOrigin: 'center',
-                  transition: 'transform 0.2s ease-out'
+                  objectPosition: `${
+                    profile?.user_profile_images?.[0]?.position?.x || 50
+                  }% ${profile?.user_profile_images?.[0]?.position?.y || 50}%`,
+                  transform: `scale(${
+                    profile?.user_profile_images?.[0]?.scale || 1
+                  }) rotate(${
+                    profile?.user_profile_images?.[0]?.rotation || 0
+                  }deg)`,
+                  transformOrigin: "center",
+                  transition: "transform 0.2s ease-out",
                 }}
               />
             </div>
@@ -127,9 +133,9 @@ function UserProfile() {
 
             {/* USER NAME */}
             <div className="flex absolute bottom-20 left-6 text-white text-2xl font-bold">
-              <p>{profile?.display_name || "-"}</p>
+              <p>{profile?.display_name || "Anonymous"}</p>
               <span>,</span>
-              <p className="ml-2">{profile?.age || "-"}</p>
+              <p className="ml-2">{profile?.age || "?"}</p>
             </div>
 
             <div className="flex absolute bottom-12 left-6">
@@ -141,14 +147,16 @@ function UserProfile() {
                     : "bg-secondary text-primary"
                 }`}
               >
-                <p className="text-sm capitalize">{profile?.role || "-"}</p>
+                <p className="text-sm capitalize">
+                  {profile?.role || "Not specified"}
+                </p>
               </div>
 
               {/* USER LOCATION */}
               <div className="flex gap-1 px-3 py-0.5 bg-emerald-100 rounded-full">
                 <MapPin className="text-emerald-900 w-4 h-4 mr-1 my-auto" />
                 <p className="text-emerald-900 text-sm capitalize">
-                  {profile?.location || "-"}
+                  {profile?.location || "Not specified"}
                 </p>
               </div>
             </div>
@@ -159,7 +167,7 @@ function UserProfile() {
                 <Folder className="w-4 h-4 mr-2 my-auto text-white" />
               </div>
               <p className="text-white text-sm capitalize">
-                {profile?.occupation || "-"}
+                {profile?.occupation || "Not specified"}
               </p>
             </div>
 
@@ -198,244 +206,264 @@ function UserProfile() {
 
           <div className="space-y-4 mt-8">
             {/* ABOUT ME SECTION -------------------- */}
-            <div className="space-y-6 mb-8">
-              <h3 className="text-lg font-bold">About Me</h3>
-              <p className="text-darkgray">{profile?.about_me}</p>
-            </div>
+            <Card className="bg-white border-gray-200 shadow-sm">
+              <CardContent className="p-6">
+                <h3 className="text-base font-semibold mb-4">About Me</h3>
+                <p className="text-sm text-darkgray">
+                  {profile?.about_me || "No description added yet"}
+                </p>
+              </CardContent>
+            </Card>
 
             {/* MY DETAILS SECTION -------------------- */}
-            <div className="space-y-6 mb-8">
-              <h3 className="text-lg font-bold">My Details</h3>
+            <Card className="bg-white border-gray-200 shadow-sm">
+              <CardContent className="p-6">
+                <h3 className="text-base font-semibold mb-4">My Details</h3>
+                <div className="space-y-4">
+                  {/* Email */}
+                  <div className="flex justify-between items-center py-1">
+                    <div className="flex items-center">
+                      <Mail className="w-4 h-4 mr-3 my-auto text-darkgray" />
+                      <span className="text-sm font-medium text-darkgray">
+                        Email
+                      </span>
+                    </div>
+                    <p className="text-sm text-lightgray text-right">
+                      {user?.email || "Not provided"}
+                    </p>
+                  </div>
 
-              {/* Email */}
-              <div className="flex justify-between">
-                <div className="flex items-center">
-                  <Mail className="w-4 h-4 mr-4 my-auto text-darkgray" />
-                  <span className="text-base font-semibold text-darkgray">
-                    Email
-                  </span>
-                </div>
-                <p className="text-lightgray text-sm text-right justify-between">
-                  {user?.email}
-                </p>
-              </div>
+                  {/* Gender & Pronouns */}
+                  <div className="flex justify-between items-center py-1">
+                    <div className="flex items-center">
+                      <User className="w-4 h-4 mr-3 my-auto text-darkgray" />
+                      <span className="text-sm font-medium text-darkgray">
+                        Gender
+                      </span>
+                    </div>
+                    <p className="text-sm text-lightgray text-right capitalize">
+                      {profile?.gender || "Not specified"}
+                    </p>
+                  </div>
 
-              {/* Gender & Pronouns */}
-              <div className="flex justify-between">
-                <div className="flex items-center">
-                  <User className="w-4 h-4 mr-4 my-auto text-darkgray" />
-                  <span className="text-base font-semibold text-darkgray">
-                    Gender
-                  </span>
-                </div>
-                <p className="text-lightgray text-sm text-right capitalize">
-                  {profile?.gender || "-"}
-                </p>
-              </div>
+                  {/* Education */}
+                  <div className="flex justify-between items-center py-1">
+                    <div className="flex items-center">
+                      <GraduationCap className="w-4 h-4 mr-3 text-darkgray" />
+                      <span className="text-sm font-medium text-darkgray">
+                        Education
+                      </span>
+                    </div>
+                    <p className="text-sm text-lightgray text-right capitalize">
+                      {profile?.education || "Not specified"}
+                    </p>
+                  </div>
 
-              {/* Education */}
-              <div className="flex justify-between">
-                <div className="flex items-center">
-                  <GraduationCap className="w-4 h-4 mr-4 text-darkgray" />
-                  <span className="text-base font-semibold text-darkgray">
-                    Education
-                  </span>
-                </div>
-                <p className="text-lightgray text-sm text-right capitalize overflow-ellipsis">
-                  {profile?.education || "-"}
-                </p>
-              </div>
+                  {/* Height */}
+                  <div className="flex justify-between items-center py-1">
+                    <div className="flex items-center">
+                      <Ruler className="w-4 h-4 mr-3 my-auto text-darkgray" />
+                      <span className="text-sm font-medium text-darkgray">
+                        Height
+                      </span>
+                    </div>
+                    <p className="text-sm text-lightgray text-right">
+                      {profile?.height
+                        ? `${profile.height} cm`
+                        : "Not specified"}
+                    </p>
+                  </div>
 
-              {/* Height */}
-              <div className="flex justify-between">
-                <div className="flex items-center">
-                  <Ruler className="w-4 h-4 mr-4 my-auto text-darkgray" />
-                  <span className="text-base font-semibold text-darkgray">
-                    Height
-                  </span>
-                </div>
-                <p className="text-lightgray text-sm text-right capitalize overflow-ellipsis">
-                  {profile?.height || "-"}
-                </p>
-              </div>
+                  {/* Smoking */}
+                  <div className="flex justify-between items-center py-1">
+                    <div className="flex items-center">
+                      <Cigarette className="w-4 h-4 mr-3 my-auto text-darkgray" />
+                      <span className="text-sm font-medium text-darkgray">
+                        Smoking
+                      </span>
+                    </div>
+                    <p className="text-sm text-lightgray text-right capitalize">
+                      {profile?.smoking || "Not specified"}
+                    </p>
+                  </div>
 
-              {/* Smoking */}
-              <div className="flex justify-between">
-                <div className="flex">
-                  <Cigarette className="w-4 h-4 mr-4 my-auto text-darkgray" />
-                  <span className="text-base font-semibold text-darkgray">
-                    Smoking
-                  </span>
-                </div>
-                <p className="text-lightgray text-sm text-right capitalize overflow-ellipsis">
-                  {profile?.smoking || "-"}
-                </p>
-              </div>
+                  {/* Drinking */}
+                  <div className="flex justify-between items-center py-1">
+                    <div className="flex items-center">
+                      <Wine className="w-4 h-4 mr-3 my-auto text-darkgray" />
+                      <span className="text-sm font-medium text-darkgray">
+                        Drinking
+                      </span>
+                    </div>
+                    <p className="text-sm text-lightgray text-right capitalize">
+                      {profile?.drinking || "Not specified"}
+                    </p>
+                  </div>
 
-              {/* Drinking */}
-              <div className="flex justify-between">
-                <div className="flex items-center">
-                  <Wine className="w-4 h-4 mr-4 my-auto text-darkgray" />
-                  <span className="text-base font-semibold text-darkgray">
-                    Drinking
-                  </span>
-                </div>
-                <p className="text-lightgray text-sm text-right capitalize overflow-ellipsis">
-                  {profile?.drinking || "-"}
-                </p>
-              </div>
+                  {/* Pets */}
+                  <div className="flex justify-between items-center py-1">
+                    <div className="flex items-center">
+                      <PawPrint className="w-4 h-4 mr-3 my-auto text-darkgray" />
+                      <span className="text-sm font-medium text-darkgray">
+                        Pets
+                      </span>
+                    </div>
+                    <p className="text-sm text-lightgray text-right capitalize">
+                      {profile?.pets || "Not specified"}
+                    </p>
+                  </div>
 
-              {/* Pets */}
-              <div className="flex justify-between">
-                <div className="flex items-center">
-                  <PawPrint className="w-4 h-4 mr-4 my-auto text-darkgray" />
-                  <span className="text-base font-semibold text-darkgray">
-                    Pets
-                  </span>
-                </div>
-                <p className="text-lightgray text-sm text-right capitalize overflow-ellipsis">
-                  {profile?.pets || "-"}
-                </p>
-              </div>
+                  {/* Children */}
+                  <div className="flex justify-between items-center py-1">
+                    <div className="flex items-center">
+                      <Baby className="w-4 h-4 mr-3 my-auto text-darkgray" />
+                      <span className="text-sm font-medium text-darkgray">
+                        Children
+                      </span>
+                    </div>
+                    <p className="text-sm text-lightgray text-right capitalize">
+                      {profile?.children || "Not specified"}
+                    </p>
+                  </div>
 
-              {/* Children */}
-              <div className="flex justify-between">
-                <div className="flex items-center">
-                  <Baby className="w-4 h-4 mr-4 my-auto text-darkgray" />
-                  <span className="text-base font-semibold text-darkgray">
-                    Children
-                  </span>
-                </div>
-                <p className="text-lightgray text-sm text-right capitalize overflow-ellipsis">
-                  {profile?.children || "-"}
-                </p>
-              </div>
+                  {/* Zodiac Sign */}
+                  <div className="flex justify-between items-center py-1">
+                    <div className="flex items-center">
+                      <Telescope className="w-4 h-4 mr-3 my-auto text-darkgray" />
+                      <span className="text-sm font-medium text-darkgray">
+                        Zodiac Sign
+                      </span>
+                    </div>
+                    <p className="text-sm text-lightgray text-right capitalize">
+                      {profile?.zodiac || "Not specified"}
+                    </p>
+                  </div>
 
-              {/* Zodiac Sign */}
-              <div className="flex justify-between">
-                <div className="flex items-center">
-                  <Telescope className="w-4 h-4 mr-4 my-auto text-darkgray" />
-                  <span className="text-base font-semibold text-darkgray">
-                    Zodiac Sign
-                  </span>
+                  {/* Religion */}
+                  <div className="flex justify-between items-center py-1">
+                    <div className="flex items-center">
+                      <Church className="w-4 h-4 mr-3 my-auto text-darkgray" />
+                      <span className="text-sm font-medium text-darkgray">
+                        Religion
+                      </span>
+                    </div>
+                    <p className="text-sm text-lightgray text-right capitalize">
+                      {profile?.religion || "Not specified"}
+                    </p>
+                  </div>
                 </div>
-                <p className="text-lightgray text-sm text-right capitalize overflow-ellipsis">
-                  {profile?.zodiac || "-"}
-                </p>
-              </div>
-
-              {/* Religion */}
-              <div className="flex justify-between">
-                <div className="flex items-center">
-                  <Church className="w-4 h-4 mr-4 my-auto text-darkgray" />
-                  <span className="text-base font-semibold text-darkgray">
-                    Religion
-                  </span>
-                </div>
-                <p className="text-lightgray text-sm text-right capitalize overflow-ellipsis">
-                  {profile?.religion || "-"}
-                </p>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
 
             {/* INTERESTS SECTION -------------------- */}
-            <div className="space-y-4 mb-8">
-              <h3 className="text-lg font-bold">I enjoy</h3>
-              {/* INTERESTS CAPSULES */}
-              {profile?.interests && profile.interests.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  {profile?.interests.map((interest) => (
-                    <div
-                      key={interest}
-                      className="flex items-center gap-2 bg-primary/80 rounded-full py-1 px-3"
-                    >
-                      <span className="text-xs text-white">{interest}</span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground text-lightgray">
-                  No interests added yet
-                </p>
-              )}
-            </div>
+            <Card className="bg-white border-gray-200 shadow-sm">
+              <CardContent className="p-6">
+                <h3 className="text-base font-semibold mb-4">I enjoy</h3>
+                {/* INTERESTS CAPSULES */}
+                {profile?.interests && profile.interests.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {profile?.interests.map((interest) => (
+                      <div
+                        key={interest}
+                        className="flex items-center gap-2 bg-primary/80 rounded-full py-1 px-3"
+                      >
+                        <span className="text-xs text-white">{interest}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground text-lightgray">
+                    No interests added yet
+                  </p>
+                )}
+              </CardContent>
+            </Card>
 
             {/* LANGUAGES SECTION -------------------- */}
-            <div className="space-y-4 mb-8">
-              <h3 className="text-lg font-bold">I communicate in</h3>
-              {/* LANGUAGE CAPSULES */}
-              {profile?.languages && profile.languages.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  {profile?.languages.map((language) => (
-                    <div
-                      key={language}
-                      className="flex items-center gap-2 bg-primary/80 rounded-full py-1 px-3"
-                    >
-                      <span className="text-xs text-white">{language}</span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground text-lightgray">
-                  No languages added yet
-                </p>
-              )}
-            </div>
+            <Card className="bg-white border-gray-200 shadow-sm">
+              <CardContent className="p-6">
+                <h3 className="text-base font-semibold mb-4">
+                  I communicate in
+                </h3>
+                {/* LANGUAGE CAPSULES */}
+                {profile?.languages && profile.languages.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {profile?.languages.map((language) => (
+                      <div
+                        key={language}
+                        className="flex items-center gap-2 bg-primary/80 rounded-full py-1 px-3"
+                      >
+                        <span className="text-xs text-white">{language}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground text-lightgray">
+                    No languages added yet
+                  </p>
+                )}
+              </CardContent>
+            </Card>
 
             {/* SOCIAL LINKS SECTION -------------------- */}
-            <div className="space-y-6 mb-8">
-              <h3 className="text-lg font-bold">Linked accounts</h3>
+            <Card className="bg-white border-gray-200 shadow-sm">
+              <CardContent className="p-6">
+                <h3 className="text-base font-semibold mb-4">
+                  Linked accounts
+                </h3>
+                <div className="space-y-4">
+                  {/* IG */}
+                  <div className="flex justify-between items-center py-1">
+                    <div className="flex items-center">
+                      <Instagram className="w-4 h-4 mr-3 my-auto text-darkgray" />
+                      <span className="text-sm font-medium text-darkgray">
+                        Instagram
+                      </span>
+                    </div>
+                    <p className="text-sm text-lightgray text-right">
+                      {profile?.social_links?.instagram || "Not linked"}
+                    </p>
+                  </div>
 
-              {/* IG */}
-              <div className="flex justify-between">
-                <div className="flex items-center">
-                  <Instagram className="w-4 h-4 mr-4 my-auto text-darkgray" />
-                  <span className="text-base font-semibold text-darkgray">
-                    Instagram
-                  </span>
-                </div>
-                <p className="text-lightgray text-sm text-right overflow-ellipsis">
-                  {profile?.social_links.instagram || "-"}
-                </p>
-              </div>
+                  {/* FB */}
+                  <div className="flex justify-between items-center py-1">
+                    <div className="flex items-center">
+                      <Facebook className="w-4 h-4 mr-3 my-auto text-darkgray" />
+                      <span className="text-sm font-medium text-darkgray">
+                        Facebook
+                      </span>
+                    </div>
+                    <p className="text-sm text-lightgray text-right">
+                      {profile?.social_links?.facebook || "Not linked"}
+                    </p>
+                  </div>
 
-              {/* FB */}
-              <div className="flex justify-between">
-                <div className="flex items-center">
-                  <Facebook className="w-4 h-4 mr-4 my-auto text-darkgray" />
-                  <span className="text-base font-semibold text-darkgray">
-                    Facebook
-                  </span>
+                  {/* TWITTER */}
+                  <div className="flex justify-between items-center py-1">
+                    <div className="flex items-center">
+                      <Twitter className="w-4 h-4 mr-3 my-auto text-darkgray" />
+                      <span className="text-sm font-medium text-darkgray">
+                        Twitter
+                      </span>
+                    </div>
+                    <p className="text-sm text-lightgray text-right">
+                      {profile?.social_links?.twitter || "Not linked"}
+                    </p>
+                  </div>
                 </div>
-                <p className="text-lightgray text-sm text-right overflow-ellipsis">
-                  {profile?.social_links.facebook || "-"}
-                </p>
-              </div>
-
-              {/* TWITTER */}
-              <div className="flex justify-between">
-                <div className="flex items-center">
-                  <Twitter className="w-4 h-4 mr-4 my-auto text-darkgray" />
-                  <span className="text-base font-semibold text-darkgray">
-                    Twitter
-                  </span>
-                </div>
-                <p className="text-lightgray text-sm text-right overflow-ellipsis">
-                  {profile?.social_links.twitter || "-"}
-                </p>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
 
             {/* MEMBER SINCE -------------------- */}
-            <div className="space-y-6 mb-8">
-              <h3 className="text-lg font-bold">Member Since</h3>
-              <p className="text-darkgray flex items-center gap-2">
-                <Calendar className="w-4 h-4" />
-                <span className="text-sm">
-                  {formatDate(profile?.created_at)}
-                </span>
-              </p>
-            </div>
+            <Card className="bg-white border-gray-200 shadow-sm">
+              <CardContent className="p-6">
+                <h3 className="text-base font-semibold mb-4">Member Since</h3>
+                <p className="text-sm text-darkgray flex items-center gap-2">
+                  <Calendar className="w-4 h-4" />
+                  <span>{formatDate(profile?.created_at)}</span>
+                </p>
+              </CardContent>
+            </Card>
           </div>
         </CardContent>
       </Card>
@@ -448,10 +476,10 @@ function UserProfile() {
         currentImageIndex={selectedImageIndex}
         onPrevious={handlePreviousImage}
         onNext={handleNextImage}
-        imageTransforms={profile?.user_profile_images?.map(img => ({
+        imageTransforms={profile?.user_profile_images?.map((img) => ({
           position: img.position,
           scale: img.scale,
-          rotation: img.rotation
+          rotation: img.rotation,
         }))}
       />
     </div>

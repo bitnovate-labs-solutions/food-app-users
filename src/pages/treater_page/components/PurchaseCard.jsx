@@ -1,4 +1,5 @@
 import { memo, useState } from "react";
+import { useInterestedUsers } from "@/hooks/usePurchaseInterests";
 
 // COMPONENTS
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
@@ -7,10 +8,10 @@ import { Badge } from "@/components/ui/badge";
 import { QrCode, Users, Package, Info } from "lucide-react";
 import ImageWithFallback from "@/components/ImageWithFallback";
 import InterestedUsersModal from "./InterestedUsersModal";
-import { MOCK_INTERESTED_USERS } from "@/data/mock_data";
 
 function PurchaseCard({ item, onShowQR, onShowDetails }) {
   const [showInterestedUsers, setShowInterestedUsers] = useState(false);
+  const { data: interestedUsers = [], isLoading } = useInterestedUsers(item.id);
 
   // Early return if item is not defined
   if (!item) return null;
@@ -19,9 +20,6 @@ function PurchaseCard({ item, onShowQR, onShowDetails }) {
   const purchaseItem = item?.purchase_items?.[0];
   const menuPackage = purchaseItem?.menu_packages;
   const restaurant = menuPackage?.restaurant;
-
-  // Use mock interested users data
-  const interestedUsers = MOCK_INTERESTED_USERS;
 
   return (
     <>
@@ -100,10 +98,11 @@ function PurchaseCard({ item, onShowQR, onShowDetails }) {
               size="sm"
               className="h-8 bg-secondary shadow-md"
               onClick={() => setShowInterestedUsers(true)}
+              disabled={isLoading}
             >
               <Users className="h-4 w-4 text-primary" />
               <span className="text-xs text-primary">
-                {interestedUsers.length || 0} interested
+                {interestedUsers.length} interested
               </span>
             </Button>
 
@@ -134,8 +133,6 @@ export default memo(PurchaseCard, (prevProps, nextProps) => {
   return (
     prevProps.item?.id === nextProps.item?.id &&
     prevProps.item?.purchase_items?.[0]?.quantity ===
-      nextProps.item?.purchase_items?.[0]?.quantity &&
-    prevProps.item?.interested_users?.length ===
-      nextProps.item?.interested_users?.length
+      nextProps.item?.purchase_items?.[0]?.quantity
   );
 });

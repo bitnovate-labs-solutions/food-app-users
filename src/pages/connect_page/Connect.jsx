@@ -288,9 +288,9 @@ const Connect = () => {
                       </div>
 
                       {/* USER LOCATION */}
-                      <div className="flex gap-1 px-3 py-0.5 bg-emerald-100 rounded-full">
-                        <MapPin className="text-emerald-900 w-4 h-4 mr-1 my-auto" />
-                        <p className="text-emerald-900 text-sm capitalize">
+                      <div className="flex gap-1 px-3 py-0.5 bg-emerald-100 rounded-full max-w-[150px]">
+                        <MapPin className="text-emerald-900 w-4 h-4 mr-1 my-auto flex-shrink-0" />
+                        <p className="text-emerald-900 text-sm capitalize truncate">
                           {currentUser.location || "-"}
                         </p>
                       </div>
@@ -328,126 +328,188 @@ const Connect = () => {
                     transition={{ duration: 0.3 }}
                     className="overflow-hidden"
                   >
-                    <CardContent className="space-y-6 p-6">
+                    <CardContent className="space-y-3 p-4">
                       {/* ABOUT ME SECTION -------------------- */}
-                      <div className="space-y-4">
-                        <h3 className="text-lg font-bold">About Me</h3>
-                        <p className="text-gray-600">
-                          {currentUser.about_me || "No description available"}
-                        </p>
-                      </div>
+                      <Card className="bg-white border-gray-200 shadow-sm">
+                        <CardContent className="p-4">
+                          <h3 className="text-base font-semibold mb-3">
+                            About Me
+                          </h3>
+                          <p className="text-sm text-gray-600">
+                            {currentUser.about_me || "No description available"}
+                          </p>
+                        </CardContent>
+                      </Card>
 
                       {/* MY DETAILS SECTION -------------------- */}
-                      <div className="space-y-4">
-                        <h3 className="text-lg font-bold">Details</h3>
-                        <div className="grid grid-cols-2 gap-4">
-                          {/* EDUCATION */}
-                          <div className="flex items-center gap-2">
-                            <GraduationCap className="w-4 h-4 text-gray-500" />
-                            <span className="text-sm">
-                              {currentUser.education || "-"}
-                            </span>
-                          </div>
+                      <Card className="bg-white border-gray-200 shadow-sm">
+                        <CardContent className="p-4">
+                          <h3 className="text-base font-semibold mb-3">
+                            Details
+                          </h3>
+                          <div className="grid grid-cols-1 gap-2">
+                            {/* EDUCATION */}
+                            <div className="flex items-center justify-between py-1.5">
+                              <div className="flex items-center gap-2">
+                                <GraduationCap className="w-4 h-4 text-gray-500" />
+                                <span className="text-sm font-medium text-gray-700">
+                                  Education
+                                </span>
+                              </div>
+                              <span className="text-sm text-gray-600">
+                                {currentUser.education || "-"}
+                              </span>
+                            </div>
 
-                          {/* HEIGHT */}
-                          <div className="flex items-center gap-2">
-                            <Ruler className="w-4 h-4 text-gray-500" />
-                            <span className="text-sm">
-                              {currentUser.height || "-"}
-                            </span>
+                            {/* HEIGHT */}
+                            <div className="flex items-center justify-between py-1.5">
+                              <div className="flex items-center gap-2">
+                                <Ruler className="w-4 h-4 text-gray-500" />
+                                <span className="text-sm font-medium text-gray-700">
+                                  Height
+                                </span>
+                              </div>
+                              <span className="text-sm text-gray-600">
+                                {currentUser.height || "-"}
+                              </span>
+                            </div>
+
+                            {/* SMOKING */}
+                            <div className="flex items-center justify-between py-1.5">
+                              <div className="flex items-center gap-2">
+                                <Cigarette className="w-4 h-4 text-gray-500" />
+                                <span className="text-sm font-medium text-gray-700">
+                                  Smoking
+                                </span>
+                              </div>
+                              <span className="text-sm text-gray-600">
+                                {currentUser.smoking || "-"}
+                              </span>
+                            </div>
+
+                            {/* DRINKING */}
+                            <div className="flex items-center justify-between py-1.5">
+                              <div className="flex items-center gap-2">
+                                <Wine className="w-4 h-4 text-gray-500" />
+                                <span className="text-sm font-medium text-gray-700">
+                                  Drinking
+                                </span>
+                              </div>
+                              <span className="text-sm text-gray-600">
+                                {currentUser.drinking || "-"}
+                              </span>
+                            </div>
+
+                            {/* PETS */}
+                            <div className="flex items-center justify-between py-1.5">
+                              <div className="flex items-center gap-2">
+                                <PawPrint className="w-4 h-4 text-gray-500" />
+                                <span className="text-sm font-medium text-gray-700">
+                                  Pets
+                                </span>
+                              </div>
+                              <span className="text-sm text-gray-600">
+                                {currentUser.pets || "-"}
+                              </span>
+                            </div>
+
+                            {/* CHILDREN */}
+                            <div className="flex items-center justify-between py-1.5">
+                              <div className="flex items-center gap-2">
+                                <Baby className="w-4 h-4 text-gray-500" />
+                                <span className="text-sm font-medium text-gray-700">
+                                  Children
+                                </span>
+                              </div>
+                              <span className="text-sm text-gray-600">
+                                {currentUser.children || "-"}
+                              </span>
+                            </div>
+
+                            {/* ZODIAC */}
+                            <div className="flex items-center justify-between py-1.5">
+                              <div className="flex items-center gap-2">
+                                <Telescope className="w-4 h-4 text-gray-500" />
+                                <span className="text-sm font-medium text-gray-700">
+                                  Zodiac Sign
+                                </span>
+                              </div>
+                              <span className="text-sm text-gray-600">
+                                {currentUser.zodiac || "-"}
+                              </span>
+                            </div>
+
+                            {/* RELIGION */}
+                            <div className="flex items-center justify-between py-1.5">
+                              <div className="flex items-center gap-2">
+                                <Church className="w-4 h-4 text-gray-500" />
+                                <span className="text-sm font-medium text-gray-700">
+                                  Religion
+                                </span>
+                              </div>
+                              <span className="text-sm text-gray-600">
+                                {currentUser.religion || "-"}
+                              </span>
+                            </div>
                           </div>
-                          {/* SMOKING */}
-                          <div className="flex items-center gap-2">
-                            <Cigarette className="w-4 h-4 text-gray-500" />
-                            <span className="text-sm">
-                              {currentUser.smoking || "-"}
-                            </span>
-                          </div>
-                          {/* DRINKNG */}
-                          <div className="flex items-center gap-2">
-                            <Wine className="w-4 h-4 text-gray-500" />
-                            <span className="text-sm">
-                              {currentUser.drinking || "-"}
-                            </span>
-                          </div>
-                          {/* PETS */}
-                          <div className="flex items-center gap-2">
-                            <PawPrint className="w-4 h-4 text-gray-500" />
-                            <span className="text-sm">
-                              {currentUser.pets || "-"}
-                            </span>
-                          </div>
-                          {/* CHILDREN */}
-                          <div className="flex items-center gap-2">
-                            <Baby className="w-4 h-4 text-gray-500" />
-                            <span className="text-sm">
-                              {currentUser.children || "-"}
-                            </span>
-                          </div>
-                          {/* ZODIAC */}
-                          <div className="flex items-center gap-2">
-                            <Telescope className="w-4 h-4 text-gray-500" />
-                            <span className="text-sm">
-                              {currentUser.zodiac || "-"}
-                            </span>
-                          </div>
-                          {/* RELIGION */}
-                          <div className="flex items-center gap-2">
-                            <Church className="w-4 h-4 text-gray-500" />
-                            <span className="text-sm">
-                              {currentUser.religion || "-"}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
+                        </CardContent>
+                      </Card>
 
                       {/* INTERESTS SECTION -------------------- */}
-                      <div className="space-y-4">
-                        <h3 className="text-lg font-bold">Interests</h3>
-                        {currentUser.interests &&
-                        currentUser.interests.length > 0 ? (
-                          <div className="flex flex-wrap gap-2">
-                            {currentUser.interests.map((interest) => (
-                              <div
-                                key={interest}
-                                className="flex items-center gap-2 bg-primary/80 rounded-full py-1 px-3"
-                              >
-                                <span className="text-xs text-white">
-                                  {interest}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-sm text-muted-foreground text-lightgray">
-                            No interests added yet
-                          </p>
-                        )}
-                      </div>
+                      <Card className="bg-white border-gray-200 shadow-sm">
+                        <CardContent className="p-4">
+                          <h3 className="text-base font-semibold mb-3">
+                            Interests
+                          </h3>
+                          {currentUser.interests &&
+                          currentUser.interests.length > 0 ? (
+                            <div className="flex flex-wrap gap-2">
+                              {currentUser.interests.map((interest) => (
+                                <div
+                                  key={interest}
+                                  className="flex items-center gap-2 bg-primary/80 rounded-full py-1 px-3"
+                                >
+                                  <span className="text-xs text-white">
+                                    {interest}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-sm text-muted-foreground text-lightgray">
+                              No interests added yet
+                            </p>
+                          )}
+                        </CardContent>
+                      </Card>
 
                       {/* LANGUAGES SECTION -------------------- */}
-                      <div className="space-y-4 pb-4">
-                        <h3 className="text-lg font-bold">Languages</h3>
-                        {currentUser.languages &&
-                        currentUser.languages.length > 0 ? (
-                          <div className="flex flex-wrap gap-2">
-                            {currentUser.languages.map((language) => (
-                              <div
-                                key={language}
-                                className="flex items-center gap-2 bg-primary/80 rounded-full py-1 px-3"
-                              >
-                                <span className="text-xs text-white">
-                                  {language}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-sm text-muted-foreground text-lightgray">
-                            No languages added yet
-                          </p>
-                        )}
-                      </div>
+                      <Card className="bg-white border-gray-200 shadow-sm">
+                        <CardContent className="p-4">
+                          <h3 className="text-base font-semibold mb-3">
+                            Languages
+                          </h3>
+                          {currentUser.languages &&
+                          currentUser.languages.length > 0 ? (
+                            <div className="flex flex-wrap gap-2">
+                              {currentUser.languages.map((language) => (
+                                <div
+                                  key={language}
+                                  className="flex items-center gap-2 bg-primary/80 rounded-full py-1 px-3"
+                                >
+                                  <span className="text-xs text-white">
+                                    {language}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-sm text-muted-foreground text-lightgray">
+                              No languages added yet
+                            </p>
+                          )}
+                        </CardContent>
+                      </Card>
                     </CardContent>
                   </motion.div>
                 </Card>

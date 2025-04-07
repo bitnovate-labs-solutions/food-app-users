@@ -1,19 +1,45 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Calendar, Heart, MapPin, Users } from "lucide-react";
+import { Calendar, Heart, MapPin, Users, Package } from "lucide-react";
 import { useImageCache } from "@/hooks/useImageCache";
 import { useState } from "react";
 import ImageWithFallback from "@/components/ImageWithFallback";
 import TreateeDetails from "./TreateeDetails";
 import TreatersModal from "./TreatersModal";
+import { useExpressInterest } from "@/hooks/usePurchaseInterests";
+import { useAuth } from "@/context/AuthContext";
+import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase";
 
 export default function TreateeCard({ item, onLike, isLiked }) {
   const [showAllUsers, setShowAllUsers] = useState(false);
-  const [hasRequested, setHasRequested] = useState(false);
-  const [interestedCount, setInterestedCount] = useState(item.likes || 0);
   const [showDetails, setShowDetails] = useState(false);
   const [showTreaters, setShowTreaters] = useState(false);
   const cachedImageUrl = useImageCache(item.image_url || []);
+  const { user } = useAuth();
+  const expressInterest = useExpressInterest();
+
+  // Get user's profile ID
+  const { data: userProfile } = useQuery({
+    queryKey: ["userProfile", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("user_profiles")
+        .select("id")
+        .eq("user_id", user?.id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+  });
+
+  // Calculate total interested count and check if current user has requested
+  const interestedCount = item.purchase_interests?.length || 0;
+  const hasRequested = userProfile?.id && item.purchase_interests?.some(
+    interest => interest.treatee_id === userProfile.id
+  );
 
   // Get all users based on item.user_profiles
   const allUsers = item.user_profiles || [];
@@ -21,9 +47,28 @@ export default function TreateeCard({ item, onLike, isLiked }) {
   const remainingCount = allUsers.length - 4;
 
   // HANDLE JOIN
-  const handleJoinClick = () => {
-    setHasRequested(true);
-    setInterestedCount((prev) => prev + 1);
+  const handleJoinClick = async () => {
+    if (!user) {
+      toast.error("Please login to express interest");
+      return;
+    }
+
+    if (!userProfile) {
+      toast.error("User profile not found");
+      return;
+    }
+
+    try {
+      await expressInterest.mutateAsync({
+        purchaseId: item.id,
+        treateeId: userProfile.id
+      });
+      toast.success("Interest expressed successfully!");
+    } catch (error) {
+      toast.error("Failed to express interest", {
+        description: error.message
+      });
+    }
   };
 
   return (
@@ -123,39 +168,31 @@ export default function TreateeCard({ item, onLike, isLiked }) {
             <div className="mb-2">
               <div className="flex items-center gap-2 mb-1">
                 <p className="text-sm font-semibold">Treaters</p>
+                <span className="text-xs text-gray-500 hidden sm:inline">(Click to view all)</span>
+                <span className="text-xs text-gray-500 sm:hidden">(Tap to view all)</span>
               </div>
               {/* AVATAR STACK */}
               <div
-                className="flex items-center cursor-pointer hover:opacity-80 transition-opacity"
+                className="flex items-center cursor-pointer group active:scale-[0.98] transition-all duration-200"
                 onClick={() => setShowTreaters(true)}
               >
-                <div className="flex -space-x-2">
+                <div className="flex -space-x-2 group-hover:-space-x-1 transition-all duration-200">
                   {displayedUsers.map((user) => (
                     <div
                       key={user.id}
-                      className="relative w-10 h-10 rounded-xl bg-gray-200 border-2 border-white overflow-hidden"
+                      className="relative w-10 h-10 rounded-xl bg-gray-200 border-2 border-white overflow-hidden group-hover:scale-105 transition-transform duration-200"
                     >
                       <img
                         src={user.user_profile_images?.[0].image_url}
                         alt={user.display_name}
                         className="w-full h-full object-cover"
                       />
-                      {/* CODE FOR POTENTIAL FUTURE USE ------------------------ */}
-                      {/* <div
-                        className={`absolute bottom-0 right-0 w-2.5 h-2.5 border-2 border-white rounded-full ${
-                          user.status === "online"
-                            ? "bg-green-500"
-                            : user.status === "away"
-                            ? "bg-yellow-500"
-                            : "bg-red-500"
-                        }`}
-                      /> */}
                     </div>
                   ))}
                 </div>
                 {!showAllUsers && remainingCount > 0 && (
-                  <div className="ml-2 h-10 rounded-xl bg-secondary/30 flex items-center justify-center px-4 cursor-pointer hover:bg-secondary/40 transition-colors">
-                    <span className="text-sm text-primary">
+                  <div className="ml-2 h-10 rounded-xl bg-secondary/30 flex items-center justify-center px-4 group-hover:bg-secondary/40 transition-colors duration-200">
+                    <span className="text-sm text-primary group-hover:scale-105 transition-transform duration-200">
                       +{remainingCount}
                     </span>
                   </div>
@@ -163,15 +200,18 @@ export default function TreateeCard({ item, onLike, isLiked }) {
               </div>
             </div>
 
-            {/* INTERESTED COUNT */}
-            <div className="flex items-center gap-1 px-3 bg-secondary rounded-lg w-fit h-7 shadow-md">
-              <span className="text-sm text-rose-500 flex">
-                {interestedCount}
-              </span>
-              <span className="text-xs text-rose-500 flex">
-                <Users className="h-4 w-4 text-primary mr-1" />
-                <p>interested</p>
-              </span>
+            {/* QUANTITY AND INTERESTED COUNT */}
+            <div className="flex items-center gap-3">
+              {/* INTERESTED COUNT */}
+              <div className="flex items-center gap-1 px-3 bg-secondary rounded-lg w-fit h-7 shadow-md">
+                <span className="text-sm text-rose-500 flex">
+                  {interestedCount}
+                </span>
+                <span className="text-xs text-rose-500 flex">
+                  <Users className="h-4 w-4 text-primary mr-1" />
+                  <p>interested</p>
+                </span>
+              </div>
             </div>
           </div>
 

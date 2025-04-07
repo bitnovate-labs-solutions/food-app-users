@@ -37,7 +37,14 @@ const getPurchases = async () => {
 
   if (purchasesError) throw new Error(purchasesError.message);
 
-  // Then get all user profiles of the Treaters for these purchases based on the user_id under purchases table
+  // Get all purchase interests
+  const { data: purchaseInterests, error: interestsError } = await supabase
+    .from("purchase_interests")
+    .select("*");
+
+  if (interestsError) throw new Error(interestsError.message);
+
+  // Then get all user profiles of the Treaters for these purchases
   const userIds = purchases.map((purchase) => purchase.user_id);
   const { data: userProfiles, error: profilesError } = await supabase
     .from("user_profiles")
@@ -59,40 +66,59 @@ const getPurchases = async () => {
 
   if (profilesError) throw new Error(profilesError.message);
 
-  // Combine the data
-  return purchases.map((purchase) => ({
-    ...purchase,
-    user_profiles: userProfiles.filter(
-      (profile) => profile.user_id === purchase.user_id
-    ),
-  }));
+  // Group purchases by menu package
+  const groupedPurchases = purchases.reduce((acc, purchase) => {
+    purchase.purchase_items.forEach((item) => {
+      const menuPackageId = item.menu_packages.id;
+      const existingGroup = acc.find(group => group.menuPackageId === menuPackageId);
+
+      // Get interests for this purchase
+      const interests = purchaseInterests?.filter(interest => interest.purchase_id === purchase.id) || [];
+
+      if (existingGroup) {
+        // Add this purchase's user to the treaters list if not already included
+        const treaterProfile = userProfiles.find(profile => profile.user_id === purchase.user_id);
+        if (treaterProfile && !existingGroup.user_profiles.some(p => p.user_id === treaterProfile.user_id)) {
+          existingGroup.user_profiles.push(treaterProfile);
+        }
+        // Update the total quantity
+        existingGroup.purchase_items[0].quantity += item.quantity;
+        // Update the total likes
+        existingGroup.likes = (existingGroup.likes || 0) + (purchase.likes || 0);
+        // Keep the most recent purchase date
+        if (new Date(purchase.created_at) > new Date(existingGroup.created_at)) {
+          existingGroup.created_at = purchase.created_at;
+        }
+        // Merge purchase interests
+        existingGroup.purchase_interests = [
+          ...(existingGroup.purchase_interests || []),
+          ...interests
+        ];
+      } else {
+        // Create new group
+        const treaterProfile = userProfiles.find(profile => profile.user_id === purchase.user_id);
+        acc.push({
+          ...purchase,
+          menuPackageId,
+          user_profiles: treaterProfile ? [treaterProfile] : [],
+          purchase_items: [{
+            ...item,
+            quantity: item.quantity
+          }],
+          likes: purchase.likes || 0,
+          purchase_interests: interests
+        });
+      }
+    });
+    return acc;
+  }, []);
+
+  return groupedPurchases;
 };
 
 export const usePurchasedItems = () => {
   return useQuery({
-    queryKey: ["purchases"],
+    queryKey: ["purchasedItems"],
     queryFn: getPurchases,
-    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
-    refetchInterval: 1000 * 60, // Refresh every 1 minute instead of 30 seconds
-    cacheTime: 1000 * 60 * 30, // Keep in cache for 30 minutes
-    suspense: true, // Enable React Suspense mode
-    refetchOnWindowFocus: false, // Disable refetch on window focus
-    select: (data) => {
-      // Transform and filter data if needed
-      return (
-        data?.map((purchase) => ({
-          ...purchase,
-          purchase_items: purchase.purchase_items?.map((item) => ({
-            ...item,
-            menu_packages: item.menu_packages
-              ? {
-                  ...item.menu_packages,
-                  menu_images: item.menu_packages.menu_images || [],
-                }
-              : null,
-          })),
-        })) || []
-      );
-    },
   });
 };

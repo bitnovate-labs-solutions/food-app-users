@@ -99,16 +99,23 @@ function UserProfile() {
 
           {/* PROFILE IMAGE */}
           <div className="h-[450px] w-full relative">
-            {/* IMAGE */}
-            <img
-              // src={imageSrc}
-              src={cachedImageUrl || defaultImage}
-              alt="Profile"
-              className="w-full h-full rounded-2xl object-cover border-1 border-gray-200 shadow-xl"
-            />
+            {/* IMAGE CONTAINER */}
+            <div className="w-full h-full overflow-hidden rounded-2xl">
+              <img
+                src={cachedImageUrl || defaultImage}
+                alt="Profile"
+                className="w-full h-full object-cover"
+                style={{
+                  objectPosition: `${profile?.user_profile_images?.[0]?.position?.x || 50}% ${profile?.user_profile_images?.[0]?.position?.y || 50}%`,
+                  transform: `scale(${profile?.user_profile_images?.[0]?.scale || 1}) rotate(${profile?.user_profile_images?.[0]?.rotation || 0}deg)`,
+                  transformOrigin: 'center',
+                  transition: 'transform 0.2s ease-out'
+                }}
+              />
+            </div>
 
             {/* IMAGE OVERLAY */}
-            <div className="rounded-2xl shadow-xl absolute inset-0 bg-gradient-to-t from-black/80 via-black/5 to-black/10" />
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-t from-black/80 via-black/5 to-black/10" />
 
             {/* USER NAME */}
             <div className="flex absolute bottom-20 left-6 text-white text-2xl font-bold">

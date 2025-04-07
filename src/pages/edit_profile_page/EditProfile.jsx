@@ -57,7 +57,10 @@ export default function EditProfile() {
   const [selectedInterests, setSelectedInterests] = useState([]);
   const [selectedLanguages, setSelectedLanguages] = useState([]);
   const [selectedLanguage, setSelectedLanguage] = useState("");
+  const [scale, setScale] = useState(1);
+  const [rotation, setRotation] = useState(0);
   const imageRef = useRef(null);
+  const [initialPosition, setInitialPosition] = useState({ x: 50, y: 50 });
 
   // FORM INITIALIZATION
   const form = useForm({
@@ -123,9 +126,11 @@ export default function EditProfile() {
       setSelectedInterests(profile.interests || []);
       setSelectedLanguages(profile.languages || []);
       
-      // Set image position
+      // Set image transformation values
       if (profile.user_profile_images?.[0]) {
         setImagePosition(profile.user_profile_images[0].position || { x: 50, y: 50 });
+        setScale(profile.user_profile_images[0].scale || 1);
+        setRotation(profile.user_profile_images[0].rotation || 0);
       }
     }
   }, [profile, form]);
@@ -199,8 +204,31 @@ export default function EditProfile() {
   };
 
   const bind = useGesture({
-    onDrag: ({ offset: [x, y] }) => {
-      setImagePosition({ x: x, y: y });
+    onDrag: ({ movement: [mx, my], first }) => {
+      if (first) {
+        // Store initial position when drag starts
+        setInitialPosition({
+          x: imagePosition.x,
+          y: imagePosition.y
+        });
+      }
+      
+      // Convert pixel movement to percentage (using the smaller container dimension for consistent movement)
+      const containerSize = 450;
+      const deltaX = -(mx / containerSize) * 100; // Invert X movement for more intuitive control
+      const deltaY = -(my / containerSize) * 100; // Invert Y movement for more intuitive control
+      
+      // Update position, keeping it within 0-100 range
+      setImagePosition({
+        x: Math.min(100, Math.max(0, initialPosition.x + deltaX)),
+        y: Math.min(100, Math.max(0, initialPosition.y + deltaY))
+      });
+    },
+    onPinch: ({ offset: [d] }) => {
+      setScale(1 + d / 100);
+    },
+    onWheel: ({ delta: [dx, dy] }) => {
+      setScale(prev => Math.max(1, Math.min(3, prev + dy * 0.01)));
     }
   });
 
@@ -254,6 +282,8 @@ export default function EditProfile() {
             image_url: profileImage, 
             is_primary: true,
             position: imagePosition,
+            scale: scale,
+            rotation: rotation,
             order: 0,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
@@ -263,6 +293,8 @@ export default function EditProfile() {
             image_url: url,
             is_primary: false,
             position: { x: 0, y: 0 },
+            scale: 1,
+            rotation: 0,
             order: index + 1,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
@@ -329,6 +361,8 @@ export default function EditProfile() {
                         className="w-full h-full object-cover rounded-2xl touch-none"
                         style={{
                           objectPosition: `${imagePosition.x}% ${imagePosition.y}%`,
+                          transform: `scale(${scale}) rotate(${rotation}deg)`,
+                          transformOrigin: 'center',
                           touchAction: 'none',
                           userSelect: 'none',
                           WebkitUserSelect: 'none',
@@ -338,23 +372,52 @@ export default function EditProfile() {
                     </div>
                     <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/50 to-transparent">
                       <div className="flex justify-between items-center">
-                        <button
-                          type="button"
-                          onClick={() => setImagePosition({ x: 50, y: 50 })}
-                          className="text-white text-sm hover:text-gray-200"
-                        >
-                          Reset Position
-                        </button>
-                        <label className="text-white text-sm cursor-pointer hover:text-gray-200">
-                          Change Photo
-                          <input
-                            type="file"
-                            accept="image/*"
-                            ref={fileInputRef}
-                            onChange={(e) => handleImageUpload(e, false)}
-                            className="hidden"
-                          />
-                        </label>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setScale(prev => Math.max(1, prev - 0.1))}
+                            className="text-white p-2 rounded-full bg-white/20 hover:bg-white/30"
+                          >
+                            <ZoomOut className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setScale(prev => Math.min(3, prev + 0.1))}
+                            className="text-white p-2 rounded-full bg-white/20 hover:bg-white/30"
+                          >
+                            <ZoomIn className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setRotation(prev => (prev + 90) % 360)}
+                            className="text-white p-2 rounded-full bg-white/20 hover:bg-white/30"
+                          >
+                            <RotateCw className="w-4 h-4" />
+                          </button>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setScale(1);
+                              setRotation(0);
+                              setImagePosition({ x: 50, y: 50 });
+                            }}
+                            className="text-white text-sm hover:text-gray-200"
+                          >
+                            Reset
+                          </button>
+                          <label className="text-white text-sm cursor-pointer hover:text-gray-200">
+                            Change Photo
+                            <input
+                              type="file"
+                              accept="image/*"
+                              ref={fileInputRef}
+                              onChange={(e) => handleImageUpload(e, false)}
+                              className="hidden"
+                            />
+                          </label>
+                        </div>
                       </div>
                     </div>
                   </div>

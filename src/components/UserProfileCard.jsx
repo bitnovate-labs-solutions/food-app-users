@@ -38,9 +38,10 @@ export default function UserProfileCard({
   }, [user]);
 
   // Combine avatar with additional images
-  const images = user.user_profile_images
-    ?.sort((a, b) => a.order - b.order)
-    ?.map(img => img.image_url) || [];
+  const images = [
+    user.user_profile_images?.[0].image_url,
+    ...(user.additional_images || []),
+  ];
 
   // TOGGLE DETAILS
   const toggleDetails = () => {
@@ -95,7 +96,7 @@ export default function UserProfileCard({
           onDragEnd={handleDragEnd}
           whileDrag={{ scale: 0.95 }}
         >
-          <div className="aspect-[3/4] w-full relative">
+          <div className="h-[620px] w-full relative">
             <ImageWithFallback
               src={images[mainImageIndex]}
               alt="Profile"
@@ -171,14 +172,19 @@ export default function UserProfileCard({
             >
               {/* Thumbnail Strip */}
               {images.length > 1 && (
-                <div className="grid grid-cols-4 gap-2">
+                <div className="grid grid-cols-4 gap-2 mb-4">
                   {images.map((image, index) => (
                     <div
                       key={index}
-                      className={`aspect-square rounded-lg overflow-hidden cursor-pointer transition-transform hover:scale-105 ${
-                        index === mainImageIndex ? "ring-2 ring-primary" : ""
+                      className={`aspect-square rounded-lg overflow-hidden cursor-pointer transition-all duration-200 ${
+                        index === mainImageIndex
+                          ? "ring-2 ring-primary scale-105"
+                          : "hover:scale-105 hover:ring-2 hover:ring-primary/50"
                       }`}
-                      onClick={() => openImageViewer(index)}
+                      onClick={() => {
+                        setMainImageIndex(index);
+                        openImageViewer(index);
+                      }}
                     >
                       <ImageWithFallback
                         src={image}

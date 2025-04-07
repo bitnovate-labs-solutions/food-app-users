@@ -49,8 +49,7 @@ export default function EditProfile() {
   const [isLoading, setIsLoading] = useState(false);
   const [profileImage, setProfileImage] = useState(null);
   const [additionalImages, setAdditionalImages] = useState([]);
-  const [imagePosition, setImagePosition] = useState({ x: 0, y: 0 });
-  const [isDragging, setIsDragging] = useState(false);
+  const [imagePosition, setImagePosition] = useState({ x: 50, y: 50 });
   const [selectedInterests, setSelectedInterests] = useState([]);
   const [selectedLanguages, setSelectedLanguages] = useState([]);
   const [selectedLanguage, setSelectedLanguage] = useState("");
@@ -143,7 +142,7 @@ export default function EditProfile() {
           setAdditionalImages((prev) => [...prev, publicUrl]);
         } else {
           setProfileImage(publicUrl);
-          setImagePosition({ x: 0, y: 0 }); // Reset position when new image is uploaded
+          setImagePosition({ x: 50, y: 50 }); // Reset position when new image is uploaded
         }
       } catch (error) {
         toast.error("Error uploading image: ", error);
@@ -151,30 +150,37 @@ export default function EditProfile() {
     }
   };
 
-  // HANDLE IMAGE DRAG
-  const handleDragStart = (e) => {
-    setIsDragging(true);
-  };
+  // HANDLE IMAGE POSITION
+  const moveImage = (direction) => {
+    const step = 10; // Move by 10% each time
+    const max = 100;
+    const min = 0;
 
-  const handleDragMove = (e) => {
-    if (!isDragging || !profileImage) return;
+    setImagePosition(prev => {
+      let newX = prev.x;
+      let newY = prev.y;
 
-    const container = e.currentTarget;
-    const rect = container.getBoundingClientRect();
-    const clientX = e.clientX || e.touches[0].clientX;
-    const clientY = e.clientY || e.touches[0].clientY;
-    const x = clientX - rect.left;
-    const y = clientY - rect.top;
+      switch(direction) {
+        case 'up':
+          newY = Math.max(min, prev.y - step);
+          break;
+        case 'down':
+          newY = Math.min(max, prev.y + step);
+          break;
+        case 'left':
+          newX = Math.max(min, prev.x - step);
+          break;
+        case 'right':
+          newX = Math.min(max, prev.x + step);
+          break;
+        case 'center':
+          newX = 50;
+          newY = 50;
+          break;
+      }
 
-    // Calculate percentage position
-    const xPercent = (x / rect.width) * 100;
-    const yPercent = (y / rect.height) * 100;
-
-    setImagePosition({ x: xPercent, y: yPercent });
-  };
-
-  const handleDragEnd = () => {
-    setIsDragging(false);
+      return { x: newX, y: newY };
+    });
   };
 
   // HANDLE REMOVE ADDITIONAL IMAGE
@@ -294,43 +300,83 @@ export default function EditProfile() {
             <div className="mb-2">
               <h3 className="text-sm text-gray-500 mb-2">Main profile photo</h3>
               <div className="flex justify-center">
-                <label
-                  className="h-[450px] aspect-square bg-lightgray/20 border border-gray-200 rounded-2xl overflow-hidden relative cursor-move shadow-lg"
-                  onMouseDown={handleDragStart}
-                  onMouseMove={handleDragMove}
-                  onMouseUp={handleDragEnd}
-                  onMouseLeave={handleDragEnd}
-                  onTouchStart={handleDragStart}
-                  onTouchMove={handleDragMove}
-                  onTouchEnd={handleDragEnd}
-                  style={{ touchAction: "none" }}
-                >
-                  {profileImage ? (
+                {profileImage ? (
+                  <div className="h-[450px] aspect-square bg-lightgray/20 border border-gray-200 rounded-2xl overflow-hidden relative shadow-lg">
                     <img
                       src={profileImage}
                       alt="Profile"
                       className="w-full h-full object-cover rounded-2xl"
                       style={{
                         objectPosition: `${imagePosition.x}% ${imagePosition.y}%`,
-                        pointerEvents: "none"
                       }}
                     />
-                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="grid grid-cols-3 gap-2 p-4">
+                        <button
+                          type="button"
+                          onClick={() => moveImage('up')}
+                          className="col-start-2 bg-white/80 rounded-full p-2 hover:bg-white"
+                        >
+                          ↑
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => moveImage('left')}
+                          className="col-start-1 bg-white/80 rounded-full p-2 hover:bg-white"
+                        >
+                          ←
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => moveImage('center')}
+                          className="col-start-2 bg-white/80 rounded-full p-2 hover:bg-white"
+                        >
+                          ⊙
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => moveImage('right')}
+                          className="col-start-3 bg-white/80 rounded-full p-2 hover:bg-white"
+                        >
+                          →
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => moveImage('down')}
+                          className="col-start-2 bg-white/80 rounded-full p-2 hover:bg-white"
+                        >
+                          ↓
+                        </button>
+                      </div>
+                    </div>
+                    <label className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-white/90 text-gray-700 px-4 py-2 rounded-full cursor-pointer">
+                      Change Photo
+                      <input
+                        type="file"
+                        accept="image/*"
+                        ref={fileInputRef}
+                        onChange={(e) => handleImageUpload(e, false)}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                ) : (
+                  <label className="h-[450px] aspect-square bg-lightgray/20 border border-gray-200 rounded-2xl overflow-hidden relative shadow-lg cursor-pointer">
                     <div className="w-full h-full flex items-center justify-center">
                       <div className="flex flex-col items-center gap-2">
                         <Camera className="w-8 h-8 text-gray-400" />
                         <span className="text-sm text-gray-500">Add photo</span>
                       </div>
                     </div>
-                  )}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    ref={fileInputRef}
-                    onChange={(e) => handleImageUpload(e, false)}
-                    className="absolute inset-0 opacity-0"
-                  />
-                </label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      ref={fileInputRef}
+                      onChange={(e) => handleImageUpload(e, false)}
+                      className="absolute inset-0 opacity-0"
+                    />
+                  </label>
+                )}
               </div>
               {profileImage && (
                 <div className="mt-4 flex justify-center gap-4">
@@ -338,7 +384,7 @@ export default function EditProfile() {
                     type="button"
                     onClick={() => {
                       setProfileImage(null);
-                      setImagePosition({ x: 0, y: 0 });
+                      setImagePosition({ x: 50, y: 50 });
                       if (fileInputRef.current) {
                         fileInputRef.current.value = "";
                       }
@@ -348,7 +394,7 @@ export default function EditProfile() {
                     Remove photo
                   </button>
                   <span className="text-sm text-gray-500">
-                    Drag to reposition image
+                    Use arrows to reposition image
                   </span>
                 </div>
               )}

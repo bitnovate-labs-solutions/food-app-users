@@ -41,7 +41,9 @@ function UserProfile() {
   const navigate = useNavigate();
 
   // Use custom caching hook
-  const cachedImageUrl = useImageCache(profile?.avatar_url);
+  const cachedImageUrl = useImageCache(
+    profile?.user_profile_images?.[0].image_url
+  );
 
   if (isLoading) return <ProfileSkeleton />;
   if (error) return <ErrorFallback error={error} />;

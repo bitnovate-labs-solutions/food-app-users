@@ -17,7 +17,16 @@ export function useUserProfile(authUser) {
 
     const { data, error } = await supabase
       .from("user_profiles")
-      .select("*")
+      .select(
+        `
+        *,
+          user_profile_images!inner(
+          id, 
+          image_url,
+          is_primary
+        )
+        `
+      )
       .eq("user_id", authUser.id)
       .single();
 

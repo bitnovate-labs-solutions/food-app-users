@@ -44,9 +44,13 @@ export default function EditProfile() {
   const { data: profile } = useUserProfile(user);
   const queryClient = useQueryClient();
   const fileInputRef = useRef(null);
+
   // USESTATES
   const [isLoading, setIsLoading] = useState(false);
   const [profileImage, setProfileImage] = useState(null);
+  const [additionalImages, setAdditionalImages] = useState([]);
+  const [imagePosition, setImagePosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
   const [selectedInterests, setSelectedInterests] = useState([]);
   const [selectedLanguages, setSelectedLanguages] = useState([]);
   const [selectedLanguage, setSelectedLanguage] = useState("");
@@ -105,14 +109,15 @@ export default function EditProfile() {
           twitter: "",
         },
       });
-      setProfileImage(profile.avatar_url);
+      setProfileImage(profile?.user_profile_images?.[0]?.image_url);
+      setAdditionalImages(profile.user_profile_images || []);
       setSelectedInterests(profile.interests || []);
       setSelectedLanguages(profile.languages || []);
     }
   }, [profile, form]);
 
   // HANDLE IMAGE UPLOAD
-  const handleImageUpload = async (e) => {
+  const handleImageUpload = async (e, isAdditional = false) => {
     const file = e.target.files?.[0];
     if (file) {
       const fileExt = file.name.split(".").pop();
@@ -129,11 +134,45 @@ export default function EditProfile() {
           data: { publicUrl },
         } = supabase.storage.from("user-avatars").getPublicUrl(fileName);
 
-        setProfileImage(publicUrl);
+        if (isAdditional) {
+          setAdditionalImages((prev) => [...prev, publicUrl]);
+        } else {
+          setProfileImage(publicUrl);
+          setImagePosition({ x: 0, y: 0 }); // Reset position when new image is uploaded
+        }
       } catch (error) {
         toast.error("Error uploading image: ", error);
       }
     }
+  };
+
+  // HANDLE IMAGE DRAG
+  const handleMouseDown = (e) => {
+    setIsDragging(true);
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isDragging || !profileImage) return;
+
+    const container = e.currentTarget;
+    const rect = container.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    // Calculate percentage position
+    const xPercent = (x / rect.width) * 100;
+    const yPercent = (y / rect.height) * 100;
+
+    setImagePosition({ x: xPercent, y: yPercent });
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  // HANDLE REMOVE ADDITIONAL IMAGE
+  const handleRemoveAdditionalImage = (index) => {
+    setAdditionalImages((prev) => prev.filter((_, i) => i !== index));
   };
 
   //   HANDLE SUBMIT
@@ -161,6 +200,8 @@ export default function EditProfile() {
           languages: selectedLanguages,
           social_links: data.social_links,
           avatar_url: profileImage,
+          image_position: imagePosition,
+          additional_images: additionalImages,
           updated_at: new Date().toISOString(),
         })
         .eq("user_id", user.id);
@@ -185,7 +226,7 @@ export default function EditProfile() {
   };
 
   return (
-    <div className="min-h-screen bg-white w-full max-w-sm sm:max-w-md mx-auto">
+    <div className="min-h-screen bg-white w-full max-w-sm mx-auto">
       <div className="px-4 py-4 border-b border-b-gray-300">
         <div className="flex items-center">
           {/* LEFT CHEVRON */}
@@ -196,55 +237,117 @@ export default function EditProfile() {
         </div>
       </div>
 
-      <div className="px-4 py-6">
+      <div className="px-5 py-6">
         {/* FORMS */}
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
           {/* AVATAR PHOTO SECTION */}
           <div>
-            <h2 className="text-xl font-semibold mb-4">Photos</h2>
+            <h2 className="text-lg font-semibold mb-2">Photos</h2>
 
-            {/* AVATAR UPDATE */}
-            <div className="flex justify-center">
-              <label className="h-[500px] not-target:aspect-square bg-lightgray/20 rounded-lg overflow-hidden relative">
-                {profileImage ? (
-                  <img
-                    src={profileImage}
-                    alt="Profile"
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <div className="flex flex-col items-center gap-2">
-                      <Camera className="w-8 h-8 text-gray-400" />
-                      <span className="text-sm text-gray-500">Add photo</span>
-                    </div>
-                  </div>
-                )}
-                <input
-                  type="file"
-                  accept="image/*"
-                  ref={fileInputRef}
-                  onChange={handleImageUpload}
-                  className="absolute inset-0 opacity-0"
-                />
-              </label>
-            </div>
-            {profileImage && (
-              <div className="mt-4 flex justify-center">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setProfileImage(null);
-                    if (fileInputRef.current) {
-                      fileInputRef.current.value = "";
-                    }
-                  }}
-                  className="text-sm text-primary hover:text-red-600"
+            {/* MAIN PROFILE PHOTO */}
+            <div className="mb-2">
+              <h3 className="text-sm text-gray-500 mb-2">Main profile photo</h3>
+              <div className="flex justify-center">
+                <label
+                  className="h-[450px] aspect-square bg-lightgray/20 border border-gray-200 rounded-2xl overflow-hidden relative cursor-move shadow-lg"
+                  onMouseDown={handleMouseDown}
+                  onMouseMove={handleMouseMove}
+                  onMouseUp={handleMouseUp}
+                  onMouseLeave={handleMouseUp}
                 >
-                  Remove photo
-                </button>
+                  {profileImage ? (
+                    <img
+                      src={profileImage}
+                      alt="Profile"
+                      className="w-full h-full object-cover rounded-2xl"
+                      style={{
+                        objectPosition: `${imagePosition.x}% ${imagePosition.y}%`,
+                      }}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <div className="flex flex-col items-center gap-2">
+                        <Camera className="w-8 h-8 text-gray-400" />
+                        <span className="text-sm text-gray-500">Add photo</span>
+                      </div>
+                    </div>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    ref={fileInputRef}
+                    onChange={(e) => handleImageUpload(e, false)}
+                    className="absolute inset-0 opacity-0"
+                  />
+                </label>
               </div>
-            )}
+              {profileImage && (
+                <div className="mt-4 flex justify-center gap-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setProfileImage(null);
+                      setImagePosition({ x: 0, y: 0 });
+                      if (fileInputRef.current) {
+                        fileInputRef.current.value = "";
+                      }
+                    }}
+                    className="text-sm text-primary hover:text-red-600"
+                  >
+                    Remove photo
+                  </button>
+                  <span className="text-sm text-gray-500">
+                    Drag to reposition image
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* ADDITIONAL PHOTOS */}
+            <div>
+              <div className="grid grid-cols-3 gap-4">
+                {[...Array(3)].map((_, index) => (
+                  <div key={index} className="relative">
+                    <label className="h-[100px] aspect-square bg-lightgray/20 rounded-lg overflow-hidden relative block">
+                      {additionalImages[index] ? (
+                        <img
+                          src={additionalImages[index]}
+                          alt={`Additional ${index + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <div className="flex flex-col items-center gap-1">
+                            <Camera className="w-6 h-6 text-gray-400" />
+                            <span className="text-xs text-gray-500">
+                              Add photo
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleImageUpload(e, true)}
+                        className="absolute inset-0 opacity-0"
+                      />
+                    </label>
+                    {additionalImages[index] && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveAdditionalImage(index)}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600"
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <h3 className="text-sm text-center text-gray-400 mt-3">
+                Additional photos (up to 3)
+              </h3>
+            </div>
           </div>
 
           {/* DISPLAY NAME */}
@@ -389,11 +492,14 @@ export default function EditProfile() {
                     Height
                   </span>
                 </div>
-                <Input
-                  placeholder="Add"
-                  className="w-2/5 h-auto text-right text-sm text-lightgray border-none shadow-none bg-white"
-                  {...form.register("height")}
-                />
+                <div className="flex justify-end items-center">
+                  <Input
+                    placeholder="Add"
+                    className="w-2/5 h-auto text-right text-sm text-lightgray border-none shadow-none bg-white"
+                    {...form.register("height")}
+                  />
+                  <p className="text-sm text-darkgray pr-4">cm</p>
+                </div>
               </div>
 
               {/* SMOKING FIELD */}

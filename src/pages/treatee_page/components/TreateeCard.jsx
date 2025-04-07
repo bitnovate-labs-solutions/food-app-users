@@ -119,12 +119,12 @@ export default function TreateeCard({ item, onLike, isLiked }) {
       <CardContent className="px-4 pb-3 mt-2">
         <div className="grid grid-cols-3 gap-4">
           <div className="space-y-3 col-span-2">
-            {/* Treaters section */}
+            {/* TREATERS SECTION */}
             <div className="mb-2">
               <div className="flex items-center gap-2 mb-1">
                 <p className="text-sm font-semibold">Treaters</p>
               </div>
-              {/* Avatar stack */}
+              {/* AVATAR STACK */}
               <div
                 className="flex items-center cursor-pointer hover:opacity-80 transition-opacity"
                 onClick={() => setShowTreaters(true)}
@@ -136,7 +136,7 @@ export default function TreateeCard({ item, onLike, isLiked }) {
                       className="relative w-10 h-10 rounded-xl bg-gray-200 border-2 border-white overflow-hidden"
                     >
                       <img
-                        src={user.avatar_url}
+                        src={user.user_profile_images?.[0].image_url}
                         alt={user.display_name}
                         className="w-full h-full object-cover"
                       />
@@ -201,6 +201,7 @@ export default function TreateeCard({ item, onLike, isLiked }) {
         </div>
       </CardContent>
 
+      {/* PACKAGE DETAILS */}
       <TreateeDetails
         item={item}
         isOpen={showDetails}
@@ -209,6 +210,7 @@ export default function TreateeCard({ item, onLike, isLiked }) {
         isLiked={isLiked}
       />
 
+      {/* TREATER LIST MODAL */}
       <TreatersModal
         isOpen={showTreaters}
         onClose={() => setShowTreaters(false)}

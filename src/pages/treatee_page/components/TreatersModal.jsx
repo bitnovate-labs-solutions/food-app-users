@@ -65,7 +65,7 @@ export default function TreatersModal({ isOpen, onClose, users }) {
                   <div className="flex items-center gap-4">
                     <div className="h-12 w-12 rounded-full overflow-hidden">
                       <ImageWithFallback
-                        src={user.avatar_url}
+                        src={user.user_profile_images?.[0].image_url}
                         alt={user.display_name}
                         className="w-full h-full object-cover"
                       />

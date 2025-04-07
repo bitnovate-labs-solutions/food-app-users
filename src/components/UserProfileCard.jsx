@@ -32,16 +32,18 @@ export default function UserProfileCard({
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
-  console.log(user);
-
   // Reset mainImageIndex when user changes
   useEffect(() => {
     setMainImageIndex(0);
   }, [user]);
 
   // Combine avatar with additional images
-  const images = [user.avatar, ...(user.additional_images || [])];
+  const images = [
+    user.user_profile_images?.[0].image_url,
+    ...(user.additional_images || []),
+  ];
 
+  // TOGGLE DETAILS
   const toggleDetails = () => {
     setIsDetailsShown(!isDetailsShown);
     if (onShowDetails) {
@@ -104,7 +106,7 @@ export default function UserProfileCard({
 
             {/* USER NAME, AGE */}
             <div className="flex absolute bottom-22 left-6 text-white text-2xl font-bold">
-              <p>{user.name || "-"}</p>
+              <p>{user.display_name || "-"}</p>
               <span>,</span>
               <p className="ml-2">{user.age || "-"}</p>
             </div>
@@ -196,19 +198,19 @@ export default function UserProfileCard({
               </div>
 
               {/* ABOUT ME SECTION */}
-              <div className="space-y-4">
+              <div className="space-y-4 mb-6">
                 <h3 className="text-lg font-bold">About Me</h3>
                 <p className="text-gray-600">
-                  {user.about || "No description available"}
+                  {user.about_me || "No description available"}
                 </p>
               </div>
 
               {/* MY DETAILS SECTION */}
-              <div className="space-y-4">
+              <div className="space-y-4 mb-6">
                 <h3 className="text-lg font-bold">My Details</h3>
                 <div className="space-y-4">
                   {/* Education */}
-                  <div className="flex justify-between">
+                  <div className="flex items-center justify-between">
                     <div className="flex items-center">
                       <GraduationCap className="w-4 h-4 mr-4 text-darkgray" />
                       <span className="text-base font-semibold text-darkgray">
@@ -314,7 +316,7 @@ export default function UserProfileCard({
               </div>
 
               {/* INTERESTS SECTION */}
-              <div className="space-y-4">
+              <div className="space-y-4 mb-6">
                 <h3 className="text-lg font-bold">I enjoy</h3>
                 {user.interests?.length > 0 ? (
                   <div className="flex flex-wrap gap-2">

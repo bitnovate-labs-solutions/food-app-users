@@ -17,8 +17,6 @@ export default function Menu() {
 
   const { data: purchaseItems, isLoading, error } = usePurchasedItems();
 
-  // console.log(purchaseItems);
-
   // LOADING AND ERROR HANDLERS
   if (isLoading) return <LoadingComponent type="screen" text="Loading..." />;
   if (error) return <ErrorComponent message={error.message} />;

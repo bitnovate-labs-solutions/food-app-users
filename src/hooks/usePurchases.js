@@ -41,7 +41,16 @@ const getPurchases = async () => {
   const userIds = purchases.map((purchase) => purchase.user_id);
   const { data: userProfiles, error: profilesError } = await supabase
     .from("user_profiles")
-    .select("*")
+    .select(
+      `
+      *,
+        user_profile_images!inner(
+          id, 
+          image_url,
+          is_primary
+        )
+      `
+    )
     .in("user_id", userIds);
 
   if (profilesError) throw new Error(profilesError.message);

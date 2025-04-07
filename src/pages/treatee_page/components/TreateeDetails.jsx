@@ -25,7 +25,7 @@ export default function TreateeDetails({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[600px] bg-white border-none shadow-xl rounded-2xl max-h-[90vh] overflow-y-auto pb-8">
         <DialogHeader>
-          <DialogTitle className="font-bold">
+          <DialogTitle className="text-base font-bold">
             {item?.purchase_items?.[0].menu_packages?.name}
           </DialogTitle>
         </DialogHeader>

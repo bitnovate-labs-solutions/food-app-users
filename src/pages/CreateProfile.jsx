@@ -144,10 +144,12 @@ export default function CreateProfile() {
 
       if (metadataError) throw metadataError;
 
-      // Then update profile
+      // Then create/update profile
       const { data: profile, error } = await supabase
         .from("user_profiles")
-        .update({
+        .upsert({
+          user_id: user.id,
+          email: user.email,
           role: selectedRole,
           age: parseInt(data.age),
           about_me: data.about_me,
@@ -165,12 +167,31 @@ export default function CreateProfile() {
           interests: selectedInterests,
           languages: selectedLanguages,
           social_links: data.social_links,
-          avatar_url: profileImage,
           updated_at: new Date().toISOString(),
+        }, {
+          onConflict: 'user_id'
         })
-        .eq("user_id", user.id);
+        .select()
+        .single();
 
       if (error) throw error;
+
+      // Handle profile image if exists
+      if (profileImage) {
+        const { error: imageError } = await supabase
+          .from("user_profile_images")
+          .insert({
+            user_profile_id: profile.id,
+            image_url: profileImage,
+            is_primary: true,
+            position: { x: 50, y: 50 },
+            order: 0,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          });
+
+        if (imageError) throw imageError;
+      }
 
       console.log(
         "Profile updated successfully, redirecting to:",
@@ -476,13 +497,13 @@ export default function CreateProfile() {
                     Height
                   </span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center justify-end">
                   <Input
                     placeholder="Add"
                     className="w-2/5 h-auto text-right text-sm text-lightgray border-none shadow-none bg-white"
                     {...form.register("height")}
                   />
-                  cm
+                  <p className="text-sm text-lightgray mr-1">cm</p>
                 </div>
               </div>
 

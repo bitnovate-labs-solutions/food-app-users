@@ -5,7 +5,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 const getInterestedUsers = async (purchaseId) => {
   const { data, error } = await supabase
     .from("purchase_interests")
-    .select(`
+    .select(
+      `
       *,
       treatee:user_profiles!inner(
         *,
@@ -15,46 +16,51 @@ const getInterestedUsers = async (purchaseId) => {
           is_primary
         )
       )
-    `)
-    .eq("purchase_id", purchaseId)
+    `
+    )
+    // .eq("purchase_id", purchaseId)
     .order("expressed_at", { ascending: false });
 
   if (error) throw error;
+  console.log(data);
   return data;
 };
 
 // Express interest in a purchase
 const expressInterest = async ({ purchaseId, treateeId }) => {
-  console.log('Attempting to express interest:', { purchaseId, treateeId });
-  
+  console.log("Attempting to express interest:", { purchaseId, treateeId });
+
   // Get the current user
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
   if (authError) {
-    console.error('Auth error:', authError);
+    console.error("Auth error:", authError);
     throw authError;
   }
-  console.log('Authenticated user:', user.id);
+  console.log("Authenticated user:", user.id);
 
   // Verify the user's profile
   const { data: userProfile, error: profileError } = await supabase
-    .from('user_profiles')
-    .select('id, role')
-    .eq('user_id', user.id)
+    .from("user_profiles")
+    .select("id, role")
+    .eq("user_id", user.id)
     .single();
 
   if (profileError) {
-    console.error('Error fetching user profile:', profileError);
+    console.error("Error fetching user profile:", profileError);
     throw profileError;
   }
-  console.log('User profile:', userProfile);
+  console.log("User profile:", userProfile);
 
   // Verify the treatee_id matches the user's profile
   if (userProfile.id !== treateeId) {
-    console.error('Treatee ID mismatch:', {
+    console.error("Treatee ID mismatch:", {
       userProfileId: userProfile.id,
-      treateeId: treateeId
+      treateeId: treateeId,
     });
-    throw new Error('Treatee ID does not match user profile');
+    throw new Error("Treatee ID does not match user profile");
   }
 
   // Now attempt to insert the interest
@@ -63,13 +69,13 @@ const expressInterest = async ({ purchaseId, treateeId }) => {
     .insert({
       purchase_id: purchaseId,
       treatee_id: treateeId,
-      status: "pending"
+      status: "pending",
     })
     .select()
     .single();
 
   if (error) {
-    console.error('Error expressing interest:', error);
+    console.error("Error expressing interest:", error);
     throw error;
   }
 
@@ -96,4 +102,4 @@ export const useExpressInterest = () => {
       queryClient.invalidateQueries(["purchasedItems"]);
     },
   });
-}; 
+};

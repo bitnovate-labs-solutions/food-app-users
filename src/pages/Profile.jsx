@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
 // import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
@@ -30,6 +30,7 @@ import {
   Edit,
 } from "lucide-react";
 import { ProfileSkeleton } from "@/components/LoadingSkeleton";
+import ImageViewerModal from "@/components/ImageViewerModal";
 
 // ASSETS
 import defaultImage from "@/assets/images/default-avatar.jpg";
@@ -45,6 +46,9 @@ function UserProfile() {
     profile?.user_profile_images?.[0].image_url
   );
 
+  const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+
   if (isLoading) return <ProfileSkeleton />;
   if (error) return <ErrorFallback error={error} />;
 
@@ -57,10 +61,42 @@ function UserProfile() {
     });
   };
 
+  const handlePreviousImage = () => {
+    setSelectedImageIndex((prev) => (prev > 0 ? prev - 1 : prev));
+  };
+
+  const handleNextImage = () => {
+    setSelectedImageIndex((prev) =>
+      prev < (profile?.user_profile_images?.length || 0) - 1 ? prev + 1 : prev
+    );
+  };
+
+  const openImageViewer = (index) => {
+    setSelectedImageIndex(index);
+    setIsImageViewerOpen(true);
+  };
+
   return (
     <div>
       <Card className="bg-white border-none rounded-none pb-20">
         <CardContent className="space-y-4 p-5">
+          {/* HEADER TITLE */}
+          <CardTitle className="text-lg font-semibold text-gray-600">
+            Hello, {profile?.display_name || "User"}
+          </CardTitle>
+
+          {/* CODE FOR FUTURE POTENTIAL USE ------------------------------------- */}
+          {/* 
+            <div className="flex justify-center">
+              <h6 className="text-center text-sm font-bold text-darkgray">
+                User ID:
+              </h6>
+              <span className="text-sm text-gray-400 ml-2">
+                {profile?.user_id.slice(0, 8)}
+              </span>
+            </div> */}
+          {/* ------------------------------------------------------------------- */}
+
           {/* PROFILE IMAGE */}
           <div className="h-[450px] w-full relative">
             {/* IMAGE */}
@@ -119,27 +155,32 @@ function UserProfile() {
                 onClick={() => navigate("/edit-profile")}
               />
             </div>
-
-            <p className="text-xs text-center text-darkgray mt-4">
-              This is how your profile will appear in the swipe view
-            </p>
           </div>
 
-          {/* HEADER TITLE */}
-          <CardHeader className="border border-gray-100 shadow-xl rounded-2xl py-5 mt-14">
-            <CardTitle className="text-lg text-center font-semibold text-gray-800">
-              Hello, {profile?.display_name || "User"}!
-            </CardTitle>
-
-            <div className="flex justify-center">
-              <h6 className="text-center text-sm font-bold text-darkgray">
-                User ID:
-              </h6>
-              <span className="text-sm text-gray-400 ml-2">
-                {profile?.user_id.slice(0, 8)}
-              </span>
+          {/* ADDITIONAL PHOTOS THUMBNAILS */}
+          {profile?.user_profile_images?.length > 1 && (
+            <div className="mt-4">
+              <h3 className="text-lg font-bold mb-4">Additional Photos</h3>
+              <div className="grid grid-cols-3 gap-4">
+                {profile.user_profile_images
+                  .filter((img) => !img.is_primary)
+                  .sort((a, b) => a.order - b.order)
+                  .map((image, index) => (
+                    <div 
+                      key={index} 
+                      className="relative aspect-square cursor-pointer"
+                      onClick={() => openImageViewer(index + 1)} // +1 because we skip the primary image
+                    >
+                      <img
+                        src={image.image_url}
+                        alt={`Additional photo ${index + 1}`}
+                        className="w-full h-full rounded-lg object-cover border border-gray-200 shadow-md hover:shadow-lg transition-shadow"
+                      />
+                    </div>
+                  ))}
+              </div>
             </div>
-          </CardHeader>
+          )}
 
           <div className="space-y-4 mt-8">
             {/* ABOUT ME SECTION -------------------- */}
@@ -384,6 +425,16 @@ function UserProfile() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Image Viewer Modal */}
+      <ImageViewerModal
+        isOpen={isImageViewerOpen}
+        onClose={() => setIsImageViewerOpen(false)}
+        images={profile?.user_profile_images?.map(img => img.image_url) || []}
+        currentImageIndex={selectedImageIndex}
+        onPrevious={handlePreviousImage}
+        onNext={handleNextImage}
+      />
     </div>
   );
 }

@@ -38,10 +38,9 @@ export default function UserProfileCard({
   }, [user]);
 
   // Combine avatar with additional images
-  const images = [
-    user.user_profile_images?.[0].image_url,
-    ...(user.additional_images || []),
-  ];
+  const images = user.user_profile_images
+    ?.sort((a, b) => a.order - b.order)
+    ?.map(img => img.image_url) || [];
 
   // TOGGLE DETAILS
   const toggleDetails = () => {

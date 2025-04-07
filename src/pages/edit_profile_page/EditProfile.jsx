@@ -110,7 +110,12 @@ export default function EditProfile() {
         },
       });
       setProfileImage(profile?.user_profile_images?.[0]?.image_url);
-      setAdditionalImages(profile.user_profile_images || []);
+      // Set additional images from non-primary images
+      const additionalImages = profile.user_profile_images
+        ?.filter(img => !img.is_primary)
+        ?.sort((a, b) => a.order - b.order)
+        ?.map(img => img.image_url) || [];
+      setAdditionalImages(additionalImages);
       setSelectedInterests(profile.interests || []);
       setSelectedLanguages(profile.languages || []);
     }
@@ -179,7 +184,8 @@ export default function EditProfile() {
   const onSubmit = async (data) => {
     setIsLoading(true);
     try {
-      const { error } = await supabase
+      // First update the user profile
+      const { data: profileData, error: profileError } = await supabase
         .from("user_profiles")
         .update({
           display_name: data.display_name,
@@ -199,14 +205,52 @@ export default function EditProfile() {
           interests: selectedInterests,
           languages: selectedLanguages,
           social_links: data.social_links,
-          avatar_url: profileImage,
-          image_position: imagePosition,
-          additional_images: additionalImages,
           updated_at: new Date().toISOString(),
         })
-        .eq("user_id", user.id);
+        .eq("user_id", user.id)
+        .select()
+        .single();
 
-      if (error) throw error;
+      if (profileError) throw profileError;
+
+      // Handle profile images
+      if (profileImage) {
+        // Delete existing images
+        const { error: deleteError } = await supabase
+          .from("user_profile_images")
+          .delete()
+          .eq("user_profile_id", profileData.id);
+
+        if (deleteError) throw deleteError;
+
+        // Insert new images
+        const imagesToInsert = [
+          { 
+            user_profile_id: profileData.id, 
+            image_url: profileImage, 
+            is_primary: true,
+            position: imagePosition,
+            order: 0,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          },
+          ...additionalImages.map((url, index) => ({
+            user_profile_id: profileData.id,
+            image_url: url,
+            is_primary: false,
+            position: { x: 0, y: 0 },
+            order: index + 1,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }))
+        ];
+
+        const { error: insertError } = await supabase
+          .from("user_profile_images")
+          .insert(imagesToInsert);
+
+        if (insertError) throw insertError;
+      }
 
       // Invalidate profile cache to trigger a refetch
       await queryClient.invalidateQueries(["profile", user.id]);

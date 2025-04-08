@@ -110,6 +110,7 @@ const Connect = () => {
   const [mainImageIndex, setMainImageIndex] = useState(0);
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [dragStart, setDragStart] = useState(0);
 
   // HOOKS
   const { data: potentialMatches, isLoading } = usePotentialMatches(
@@ -196,9 +197,6 @@ const Connect = () => {
     },
     preventDefaultTouchmoveEvent: true,
     trackMouse: true,
-    delta: 10, // Minimum distance before a swipe is detected
-    trackTouch: true,
-    rotationAngle: 0,
   });
 
   const handleStartSwiping = () => {
@@ -206,16 +204,30 @@ const Connect = () => {
     localStorage.setItem("hasSeenConnectInstructions", "true");
   };
 
+  const handleDragStart = (event, info) => {
+    setDragStart(info.point.x);
+  };
+
+  const handleDragEnd = (event, info) => {
+    const dragDistance = info.point.x - dragStart;
+    const threshold = 100; // minimum distance to trigger swipe
+
+    if (dragDistance > threshold) {
+      handleSwipe("right");
+    } else if (dragDistance < -threshold) {
+      handleSwipe("left");
+    }
+  };
+
   // LOADING HANDLER
   if (isLoading) {
     return <LoadingComponent type="screen" text="Loading..." />;
   }
 
-  // NO DATA DISPLAY CARD (either if not current user or no more users to display)
   if (!currentUser) {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-gray-100">
-        <div className="max-w-md w-full mx-6 bg-white rounded-2xl shadow-xl p-8 text-center space-y-6">
+        <div className="max-w-md w-full mx-6 bg-white rounded-2xl shadow-lg p-8 text-center space-y-6">
           <div className="space-y-4">
             <div className="w-24 h-24 mx-auto bg-primary/10 rounded-full flex items-center justify-center">
               <User className="w-12 h-12 text-primary" />
@@ -224,8 +236,7 @@ const Connect = () => {
               No More Profiles to Show
             </h2>
             <p className="text-gray-600">
-              You&apos;ve seen all potential matches for now. Check back later
-              for new profiles!
+              You've seen all potential matches for now. Check back later for new profiles!
             </p>
           </div>
 
@@ -235,17 +246,11 @@ const Connect = () => {
               <span>New profiles are added regularly</span>
             </div>
             <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
-              <div
-                className="w-2 h-2 bg-primary rounded-full animate-pulse"
-                style={{ animationDelay: "0.2s" }}
-              />
+              <div className="w-2 h-2 bg-primary rounded-full animate-pulse" style={{ animationDelay: '0.2s' }} />
               <span>Keep your profile updated for better matches</span>
             </div>
             <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
-              <div
-                className="w-2 h-2 bg-primary rounded-full animate-pulse"
-                style={{ animationDelay: "0.4s" }}
-              />
+              <div className="w-2 h-2 bg-primary rounded-full animate-pulse" style={{ animationDelay: '0.4s' }} />
               <span>Check your matches in the messages section</span>
             </div>
           </div>
@@ -253,7 +258,7 @@ const Connect = () => {
           <div className="pt-4">
             <Button
               size="lg"
-              className="w-full bg-primary hover:bg-primary/90 text-white shadow-lg"
+              className="w-full bg-primary hover:bg-primary/90 text-white shadow-lg hover:shadow-xl transition-all duration-200"
               onClick={() => window.location.reload()}
             >
               Check for New Matches
@@ -278,26 +283,36 @@ const Connect = () => {
             <AnimatePresence mode="wait">
               <motion.div
                 key={currentUser?.user_id}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
+                initial={{
+                  scale: 0.95,
+                  opacity: 0,
+                  x: direction * 1000,
+                  rotate: direction * 45,
+                }}
+                animate={{
+                  scale: 1,
+                  opacity: 1,
+                  x: 0,
+                  rotate: 0,
+                }}
+                exit={{
+                  scale: 0.95,
+                  opacity: 0,
+                  x: direction * 1000,
+                  rotate: direction * 45,
+                }}
+                transition={{
+                  type: "spring",
+                  stiffness: 300,
+                  damping: 30,
+                  mass: 0.5,
+                }}
                 drag="x"
                 dragConstraints={{ left: 0, right: 0 }}
-                dragElastic={0}
-                dragMomentum={false}
-                onDragEnd={(event, info) => {
-                  if (isSwiping) return; // Prevent multiple swipes
-
-                  const threshold = 100;
-                  const offset = info.offset.x;
-
-                  if (offset > threshold) {
-                    handleSwipe("right");
-                  } else if (offset < -threshold) {
-                    handleSwipe("left");
-                  }
-                }}
+                dragElastic={0.8}
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
+                whileDrag={{ scale: 0.95 }}
               >
                 <Card className="overflow-hidden border-none shadow-2xl rounded-2xl">
                   {/* PROFILE IMAGE */}

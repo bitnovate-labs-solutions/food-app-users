@@ -82,8 +82,7 @@ const Connect = () => {
             Oops! Something went wrong
           </h2>
           <p className="text-gray-600 mb-6">
-            We&apos;re having trouble loading profiles. Please try again
-            later.
+            We&apos;re having trouble loading profiles. Please try again later.
           </p>
           <Button
             onClick={() => window.location.reload()}
@@ -150,33 +149,25 @@ const Connect = () => {
   }
 
   return (
-    <div className="fixed inset-0 bg-gradient-to-b from-gray-50 to-white pt-16">
-      <div className="relative h-full max-w-md mx-auto px-4 flex flex-col">
-        {/* Profile Card Container */}
-        <div className="absolute inset-0 flex items-center justify-center px-4 pt-4 pb-24">
-          <div className="w-full">
-            <UserProfileCard
-              key={potentialMatches[currentIndex]?.id}
-              user={potentialMatches[currentIndex]}
-              onNext={handleNext}
-              onPrevious={handlePrevious}
-              showPreviousButton={currentIndex > 0}
-              showNextButton={currentIndex < potentialMatches.length - 1}
-              enableSwipe={true}
-              onSwipeLeft={handleNext}
-              onSwipeRight={handlePrevious}
-            />
-          </div>
-        </div>
-
-        {/* Navigation Hints */}
-        <div className="fixed bottom-6 left-4 right-4 max-w-md mx-auto">
-          <div className="grid grid-cols-2 gap-4 text-center text-xs">
-            <div className="p-3 bg-white/80 backdrop-blur-sm rounded-xl shadow-sm border border-gray-100">
-              <p className="text-gray-600">← Swipe right for previous</p>
-            </div>
-            <div className="p-3 bg-white/80 backdrop-blur-sm rounded-xl shadow-sm border border-gray-100">
-              <p className="text-gray-600">Swipe left for next →</p>
+    <div className="fixed inset-0 bg-gradient-to-b from-gray-50 to-white">
+      {/* Main Container */}
+      <div className="relative h-full max-w-md mx-auto">
+        {/* Scrollable Container */}
+        <div className="absolute inset-0 overflow-y-auto px-4">
+          {/* Card Container - Centered */}
+          <div className="min-h-full flex items-center justify-center pb-4">
+            <div className="w-full">
+              <UserProfileCard
+                key={potentialMatches[currentIndex]?.id}
+                user={potentialMatches[currentIndex]}
+                onNext={handleNext}
+                onPrevious={handlePrevious}
+                showPreviousButton={currentIndex > 0}
+                showNextButton={currentIndex < potentialMatches.length - 1}
+                enableSwipe={true}
+                onSwipeLeft={handleNext}
+                onSwipeRight={handlePrevious}
+              />
             </div>
           </div>
         </div>

@@ -1,4 +1,4 @@
-// Custom hook
+// Custom hook (For fetching a SINGLE USER)
 // More efficient for performance as:
 // React Query automatically caches the profile data - reduces server load by reusing cached data,
 // Deduplication - prevents redundant API calls (multiple requests for the same data),

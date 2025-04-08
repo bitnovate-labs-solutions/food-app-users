@@ -8,7 +8,7 @@ import { ErrorFallback } from "@/components/ErrorFallback";
 import { ErrorBoundary } from "react-error-boundary";
 
 // COMPONENTS
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Mail,

@@ -23,7 +23,7 @@ import { toast } from "sonner";
 import LoadingComponent from "./LoadingComponent";
 import ErrorComponent from "./ErrorComponent";
 
-export default function AppHeader({ title, isHomePage, isProfilePage }) {
+export default function AppHeader({ title, subtitle, isHomePage, isProfilePage }) {
   const { signOut, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -125,6 +125,11 @@ export default function AppHeader({ title, isHomePage, isProfilePage }) {
             <h1 className="text-base font-semibold mb-4 text-center text-gray-800">
               {title}
             </h1>
+            {subtitle && (
+              <div className="flex justify-center">
+                {subtitle}
+              </div>
+            )}
           </div>
 
           {/* RIGHT SIDE BUTTONS -------------------- */}
@@ -188,6 +193,7 @@ export default function AppHeader({ title, isHomePage, isProfilePage }) {
             )}
           </div>
         </div>
+
         {/* PAGE TABS -------------------- */}
         <div className="space-y-2">
           {/* Only show TabList and filters if isProfilePage is false and user is authenticated */}

@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ImageViewerModal from "./ImageViewerModal";
+import { useLocation } from "react-router-dom";
 
 export default function UserProfileCard({
   user,
@@ -35,6 +36,8 @@ export default function UserProfileCard({
   const [dragStart, setDragStart] = useState(0);
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+
+  const location = useLocation();
 
   // Reset mainImageIndex when user changes
   useEffect(() => {
@@ -112,7 +115,11 @@ export default function UserProfileCard({
           onDragEnd={handleDragEnd}
           whileDrag={{ scale: 0.95 }}
         >
-          <div className="h-[620px] w-full relative">
+          <div
+            className={`w-full relative ${
+              location.pathname === "/connect" ? "h-[580px]" : "h-[620px]"
+            }`}
+          >
             <div className="w-full h-full overflow-hidden">
               <ImageWithFallback
                 src={images[mainImageIndex]}

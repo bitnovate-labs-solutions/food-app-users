@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
@@ -11,6 +11,7 @@ export default function Layout({ title }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
+  const [subtitle, setSubtitle] = useState(null);
 
   // Define page routes for Header
   const isHomePage =
@@ -65,11 +66,12 @@ export default function Layout({ title }) {
         isHomePage={isHomePage}
         isProfilePage={isProfilePage}
         title={title}
+        subtitle={subtitle}
       />
 
       {/* OUTLET - placeholder for rendering child routes (Page content goes here!) */}
       <main className={`flex-1 pt-14 ${isHomePage ? "px-3 pt-33" : "p-0"}`}>
-        <Outlet />
+        <Outlet context={{ setSubtitle }} />
       </main>
 
       {/* BOTTOM NAVIGATION BAR */}

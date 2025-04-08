@@ -1,16 +1,18 @@
 import { supabase } from "@/lib/supabase";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-// Get interested users for a purchase
+// Get interested users for a purchase (Fetches all users interested in a specific purchase)
+// - Gets their profile information and images
+// - Orders by most recent interest first
 const getInterestedUsers = async (purchaseId) => {
   const { data, error } = await supabase
     .from("purchase_interests")
     .select(
       `
       *,
-      treatee:user_profiles!inner(
+      treatee:user_profiles!purchase_interests_treatee_id_fkey(
         *,
-        user_profile_images!inner(
+        user_profile_images(
           id,
           image_url,
           is_primary
@@ -18,28 +20,21 @@ const getInterestedUsers = async (purchaseId) => {
       )
     `
     )
-    // .eq("purchase_id", purchaseId)
+    .eq("purchase_id", purchaseId)
     .order("expressed_at", { ascending: false });
 
   if (error) throw error;
-  console.log(data);
-  return data;
+  return data || []; // Returns empty array if no data found
 };
 
-// Express interest in a purchase
+// Express interest in a purchase (Handles when a user expresses interest in a purchase)
 const expressInterest = async ({ purchaseId, treateeId }) => {
-  console.log("Attempting to express interest:", { purchaseId, treateeId });
-
-  // Get the current user
+  // Get the current user (Verifies the user is logged in)
   const {
     data: { user },
     error: authError,
   } = await supabase.auth.getUser();
-  if (authError) {
-    console.error("Auth error:", authError);
-    throw authError;
-  }
-  console.log("Authenticated user:", user.id);
+  if (authError) throw authError;
 
   // Verify the user's profile
   const { data: userProfile, error: profileError } = await supabase
@@ -48,22 +43,14 @@ const expressInterest = async ({ purchaseId, treateeId }) => {
     .eq("user_id", user.id)
     .single();
 
-  if (profileError) {
-    console.error("Error fetching user profile:", profileError);
-    throw profileError;
-  }
-  console.log("User profile:", userProfile);
+  if (profileError) throw profileError;
 
-  // Verify the treatee_id matches the user's profile
+  // Verify the treatee_id matches the user's profile (Checks if the user's profile matches)
   if (userProfile.id !== treateeId) {
-    console.error("Treatee ID mismatch:", {
-      userProfileId: userProfile.id,
-      treateeId: treateeId,
-    });
     throw new Error("Treatee ID does not match user profile");
   }
 
-  // Now attempt to insert the interest
+  // Insert the interest (Creates a new interest record)
   const { data, error } = await supabase
     .from("purchase_interests")
     .insert({
@@ -74,14 +61,11 @@ const expressInterest = async ({ purchaseId, treateeId }) => {
     .select()
     .single();
 
-  if (error) {
-    console.error("Error expressing interest:", error);
-    throw error;
-  }
-
-  return data;
+  if (error) throw error;
+  return data; // Returns the created record
 };
 
+// React query hook to fetch interested users (for Treaters to see who's interested in their purchase)
 export const useInterestedUsers = (purchaseId) => {
   return useQuery({
     queryKey: ["interestedUsers", purchaseId],
@@ -90,16 +74,16 @@ export const useInterestedUsers = (purchaseId) => {
   });
 };
 
+// React query hook to express interest (to let a Treatee show interest in a Treater's purchase)
 export const useExpressInterest = () => {
   const queryClient = useQueryClient();
 
+  // Handles the mutation (data change)
   return useMutation({
     mutationFn: expressInterest,
     onSuccess: (data, variables) => {
-      // Invalidate the interested users query for this purchase
-      queryClient.invalidateQueries(["interestedUsers", variables.purchaseId]);
-      // Also invalidate the purchases query to update the interested count
-      queryClient.invalidateQueries(["purchasedItems"]);
+      queryClient.invalidateQueries(["interestedUsers", variables.purchaseId]); // After success, refreshes the interested users list
+      queryClient.invalidateQueries(["purchasedItems"]); // Also refreshes the purchases list to update counts
     },
   });
 };

@@ -21,54 +21,27 @@ function PurchaseList() {
 
   // Process and group purchase items by menu package
   const processedItems =
-    purchasedItems?.reduce((acc, purchase) => {
-      purchase.purchase_items.forEach((item) => {
-        const menuPackageId = item.menu_packages.id;
-        const existingItem = acc.find((i) => i.menuPackageId === menuPackageId);
+    purchasedItems?.map((item) => {
+      const purchaseItem = item.purchase_items?.[0];
 
-        if (existingItem) {
-          // Update existing item
-          existingItem.purchase_items[0].quantity += item.quantity;
-          // Add this purchase ID to the list if it's not already included
-          if (!existingItem.purchaseIds.includes(purchase.id)) {
-            existingItem.purchaseIds.push(purchase.id);
-          }
-          // Add individual QR codes for each quantity
-          for (let i = 0; i < item.quantity; i++) {
-            existingItem.qrCodes.push({
-              code: `${purchase.id}-${menuPackageId}-${
-                existingItem.qrCodes.length + i
-              }`,
-              purchaseId: purchase.id,
-              used: false,
-            });
-          }
-        } else {
-          // Create new grouped item with QR codes
-          const qrCodes = Array.from({ length: item.quantity }, (_, i) => ({
-            code: `${purchase.id}-${menuPackageId}-${i}`,
-            purchaseId: purchase.id,
-            used: false,
-          }));
+      // Generate QR codes based on quantity
+      const qrCodes = Array.from(
+        { length: purchaseItem?.quantity || 0 },
+        (_, index) => ({
+          id: `${purchaseItem?.id}-${index}`,
+          code: `${purchaseItem?.id}-${index}`,
+          used: purchaseItem?.used || false,
+        })
+      );
 
-          acc.push({
-            id: `${purchase.id}-${menuPackageId}`,
-            menuPackageId,
-            purchaseIds: [purchase.id],
-            created_at: purchase.created_at,
-            interested_count: purchase.interested_count,
-            purchase_items: [
-              {
-                ...item,
-                quantity: item.quantity,
-              },
-            ],
-            qrCodes,
-          });
-        }
-      });
-      return acc;
-    }, []) || [];
+      return {
+        ...item,
+        id: item.id,
+        purchaseIds: [item.id],
+        menuPackageId: purchaseItem?.menu_packages?.id,
+        qrCodes: qrCodes,
+      };
+    }) || [];
 
   // Find the selected item from processed items
   const selectedProcessedItem = processedItems.find(
@@ -93,7 +66,6 @@ function PurchaseList() {
               (item) =>
                 item.menu_packages.id === selectedProcessedItem.menuPackageId
             ),
-          // Add the current QR code and total available
           currentQRCode: selectedProcessedItem.qrCodes[selectedQRIndex]?.code,
           totalQRCodes: selectedProcessedItem.qrCodes.length,
           unusedQRCodes: selectedProcessedItem.qrCodes.filter((qr) => !qr.used)

@@ -1,34 +1,39 @@
+import { useState } from "react";
+
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Card } from "@/components/ui/card";
 import { Users, MessageCircle } from "lucide-react";
 import ImageWithFallback from "@/components/ImageWithFallback";
-import { useState } from "react";
 import UserProfileCard from "@/components/UserProfileCard";
 import { Button } from "@/components/ui/button";
 
 export default function TreatersModal({ isOpen, onClose, users }) {
   const [selectedUser, setSelectedUser] = useState(null);
-  const [selectedUserIndex, setSelectedUserIndex] = useState(null);
   const [isDetailsShown, setIsDetailsShown] = useState(false);
 
   // HANDLE SWIPE LEFT
   const handleSwipeLeft = () => {
-    if (selectedUserIndex < users.length - 1) {
-      setSelectedUserIndex(selectedUserIndex + 1);
-      setSelectedUser(users[selectedUserIndex + 1]);
+    const currentIndex = users.findIndex(
+      (user) => user.id === selectedUser?.id
+    );
+    if (currentIndex < users.length - 1) {
+      setSelectedUser(users[currentIndex + 1]);
     }
   };
 
   // HANDLE SWIPE RIGHT
   const handleSwipeRight = () => {
-    if (selectedUserIndex > 0) {
-      setSelectedUserIndex(selectedUserIndex - 1);
-      setSelectedUser(users[selectedUserIndex - 1]);
+    const currentIndex = users.findIndex(
+      (user) => user.id === selectedUser?.id
+    );
+    if (currentIndex > 0) {
+      setSelectedUser(users[currentIndex - 1]);
     }
   };
 
@@ -41,6 +46,9 @@ export default function TreatersModal({ isOpen, onClose, users }) {
             <DialogTitle className="text-primary text-sm font-medium">
               Treaters
             </DialogTitle>
+            <DialogDescription className="sr-only">
+              List of treaters who have purchased this package
+            </DialogDescription>
           </DialogHeader>
 
           {/* MODAL CONTENT */}
@@ -52,14 +60,11 @@ export default function TreatersModal({ isOpen, onClose, users }) {
                 <p className="text-xs text-gray-400">Check back later!</p>
               </div>
             ) : (
-              users.map((user, index) => (
+              users.map((user) => (
                 <Card
                   key={user.id}
                   className="h-[88px] p-4 border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200"
-                  onClick={() => {
-                    setSelectedUser(user);
-                    setSelectedUserIndex(index);
-                  }}
+                  onClick={() => setSelectedUser(user)}
                 >
                   <div className="flex items-center gap-4">
                     <div className="h-14 w-14 rounded-lg overflow-hidden">
@@ -102,12 +107,14 @@ export default function TreatersModal({ isOpen, onClose, users }) {
         </DialogContent>
       </Dialog>
 
-      {/* User Profile Dialog */}
+      {/* USER PROFILE MODAL --------------------------------------------------- */}
       <Dialog
         open={!!selectedUser}
-        onOpenChange={() => {
-          setSelectedUser(null);
-          setSelectedUserIndex(null);
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedUser(null);
+            setIsDetailsShown(false);
+          }
         }}
       >
         <DialogContent
@@ -115,12 +122,22 @@ export default function TreatersModal({ isOpen, onClose, users }) {
             isDetailsShown ? "max-h-[95vh] overflow-y-auto" : ""
           }`}
         >
+          {/* THIS IS NOT VISIBLE BUT A REQUIRED */}
+          <DialogTitle className="sr-only">
+            {selectedUser?.display_name}&apos;s Profile
+          </DialogTitle>
+          {/* THIS IS NOT VISIBLE BUT A REQUIRED */}
+          <DialogDescription className="sr-only">
+            View and interact with {selectedUser?.display_name}&apos;s profile
+            details
+          </DialogDescription>
           {selectedUser && (
             <UserProfileCard
               user={selectedUser}
               onShowDetails={setIsDetailsShown}
               onSwipeLeft={handleSwipeLeft}
               onSwipeRight={handleSwipeRight}
+              onClose={() => setSelectedUser(null)}
             />
           )}
         </DialogContent>

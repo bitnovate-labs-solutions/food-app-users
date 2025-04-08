@@ -5,6 +5,8 @@ import { useCuisineTypeEnum, useFoodCategoryEnum } from "@/hooks/useEnumValues";
 import { useFilters } from "@/context/FilterContext";
 import { version } from "../../package.json";
 import { useUserProfile } from "@/hooks/useUserProfile";
+import { useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 
 // COMPONENTS
 import { ChevronDown, LogOut, Settings2, RefreshCw } from "lucide-react";
@@ -29,6 +31,8 @@ export default function AppHeader({ title, isHomePage, isProfilePage }) {
   const activeTab = searchParams.get("tab") || "menu";
   const { filters, setFilters } = useFilters(); // Global filter state
   const { data: userProfile } = useUserProfile(user);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const queryClient = useQueryClient();
 
   // HOOKS
   const {
@@ -70,8 +74,16 @@ export default function AppHeader({ title, isHomePage, isProfilePage }) {
   };
 
   // HANDLE REFRESH
-  const handleRefresh = () => {
-    window.location.reload();
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await queryClient.invalidateQueries();
+      toast.success("Data refreshed successfully");
+    } catch (error) {
+      toast.error("Failed to refresh data", error);
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   // HANDLE SIGN OUT
@@ -113,26 +125,47 @@ export default function AppHeader({ title, isHomePage, isProfilePage }) {
             </h1>
           </div>
 
-          {/* SETTINGS BUTTON -------------------- */}
-          {isProfilePage && !isHomePage && (
-            <div>
+          {/* RIGHT SIDE BUTTONS -------------------- */}
+          <div className="flex justify-end gap-2">
+            {/* REFRESH BUTTON - Only show on main page */}
+            {isHomePage && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+                className="h-7 mr-2 text-primary"
+              >
+                <RefreshCw
+                  className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
+                />
+              </Button>
+            )}
+
+            {/* SETTINGS BUTTON -------------------- */}
+            {isProfilePage && !isHomePage && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button className="bg-white hover:bg-white text-primary w-full h-7 shadow-none">
+                  <Button className="bg-white text-primary h-7 mr-2 shadow-none">
                     <Settings2 />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
                   align="end"
-                  className="w-30 bg-white border-gray-100 shadow-2xl mr-2 space-y-2 py-4 rounded-xl"
+                  className="bg-white border-gray-100 shadow-2xl mr-2 space-y-2 py-4 rounded-xl"
                 >
                   {/* REFRESH BUTTON */}
                   <DropdownMenuItem
                     onClick={handleRefresh}
                     className="text-primary"
+                    disabled={isRefreshing}
                   >
-                    <RefreshCw className="w-4 h-4 mr-2" />
-                    Refresh
+                    <RefreshCw
+                      className={`w-4 h-4 mr-2 ${
+                        isRefreshing ? "animate-spin" : ""
+                      }`}
+                    />
+                    {isRefreshing ? "Refreshing..." : "Refresh"}
                   </DropdownMenuItem>
 
                   {/* SIGN OUT BUTTON */}
@@ -150,8 +183,8 @@ export default function AppHeader({ title, isHomePage, isProfilePage }) {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-            </div>
-          )}
+            )}
+          </div>
         </div>
         {/* PAGE TABS -------------------- */}
         <div className="space-y-2">
@@ -163,7 +196,13 @@ export default function AppHeader({ title, isHomePage, isProfilePage }) {
                 onValueChange={handleTabChange}
                 className="w-full px-4"
               >
-                <TabsList className={`grid ${userProfile?.role === 'treatee' ? 'grid-cols-2' : 'grid-cols-3'} h-10 items-stretch px-1.5`}>
+                <TabsList
+                  className={`grid ${
+                    userProfile?.role === "treatee"
+                      ? "grid-cols-2"
+                      : "grid-cols-3"
+                  } h-10 items-stretch px-1.5`}
+                >
                   {/* MENU TAB */}
                   <TabsTrigger
                     value="menu"
@@ -172,7 +211,7 @@ export default function AppHeader({ title, isHomePage, isProfilePage }) {
                     Menu
                   </TabsTrigger>
                   {/* PURCHASED TAB - Only show if user is not a treatee */}
-                  {userProfile?.role !== 'treatee' && (
+                  {userProfile?.role !== "treatee" && (
                     <TabsTrigger
                       value="purchased"
                       className="text-sm text-primary data-[state=active]:bg-primary data-[state=active]:text-white border-primary rounded-none border-1 border-l-0"
@@ -183,7 +222,11 @@ export default function AppHeader({ title, isHomePage, isProfilePage }) {
                   {/* BOOKED TAB */}
                   <TabsTrigger
                     value="booked"
-                    className={`text-sm text-primary data-[state=active]:bg-primary data-[state=active]:text-white border-primary ${userProfile?.role === 'treatee' ? 'rounded-l-none' : 'rounded-l-none'} border-1 border-l-0`}
+                    className={`text-sm text-primary data-[state=active]:bg-primary data-[state=active]:text-white border-primary ${
+                      userProfile?.role === "treatee"
+                        ? "rounded-l-none"
+                        : "rounded-l-none"
+                    } border-1 border-l-0`}
                   >
                     Booked
                   </TabsTrigger>

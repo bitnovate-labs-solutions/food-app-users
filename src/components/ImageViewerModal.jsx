@@ -1,4 +1,4 @@
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { X } from "lucide-react";
 import ImageWithFallback from "@/components/ImageWithFallback";
 import { motion } from "framer-motion";
@@ -33,6 +33,11 @@ export default function ImageViewerModal({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[90vw] h-[95vh] bg-black/95 border-none p-0 rounded-2xl overflow-hidden">
+        <DialogTitle className="sr-only">Image Viewer</DialogTitle>
+        <DialogDescription className="sr-only">
+          View and navigate through images using swipe gestures
+        </DialogDescription>
+        
         {/* FIXED HEADER */}
         <div className="absolute top-0 left-0 right-0 h-16 z-50">
           <button

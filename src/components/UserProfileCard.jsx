@@ -1,3 +1,6 @@
+import { useState, useEffect } from "react";
+
+// COMPONENTS
 import { Card, CardContent } from "@/components/ui/card";
 import ImageWithFallback from "@/components/ImageWithFallback";
 import {
@@ -13,8 +16,8 @@ import {
   Folder,
   ChevronDown,
   ChevronUp,
+  X,
 } from "lucide-react";
-import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import ImageViewerModal from "./ImageViewerModal";
 
@@ -24,6 +27,7 @@ export default function UserProfileCard({
   onShowDetails,
   onSwipeLeft,
   onSwipeRight,
+  onClose,
   className = "",
 }) {
   const [isDetailsShown, setIsDetailsShown] = useState(showDetails);
@@ -38,14 +42,13 @@ export default function UserProfileCard({
   }, [user]);
 
   // Combine avatar with additional images
-  const images = user.user_profile_images?.map(img => img.image_url) || [];
+  const images = user.user_profile_images?.map((img) => img.image_url) || [];
 
   // TOGGLE DETAILS
   const toggleDetails = () => {
-    setIsDetailsShown(!isDetailsShown);
-    if (onShowDetails) {
-      onShowDetails(!isDetailsShown);
-    }
+    const newState = !isDetailsShown;
+    setIsDetailsShown(newState);
+    onShowDetails?.(newState);
   };
 
   const handleDragStart = (event, info) => {
@@ -78,11 +81,27 @@ export default function UserProfileCard({
     );
   };
 
+  const handleClose = (e) => {
+    e.stopPropagation();
+    onClose?.();
+  };
+
   return (
     <>
       <Card
         className={`overflow-hidden border-none shadow-2xl rounded-2xl ${className}`}
       >
+        {/* CLOSE BUTTON - Outside swipeable area */}
+        {onClose && (
+          <button
+            onClick={handleClose}
+            className="absolute top-3 right-3 flex items-center justify-center w-8 h-8 bg-white/60 backdrop-blur-sm rounded-full text-darkgray transition-colors duration-200 z-10"
+            aria-label="Close profile"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        )}
+
         {/* PROFILE IMAGE */}
         <motion.div
           className="relative"
@@ -100,10 +119,20 @@ export default function UserProfileCard({
                 alt="Profile"
                 className="w-full h-full object-cover"
                 style={{
-                  objectPosition: `${user.user_profile_images?.[mainImageIndex]?.position?.x || 50}% ${user.user_profile_images?.[mainImageIndex]?.position?.y || 50}%`,
-                  transform: `scale(${user.user_profile_images?.[mainImageIndex]?.scale || 1}) rotate(${user.user_profile_images?.[mainImageIndex]?.rotation || 0}deg)`,
-                  transformOrigin: 'center',
-                  transition: 'transform 0.2s ease-out'
+                  objectPosition: `${
+                    user.user_profile_images?.[mainImageIndex]?.position?.x ||
+                    50
+                  }% ${
+                    user.user_profile_images?.[mainImageIndex]?.position?.y ||
+                    50
+                  }%`,
+                  transform: `scale(${
+                    user.user_profile_images?.[mainImageIndex]?.scale || 1
+                  }) rotate(${
+                    user.user_profile_images?.[mainImageIndex]?.rotation || 0
+                  }deg)`,
+                  transformOrigin: "center",
+                  transition: "transform 0.2s ease-out",
                 }}
               />
             </div>
@@ -186,19 +215,31 @@ export default function UserProfileCard({
                           ? "ring-2 ring-primary scale-105"
                           : "hover:scale-105 hover:ring-2 hover:ring-primary/50"
                       }`}
-                      onClick={() => {
-                        openImageViewer(index);
-                      }}
+                      onClick={() => openImageViewer(index)}
                     >
                       <ImageWithFallback
                         src={image}
                         alt={`Image ${index + 1}`}
                         className="w-full h-full object-cover"
-                        style={user.user_profile_images?.[index] ? {
-                          objectPosition: `${user.user_profile_images[index].position?.x || 50}% ${user.user_profile_images[index].position?.y || 50}%`,
-                          transform: `scale(${user.user_profile_images[index].scale || 1}) rotate(${user.user_profile_images[index].rotation || 0}deg)`,
-                          transformOrigin: 'center'
-                        } : undefined}
+                        style={
+                          user.user_profile_images?.[index]
+                            ? {
+                                objectPosition: `${
+                                  user.user_profile_images[index].position?.x ||
+                                  50
+                                }% ${
+                                  user.user_profile_images[index].position?.y ||
+                                  50
+                                }%`,
+                                transform: `scale(${
+                                  user.user_profile_images[index].scale || 1
+                                }) rotate(${
+                                  user.user_profile_images[index].rotation || 0
+                                }deg)`,
+                                transformOrigin: "center",
+                              }
+                            : undefined
+                        }
                       />
                     </div>
                   ))}
@@ -220,7 +261,7 @@ export default function UserProfileCard({
                 <CardContent className="p-3">
                   <h3 className="text-base font-semibold mb-2">My Details</h3>
                   <div className="grid grid-cols-1 gap-1.5">
-                    {/* Education */}
+                    {/* EDUCATION */}
                     <div className="flex items-center justify-between py-1">
                       <div className="flex items-center gap-2">
                         <GraduationCap className="w-4 h-4 text-gray-500" />
@@ -228,7 +269,7 @@ export default function UserProfileCard({
                           Education
                         </span>
                       </div>
-                      <span className="text-sm text-gray-600">
+                      <span className="text-sm text-right text-gray-600">
                         {user.education || "-"}
                       </span>
                     </div>
@@ -241,8 +282,11 @@ export default function UserProfileCard({
                           Height
                         </span>
                       </div>
-                      <span className="text-sm text-gray-600">
+                      <span className="flex gap-1 text-sm text-gray-600">
                         {user.height || "-"}
+                        <span className={user.height ? "block" : "hidden"}>
+                          cm
+                        </span>
                       </span>
                     </div>
 
@@ -353,7 +397,9 @@ export default function UserProfileCard({
               {/* LANGUAGES SECTION */}
               <Card className="bg-white border-gray-200 shadow-sm">
                 <CardContent className="p-3">
-                  <h3 className="text-base font-semibold mb-2">I communicate in</h3>
+                  <h3 className="text-base font-semibold mb-2">
+                    I communicate in
+                  </h3>
                   {user.languages?.length > 0 ? (
                     <div className="flex flex-wrap gap-2">
                       {user.languages.map((language) => (
@@ -377,7 +423,7 @@ export default function UserProfileCard({
         </AnimatePresence>
       </Card>
 
-      {/* Image Viewer Modal */}
+      {/*  IMAGE VIEWER MODAL ----------------------------------------------------------------- */}
       <ImageViewerModal
         isOpen={isImageViewerOpen}
         onClose={() => setIsImageViewerOpen(false)}
@@ -385,10 +431,10 @@ export default function UserProfileCard({
         currentImageIndex={selectedImageIndex}
         onPrevious={handlePreviousImage}
         onNext={handleNextImage}
-        imageTransforms={user.user_profile_images?.map(img => ({
+        imageTransforms={user.user_profile_images?.map((img) => ({
           position: img.position,
           scale: img.scale,
-          rotation: img.rotation
+          rotation: img.rotation,
         }))}
       />
     </>

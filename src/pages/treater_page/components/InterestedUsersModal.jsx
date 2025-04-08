@@ -3,6 +3,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Card } from "@/components/ui/card";
 import { Users, MessageCircle } from "lucide-react";
@@ -45,6 +46,9 @@ export default function InterestedUsersModal({
             <DialogTitle className="text-primary text-sm font-medium">
               Interested Treatees
             </DialogTitle>
+            <DialogDescription className="sr-only">
+              List of treatees who have expressed interest in your purchase
+            </DialogDescription>
           </DialogHeader>
 
           {/* MODAL CONTENT */}
@@ -129,12 +133,14 @@ export default function InterestedUsersModal({
         </DialogContent>
       </Dialog>
 
-      {/* User Profile Dialog */}
+      {/* USER PROFILE MODAL --------------------------------------------------- */}
       <Dialog
         open={!!selectedUser}
-        onOpenChange={() => {
-          setSelectedUser(null);
-          setSelectedUserIndex(null);
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedUser(null);
+            setSelectedUserIndex(null);
+          }
         }}
       >
         <DialogContent
@@ -142,12 +148,22 @@ export default function InterestedUsersModal({
             isDetailsShown ? "max-h-[95vh] overflow-y-auto" : ""
           }`}
         >
+          {/* THIS IS NOT VISIBLE BUT A REQUIRED */}
+          <DialogTitle className="sr-only">
+            {selectedUser?.display_name}&apos;s Profile
+          </DialogTitle>
+          {/* THIS IS NOT VISIBLE BUT A REQUIRED */}
+          <DialogDescription className="sr-only">
+            View and interact with {selectedUser?.display_name}&apos;s profile
+            details
+          </DialogDescription>
           {selectedUser && (
             <UserProfileCard
               user={selectedUser}
               onShowDetails={setIsDetailsShown}
               onSwipeLeft={handleSwipeLeft}
               onSwipeRight={handleSwipeRight}
+              onClose={() => setSelectedUser(null)}
             />
           )}
         </DialogContent>

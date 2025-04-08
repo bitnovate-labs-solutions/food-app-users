@@ -78,7 +78,9 @@ export default function AppHeader({ title, isHomePage, isProfilePage }) {
     setIsRefreshing(true);
     try {
       await queryClient.invalidateQueries();
-      toast.success("Data refreshed successfully");
+      toast.success("Data refreshed successfully", {
+        duration: 500,
+      });
     } catch (error) {
       toast.error("Failed to refresh data", error);
     } finally {

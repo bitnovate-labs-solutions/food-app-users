@@ -9,11 +9,13 @@ import { User, Heart } from "lucide-react";
 import UserProfileCard from "@/components/UserProfileCard";
 import LoadingComponent from "@/components/LoadingComponent";
 import searchImage from "@/assets/images/search.svg";
+import { usePurchasedItems } from "@/hooks/usePurchases";
 
 const Connect = () => {
   const { user } = useAuth();
   const [currentIndex, setCurrentIndex] = useState(0);
   const { users: potentialMatches, isLoading, error } = useUsers(user?.id);
+  const { data: purchasedItems } = usePurchasedItems(user?.id);
   const { setSubtitle } = useOutletContext();
 
   // Navigation handlers
@@ -167,6 +169,7 @@ const Connect = () => {
                 enableSwipe={true}
                 onSwipeLeft={handleNext}
                 onSwipeRight={handlePrevious}
+                purchasedItems={purchasedItems}
               />
             </div>
           </div>

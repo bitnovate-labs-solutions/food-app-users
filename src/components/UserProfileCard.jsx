@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 
 // COMPONENTS
 import { Card, CardContent } from "@/components/ui/card";
@@ -30,6 +31,7 @@ export default function UserProfileCard({
   onSwipeRight,
   onClose,
   className = "",
+  purchasedItems,
 }) {
   const [isDetailsShown, setIsDetailsShown] = useState(showDetails);
   const [mainImageIndex, setMainImageIndex] = useState(0);
@@ -46,6 +48,10 @@ export default function UserProfileCard({
 
   // Combine avatar with additional images
   const images = user.user_profile_images?.map((img) => img.image_url) || [];
+
+  // Filter purchased items by user_id
+  const filteredPurchasedItems =
+    purchasedItems?.filter((item) => item.user_id === user.user_id) || [];
 
   // TOGGLE DETAILS
   const toggleDetails = () => {
@@ -92,7 +98,7 @@ export default function UserProfileCard({
   return (
     <>
       <Card
-        className={`overflow-hidden border-none shadow-2xl rounded-2xl ${className}`}
+        className={`overflow-hidden border-none shadow-2xl rounded-2xl mb-20 mt-20 ${className}`}
       >
         {/* CLOSE BUTTON - Outside swipeable area */}
         {onClose && (
@@ -198,11 +204,11 @@ export default function UserProfileCard({
           </div>
         </motion.div>
 
-        {/* USER DETAILS - COLLAPSIBLE */}
+        {/* USER DETAILS - COLLAPSIBLE SECTION ==================================================================== */}
         <AnimatePresence mode="wait">
           {isDetailsShown && (
             <motion.div
-              className="p-4 space-y-3"
+              className="p-4 space-y-4"
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: "auto" }}
               exit={{ opacity: 0, height: 0 }}
@@ -212,49 +218,204 @@ export default function UserProfileCard({
               }}
             >
               {/* Thumbnail Strip */}
-              {images.length > 1 && (
-                <div className="grid grid-cols-4 gap-2 mb-3">
-                  {images.map((image, index) => (
-                    <div
-                      key={index}
-                      className={`aspect-square rounded-lg overflow-hidden cursor-pointer transition-all duration-200 ${
-                        index === mainImageIndex
-                          ? "ring-2 ring-primary scale-105"
-                          : "hover:scale-105 hover:ring-2 hover:ring-primary/50"
-                      }`}
-                      onClick={() => openImageViewer(index)}
-                    >
-                      <ImageWithFallback
-                        src={image}
-                        alt={`Image ${index + 1}`}
-                        className="w-full h-full object-cover"
-                        style={
-                          user.user_profile_images?.[index]
-                            ? {
-                                objectPosition: `${
-                                  user.user_profile_images[index].position?.x ||
-                                  50
-                                }% ${
-                                  user.user_profile_images[index].position?.y ||
-                                  50
-                                }%`,
-                                transform: `scale(${
-                                  user.user_profile_images[index].scale || 1
-                                }) rotate(${
-                                  user.user_profile_images[index].rotation || 0
-                                }deg)`,
-                                transformOrigin: "center",
-                              }
-                            : undefined
-                        }
-                      />
-                    </div>
-                  ))}
+              <div className="mb-3 p-3">
+                <h4 className="text-base font-semibold mb-3">Photos</h4>
+                <div className="grid grid-cols-4 gap-2">
+                  {images.length > 0 ? (
+                    images.map((image, index) => (
+                      <div
+                        key={index}
+                        className={`aspect-square rounded-lg overflow-hidden cursor-pointer transition-all duration-200 border ${
+                          index === mainImageIndex
+                            ? "border-primary shadow-md scale-105"
+                            : "border-gray-200 hover:scale-105 hover:border-primary/50 hover:shadow-sm"
+                        }`}
+                        onClick={() => openImageViewer(index)}
+                      >
+                        <ImageWithFallback
+                          src={image}
+                          alt={`Image ${index + 1}`}
+                          className="w-full h-full object-cover"
+                          style={
+                            user.user_profile_images?.[index]
+                              ? {
+                                  objectPosition: `${
+                                    user.user_profile_images[index].position
+                                      ?.x || 50
+                                  }% ${
+                                    user.user_profile_images[index].position
+                                      ?.y || 50
+                                  }%`,
+                                  transform: `scale(${
+                                    user.user_profile_images[index].scale || 1
+                                  }) rotate(${
+                                    user.user_profile_images[index].rotation ||
+                                    0
+                                  }deg)`,
+                                  transformOrigin: "center",
+                                }
+                              : undefined
+                          }
+                        />
+                      </div>
+                    ))
+                  ) : (
+                    <>
+                      <div
+                        className="aspect-square rounded-lg overflow-hidden cursor-pointer transition-all duration-200 border border-primary shadow-md scale-105"
+                        onClick={() => openImageViewer(0)}
+                      >
+                        <ImageWithFallback
+                          src={user.avatar_url}
+                          alt="Profile image"
+                          className="w-full h-full object-cover"
+                          style={
+                            user.user_profile_images?.[0]
+                              ? {
+                                  objectPosition: `${
+                                    user.user_profile_images[0].position?.x ||
+                                    50
+                                  }% ${
+                                    user.user_profile_images[0].position?.y ||
+                                    50
+                                  }%`,
+                                  transform: `scale(${
+                                    user.user_profile_images[0].scale || 1
+                                  }) rotate(${
+                                    user.user_profile_images[0].rotation || 0
+                                  }deg)`,
+                                  transformOrigin: "center",
+                                }
+                              : undefined
+                          }
+                        />
+                      </div>
+                      {/* Placeholder Images */}
+                      {[...Array(3)].map((_, index) => (
+                        <div
+                          key={index}
+                          className="aspect-square rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center border border-gray-200 hover:border-gray-300 transition-colors duration-200"
+                        >
+                          <svg
+                            className="w-6 h-6 text-gray-400"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                            xmlns="http://www.w3.org/2000/svg"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                            />
+                          </svg>
+                        </div>
+                      ))}
+                    </>
+                  )}
                 </div>
+              </div>
+
+              <div className="border-b border-gray-300 mb-5 mx-2"></div>
+
+              {/* PURCHASED ITEMS SECTION - Only on Connect page and for treaters */}
+              {location.pathname === "/connect" && user.role === "treater" && (
+                <Card className="bg-white border-gray-100 shadow-lg">
+                  <CardContent className="p-3">
+                    {/* ITEM COUNT */}
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-base font-semibold">Treats</h3>
+                      {filteredPurchasedItems.length > 0 && (
+                        <span className="text-xs text-gray-500">
+                          {filteredPurchasedItems.reduce(
+                            (total, item) =>
+                              total + (item.purchase_items?.length || 0),
+                            0
+                          )}{" "}
+                          items
+                        </span>
+                      )}
+                    </div>
+
+                    {/* CARDS */}
+                    <div className="relative">
+                      {filteredPurchasedItems.length > 0 ? (
+                        <div className="flex overflow-x-auto gap-2.5 scrollbar-hide snap-x snap-mandatory">
+                          {filteredPurchasedItems.map((item, itemIndex) => (
+                            <div key={itemIndex}>
+                              {item.purchase_items?.map(
+                                (purchaseItem, purchaseIndex) => (
+                                  <Link
+                                    key={purchaseIndex}
+                                    to="/treatee"
+                                    className="block w-[145px] snap-start"
+                                  >
+                                    <div className="bg-white border border-gray-100 rounded-lg overflow-hidden shadow-md transition-shadow duration-200">
+                                      <div className="relative aspect-square">
+                                        <ImageWithFallback
+                                          src={
+                                            purchaseItem.menu_packages
+                                              ?.image_url || item.image_url
+                                          }
+                                          alt={
+                                            purchaseItem.menu_packages?.name ||
+                                            "Package image"
+                                          }
+                                          className="w-full h-full object-cover"
+                                        />
+                                      </div>
+                                      <div className="p-1.5">
+                                        <h4 className="font-medium text-[11px] line-clamp-1 truncate overflow-ellipsis">
+                                          {purchaseItem.menu_packages?.name ||
+                                            "N/A"}
+                                        </h4>
+                                        <div className="text-[10px] text-gray-500 mt-0.5 line-clamp-1">
+                                          {purchaseItem.menu_packages
+                                            ?.restaurant?.name || "N/A"}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </Link>
+                                )
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        // NO PURCHASE PLACEHOLDER
+                        <div className="flex flex-col items-center justify-center py-6 px-4 text-center">
+                          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-3">
+                            <svg
+                              className="w-8 h-8 text-gray-400"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
+                              />
+                            </svg>
+                          </div>
+                          <h4 className="text-sm font-medium text-gray-900 mb-1">
+                            No treats yet
+                          </h4>
+                          <p className="text-xs text-gray-500">
+                            This treater hasn&apos;t made any purchases yet
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
               )}
 
               {/* ABOUT ME SECTION */}
-              <Card className="bg-white border-gray-200 shadow-sm">
+              <Card className="bg-white border-gray-100 shadow-lg">
                 <CardContent className="p-3">
                   <h3 className="text-base font-semibold mb-2">About Me</h3>
                   <p className="text-sm text-gray-600">
@@ -264,7 +425,7 @@ export default function UserProfileCard({
               </Card>
 
               {/* MY DETAILS SECTION */}
-              <Card className="bg-white border-gray-200 shadow-sm">
+              <Card className="bg-white border-gray-100 shadow-lg">
                 <CardContent className="p-3">
                   <h3 className="text-base font-semibold mb-2">My Details</h3>
                   <div className="grid grid-cols-1 gap-1.5">
@@ -379,7 +540,7 @@ export default function UserProfileCard({
               </Card>
 
               {/* INTERESTS SECTION */}
-              <Card className="bg-white border-gray-200 shadow-sm">
+              <Card className="bg-white border-gray-100 shadow-lg">
                 <CardContent className="p-3">
                   <h3 className="text-base font-semibold mb-2">I enjoy</h3>
                   {user.interests?.length > 0 ? (
@@ -402,7 +563,7 @@ export default function UserProfileCard({
               </Card>
 
               {/* LANGUAGES SECTION */}
-              <Card className="bg-white border-gray-200 shadow-sm">
+              <Card className="bg-white border-gray-100 shadow-lg">
                 <CardContent className="p-3">
                   <h3 className="text-base font-semibold mb-2">
                     I communicate in

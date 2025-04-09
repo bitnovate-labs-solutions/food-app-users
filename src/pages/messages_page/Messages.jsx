@@ -1,4 +1,9 @@
 import { useState, useRef, useEffect } from "react";
+import { useAuth } from "@/context/AuthContext";
+import { useConversations } from "@/hooks/useConversations";
+import { useMessageNotifications } from "@/hooks/useMessageNotifications";
+import { supabase } from "@/lib/supabase";
+import { toast } from "sonner";
 
 // COMPONENTS
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -7,9 +12,23 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Send, Menu, MessageSquare } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { mockConversations } from "@/mock_data/messages";
 
 export default function Messages() {
+  const { user } = useAuth();
+  console.log("Current user:", user);
+
+  // Add the message notifications hook
+  useMessageNotifications(user?.id);
+
+  const {
+    data: conversations = [],
+    isLoading,
+    error,
+  } = useConversations(user?.id);
+  console.log("Conversations data:", conversations);
+  console.log("Loading state:", isLoading);
+  console.log("Error state:", error);
+
   const [selectedConversation, setSelectedConversation] = useState(() => {
     // Try to get the last selected conversation from localStorage
     const savedConversation = localStorage.getItem("selectedConversation");
@@ -37,29 +56,85 @@ export default function Messages() {
     }
   }, [selectedConversation]);
 
-  const handleConversationSelect = (conversation) => {
+  const handleConversationSelect = async (conversation) => {
     setSelectedConversation(conversation);
     setIsDrawerOpen(false);
+
+    // Mark messages as read
+    try {
+      const { error } = await supabase
+        .from("messages")
+        .update({ is_read: true })
+        .eq("conversation_id", conversation.id)
+        .eq("is_read", false)
+        .neq("sender_id", user.id);
+
+      if (error) {
+        console.error("Error marking messages as read:", error);
+      }
+    } catch (error) {
+      console.error("Error in handleConversationSelect:", error);
+    }
   };
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!newMessage.trim() || !selectedConversation) return;
 
-    // In a real app, this would send to an API
-    const newMessageObj = {
-      id: selectedConversation.messages.length + 1,
-      senderId: 1, // Assuming current user is senderId 1
-      content: newMessage,
-      timestamp: new Date().toISOString(),
-    };
+    try {
+      // Save message to database
+      const { data: message, error } = await supabase
+        .from("messages")
+        .insert({
+          conversation_id: selectedConversation.id,
+          sender_id: user.id,
+          message_content: newMessage,
+          created_at: new Date().toISOString(),
+          is_read: false,
+        })
+        .select()
+        .single();
 
-    const updatedConversation = {
-      ...selectedConversation,
-      messages: [...selectedConversation.messages, newMessageObj],
-    };
+      if (error) {
+        console.error("Error saving message:", error);
+        throw error;
+      }
 
-    setSelectedConversation(updatedConversation);
-    setNewMessage("");
+      console.log("Saved message:", message);
+
+      // Update local state
+      const newMessageObj = {
+        id: message.id,
+        senderId: user.id,
+        content: message.message_content,
+        timestamp: message.created_at,
+        read: message.is_read,
+      };
+
+      console.log("New message object:", newMessageObj);
+
+      const updatedConversation = {
+        ...selectedConversation,
+        messages: [...(selectedConversation.messages || []), newMessageObj],
+      };
+
+      console.log("Updated conversation:", updatedConversation);
+
+      setSelectedConversation(updatedConversation);
+      setNewMessage("");
+
+      // Update conversation's updated_at timestamp
+      const { error: updateError } = await supabase
+        .from("conversations")
+        .update({ updated_at: new Date().toISOString() })
+        .eq("id", selectedConversation.id);
+
+      if (updateError) {
+        console.error("Error updating conversation timestamp:", updateError);
+      }
+    } catch (error) {
+      console.error("Error in handleSendMessage:", error);
+      toast.error("Failed to send message");
+    }
   };
 
   const formatTime = (timestamp) => {
@@ -67,11 +142,22 @@ export default function Messages() {
     return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   };
 
+  if (isLoading) {
+    return (
+      <div className="h-[calc(100vh-4rem)] flex items-center justify-center">
+        <div className="text-center">
+          <MessageSquare className="h-12 w-12 text-primary mx-auto animate-pulse" />
+          <p className="mt-4 text-gray-600">Loading conversations...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="h-[calc(100vh-4rem)]">
       {/* Main Message Area */}
       <div className="h-full flex flex-col">
-        <div className="p-4 border-b border-gray-200 flex items-center gap-4 bg-white shadow-md">
+        <div className="p-4 border-b border-gray-200 flex items-center gap-4 bg-white shadow-md sticky">
           {/* MESSAGE LEFT DRAWER -------------------------------------------------------------- */}
           <Sheet open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
             {/* DRAWER HAMBURGER BUTTON */}
@@ -87,7 +173,7 @@ export default function Messages() {
 
             <SheetContent
               side="left"
-              className="w-[300px] h-[calc(100vh-3rem)] top-[3rem] p-0 bg-white border-r border-gray-200 shadow-lg transition-transform duration-500 ease-in-out"
+              className="w-[300px] h-[calc(100vh-3rem)] top-[3rem] p-0 bg-white border-r border-gray-200 shadow-lg transition-transform duration-500 ease-in-out z-60"
             >
               {/* DRAWER TITLE */}
               <div className="p-4 border-b border-gray-200">
@@ -98,7 +184,7 @@ export default function Messages() {
 
               {/* CONVERSATION LIST */}
               <ScrollArea className="h-[calc(100%-4rem)]">
-                {mockConversations.length === 0 ? (
+                {conversations.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-[calc(100vh-12rem)] p-4 text-center">
                     <MessageSquare className="h-12 w-12 text-primary mb-4" />
                     <h3 className="text-lg font-medium text-primary mb-2">
@@ -111,7 +197,7 @@ export default function Messages() {
                   </div>
                 ) : (
                   <div className="space-y-1 p-2">
-                    {mockConversations.map((conversation) => (
+                    {conversations.map((conversation) => (
                       <Button
                         key={conversation.id}
                         variant={
@@ -123,16 +209,19 @@ export default function Messages() {
                         onClick={() => handleConversationSelect(conversation)}
                       >
                         <Avatar className="h-10 w-10 transition-transform duration-500 ease-in-out hover:scale-105">
-                          <AvatarImage src={conversation.avatar} />
+                          <AvatarImage
+                            src={conversation.avatar}
+                            className="object-contain"
+                          />
                           <AvatarFallback>
                             {conversation.name[0]}
                           </AvatarFallback>
                         </Avatar>
                         <div className="flex flex-col items-start">
-                          <span className="font-medium">
+                          <span className="font-medium text-primary">
                             {conversation.name}
                           </span>
-                          <span className="text-sm text-muted-foreground truncate max-w-[180px]">
+                          <span className="text-sm text-muted-foreground truncate max-w-[180px] font-light">
                             {conversation.lastMessage}
                           </span>
                         </div>
@@ -159,7 +248,6 @@ export default function Messages() {
               </Avatar>
               <div>
                 <h3 className="font-medium">{selectedConversation.name}</h3>
-                {/* <p className="text-sm text-muted-foreground">Online</p> */}
               </div>
             </>
           ) : (
@@ -178,39 +266,44 @@ export default function Messages() {
           <>
             <ScrollArea className="flex-1 p-4">
               <div className="space-y-4 max-w-2xl mx-auto">
-                {selectedConversation.messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={`flex ${
-                      message.senderId === 1 ? "justify-end" : "justify-start"
-                    }`}
-                  >
+                {selectedConversation.messages?.map((message) => {
+                  console.log("Rendering message:", message);
+                  return (
                     <div
-                      className={`rounded-lg p-3 max-w-[70%] ${
-                        message.senderId === 1
-                          ? "bg-primary text-white"
-                          : "bg-white text-primary"
+                      key={message.id}
+                      className={`flex ${
+                        message.senderId === user.id
+                          ? "justify-end"
+                          : "justify-start"
                       }`}
                     >
-                      <p>{message.content}</p>
-                      <span
-                        className={`text-xs ${
-                          message.senderId === 1
-                            ? "text-primary-foreground/70"
-                            : "text-muted-foreground"
+                      <div
+                        className={`rounded-lg p-3 max-w-[70%] ${
+                          message.senderId === user.id
+                            ? "bg-primary text-white"
+                            : "bg-white text-primary"
                         }`}
                       >
-                        {formatTime(message.timestamp)}
-                      </span>
+                        <p className="whitespace-pre-wrap">{message.content}</p>
+                        <span
+                          className={`text-xs ${
+                            message.senderId === user.id
+                              ? "text-primary-foreground/70"
+                              : "text-muted-foreground"
+                          }`}
+                        >
+                          {formatTime(message.timestamp)}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
                 <div ref={messagesEndRef} />
               </div>
             </ScrollArea>
 
             {/* MESSAGE INPUT */}
-            <div className="p-4 bg-white border-t border-gray-200 mb-[4.3rem] z-100">
+            <div className="p-4 bg-white border-t border-gray-200 mb-[4.3rem] z-50">
               <div className="flex gap-2 max-w-2xl mx-auto">
                 <Input
                   placeholder="Type a message..."

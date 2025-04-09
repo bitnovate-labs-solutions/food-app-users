@@ -36,7 +36,7 @@ function SheetOverlay({ className, ...props }) {
 function SheetContent({ className, children, side = "right", ...props }) {
   return (
     <SheetPortal>
-      <SheetOverlay className="top-[3rem]" />
+      <SheetOverlay className="top-[3rem] z-60" />
       <SheetPrimitive.Content
         data-slot="sheet-content"
         className={cn(

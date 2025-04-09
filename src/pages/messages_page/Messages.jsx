@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 
 // COMPONENTS
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -13,6 +13,15 @@ export default function Messages() {
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [newMessage, setNewMessage] = useState("");
+  const messagesEndRef = useRef(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [selectedConversation?.messages]);
 
   const handleConversationSelect = (conversation) => {
     setSelectedConversation(conversation);
@@ -180,6 +189,7 @@ export default function Messages() {
                     </div>
                   </div>
                 ))}
+                <div ref={messagesEndRef} />
               </div>
             </ScrollArea>
 

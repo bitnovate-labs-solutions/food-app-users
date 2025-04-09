@@ -30,23 +30,54 @@ export default function Messages() {
   console.log("Loading state:", isLoading);
   console.log("Error state:", error);
 
-  const [selectedConversation, setSelectedConversation] = useState(() => {
-    // Try to get the last selected conversation from localStorage
-    const savedConversation = localStorage.getItem("selectedConversation");
-    return savedConversation ? JSON.parse(savedConversation) : null;
-  });
-
-  // Clear localStorage if there are no conversations
-  useEffect(() => {
-    if (!isLoading && conversations.length === 0) {
-      localStorage.removeItem("selectedConversation");
-      setSelectedConversation(null);
-    }
-  }, [conversations, isLoading]);
-
+  const [selectedConversation, setSelectedConversation] = useState(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [newMessage, setNewMessage] = useState("");
   const messagesEndRef = useRef(null);
+
+  // Restore selected conversation from sessionStorage when conversations load
+  useEffect(() => {
+    if (conversations.length > 0 && !selectedConversation) {
+      const savedConversationId = sessionStorage.getItem(
+        "selectedConversationId"
+      );
+      if (savedConversationId) {
+        const conversation = conversations.find(
+          (c) => c.id === savedConversationId
+        );
+        if (conversation) {
+          setSelectedConversation(conversation);
+        }
+      }
+    }
+  }, [conversations, selectedConversation]);
+
+  // Save selected conversation ID to sessionStorage
+  useEffect(() => {
+    if (selectedConversation) {
+      sessionStorage.setItem("selectedConversationId", selectedConversation.id);
+    }
+  }, [selectedConversation?.id]);
+
+  // Update selected conversation when conversations data changes
+  useEffect(() => {
+    if (selectedConversation && conversations) {
+      const updatedConversation = conversations.find(
+        (c) => c.id === selectedConversation.id
+      );
+      if (updatedConversation) {
+        setSelectedConversation(updatedConversation);
+      }
+    }
+  }, [conversations]);
+
+  // Scroll to bottom on initial load and new messages
+  useEffect(() => {
+    if (selectedConversation?.messages?.length > 0) {
+      // Use instant scroll for initial load
+      messagesEndRef.current?.scrollIntoView({ behavior: "instant" });
+    }
+  }, [selectedConversation?.messages]);
 
   // Prevent body scrolling when drawer is open
   useEffect(() => {
@@ -60,31 +91,13 @@ export default function Messages() {
     };
   }, [isDrawerOpen]);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [selectedConversation?.messages]);
-
-  // Save selected conversation to localStorage whenever it changes
-  useEffect(() => {
-    if (selectedConversation) {
-      localStorage.setItem(
-        "selectedConversation",
-        JSON.stringify(selectedConversation)
-      );
-    }
-  }, [selectedConversation]);
-
   const queryClient = useQueryClient();
 
   const handleConversationSelect = async (conversation) => {
     setSelectedConversation(conversation);
     setIsDrawerOpen(false);
 
-    // Mark messages as read
+    // Mark messages as read and scroll to bottom instantly
     try {
       const { error } = await supabase
         .from("messages")
@@ -106,6 +119,10 @@ export default function Messages() {
           unread: 0,
         };
         setSelectedConversation(updatedConversation);
+        // Scroll to bottom instantly after selecting conversation
+        setTimeout(() => {
+          messagesEndRef.current?.scrollIntoView({ behavior: "instant" });
+        }, 0);
 
         // Update the conversations list in the cache
         queryClient.setQueryData(["conversations", user.id], (oldData) => {

@@ -72,8 +72,18 @@ export const useConversations = (userId) => {
                 lastMessage: payload.new.message_content,
                 unread: payload.new.sender_id !== userId ? 1 : 0,
                 updated_at: new Date().toISOString(),
-                messages: [newMessage]
+                messages: []
               };
+
+              // Find the existing conversation
+              const existingConv = oldData.find(c => c.id === conversation.id);
+              if (existingConv) {
+                // Keep existing messages and add the new one
+                updatedConv.messages = [...existingConv.messages, newMessage];
+                updatedConv.unread = existingConv.unread + (payload.new.sender_id !== userId ? 1 : 0);
+              } else {
+                updatedConv.messages = [newMessage];
+              }
 
               // Remove the old conversation if it exists
               const otherConvs = oldData.filter(c => c.id !== conversation.id);
@@ -191,6 +201,18 @@ export const useConversations = (userId) => {
             msg => !msg.is_read && msg.sender_id !== userId
           ).length || 0;
           
+          // Transform messages
+          const messages = conv.messages?.map(msg => ({
+            id: msg.id,
+            senderId: msg.sender_id,
+            content: msg.message_content,
+            timestamp: msg.created_at,
+            read: msg.is_read
+          })) || [];
+
+          // Sort messages by timestamp
+          messages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+          
           const transformed = {
             id: conv.id,
             name:
@@ -201,15 +223,10 @@ export const useConversations = (userId) => {
               conv.treater.user_id === userId
                 ? conv.treatee.user_profile_images[0]?.image_url
                 : conv.treater.user_profile_images[0]?.image_url,
-            lastMessage: conv.messages?.[conv.messages.length - 1]?.message_content || "No messages yet",
+            lastMessage: messages[messages.length - 1]?.content || "",
             unread: unreadCount,
-            messages: conv.messages?.map((msg) => ({
-              id: msg.id,
-              senderId: msg.sender_id,
-              content: msg.message_content,
-              timestamp: msg.created_at,
-              read: msg.is_read
-            })) || [],
+            messages: messages,
+            updated_at: conv.updated_at
           };
 
           console.log("Transformed conversation:", transformed);
@@ -224,7 +241,9 @@ export const useConversations = (userId) => {
       }
     },
     enabled: !!userId && !!currentUserProfile && !isProfileLoading,
-    staleTime: 1000 * 60, // Consider data fresh for 1 minute
-    cacheTime: 1000 * 60 * 5, // Keep unused data in cache for 5 minutes
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
+    staleTime: 0, // Consider data always stale
+    cacheTime: 1000 * 60, // Keep unused data in cache for 1 minute only
   });
 };

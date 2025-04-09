@@ -133,8 +133,9 @@ export function AuthProvider({ children }) {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
 
-      // Clear all localStorage items
+      // Clear all storage
       localStorage.clear();
+      sessionStorage.clear();
       
       setUser(null);
       navigate("/auth", { replace: true });
@@ -142,6 +143,7 @@ export function AuthProvider({ children }) {
       console.error("Sign out error:", error);
       // Still attempt to clear everything even if there's an error
       localStorage.clear();
+      sessionStorage.clear();
       setUser(null);
       navigate("/auth", { replace: true });
     }

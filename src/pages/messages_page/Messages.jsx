@@ -2,9 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useConversations } from "@/hooks/useConversations";
 import { useMessageNotifications } from "@/hooks/useMessageNotifications";
-import { supabase } from "@/lib/supabase";
-import { toast } from "sonner";
-import { useQueryClient } from "@tanstack/react-query";
+import { formatTime } from "@/utils/formatTime";
 
 // COMPONENTS
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -13,10 +11,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Send, Menu, MessageSquare } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import ErrorComponent from "@/components/ErrorComponent";
 
 export default function Messages() {
   const { user } = useAuth();
-  console.log("Current user:", user);
 
   // Add the message notifications hook
   useMessageNotifications(user?.id);
@@ -25,10 +23,9 @@ export default function Messages() {
     data: conversations = [],
     isLoading,
     error,
+    sendMessage,
+    markMessagesAsRead,
   } = useConversations(user?.id);
-  console.log("Conversations data:", conversations);
-  console.log("Loading state:", isLoading);
-  console.log("Error state:", error);
 
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -91,116 +88,42 @@ export default function Messages() {
     };
   }, [isDrawerOpen]);
 
-  const queryClient = useQueryClient();
-
+  // HANDLE CONVERSATION SELECT
   const handleConversationSelect = async (conversation) => {
     setSelectedConversation(conversation);
     setIsDrawerOpen(false);
 
-    // Mark messages as read and scroll to bottom instantly
     try {
-      const { error } = await supabase
-        .from("messages")
-        .update({ is_read: true })
-        .eq("conversation_id", conversation.id)
-        .eq("is_read", false)
-        .neq("sender_id", user.id);
+      // Mark messages as read in the database
+      await markMessagesAsRead.mutateAsync(conversation.id);
 
-      if (error) {
-        console.error("Error marking messages as read:", error);
-      } else {
-        // Invalidate and refetch the conversations query to get fresh data
-        await queryClient.invalidateQueries(["conversations", user.id]);
-        
-        // Update the local state to reflect read status
-        const updatedConversation = {
-          ...conversation,
-          messages: conversation.messages.map((msg) => ({
-            ...msg,
-            read: msg.sender_id === user.id ? msg.read : true,
-          })),
-          unread: 0,
-        };
-        setSelectedConversation(updatedConversation);
-        
-        // Scroll to bottom instantly after selecting conversation
-        setTimeout(() => {
-          messagesEndRef.current?.scrollIntoView({ behavior: "instant" });
-        }, 0);
-
-        // Update the conversations list in the cache
-        queryClient.setQueryData(["conversations", user.id], (oldData) => {
-          if (!oldData) return oldData;
-          return oldData.map((conv) => {
-            if (conv.id === conversation.id) {
-              return {
-                ...conv,
-                unread: 0,
-                messages: conv.messages.map((msg) => ({
-                  ...msg,
-                  read: msg.sender_id === user.id ? msg.read : true,
-                })),
-              };
-            }
-            return conv;
-          });
-        });
-      }
+      // Scroll to bottom instantly after selecting conversation
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "instant" });
+      }, 0);
     } catch (error) {
       console.error("Error in handleConversationSelect:", error);
     }
   };
 
+  // HANDLE SEND MESSAGE
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !selectedConversation) return;
 
     try {
-      // Save message to database
-      const { data: message, error } = await supabase
-        .from("messages")
-        .insert({
-          conversation_id: selectedConversation.id,
-          sender_id: user.id,
-          message_content: newMessage,
-          created_at: new Date().toISOString(),
-          is_read: false,
-        })
-        .select()
-        .single();
-
-      if (error) {
-        console.error("Error saving message:", error);
-        throw error;
-      }
-
-      console.log("Saved message:", message);
+      await sendMessage.mutateAsync({
+        conversationId: selectedConversation.id,
+        content: newMessage.trim(),
+      });
 
       // Clear input immediately
       setNewMessage("");
-
-      // Update conversation's updated_at timestamp
-      const { error: updateError } = await supabase
-        .from("conversations")
-        .update({ updated_at: new Date().toISOString() })
-        .eq("id", selectedConversation.id);
-
-      if (updateError) {
-        console.error("Error updating conversation timestamp:", updateError);
-      }
-
-      // Invalidate queries to trigger a refresh
-      await queryClient.invalidateQueries(["conversations", user.id]);
     } catch (error) {
       console.error("Error in handleSendMessage:", error);
-      toast.error("Failed to send message");
     }
   };
 
-  const formatTime = (timestamp) => {
-    const date = new Date(timestamp);
-    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  };
-
+  // LOADING AND ERROR HANDLERS
   if (isLoading) {
     return (
       <div className="h-[calc(100vh-4rem)] flex items-center justify-center">
@@ -211,6 +134,8 @@ export default function Messages() {
       </div>
     );
   }
+
+  if (error) return <ErrorComponent message={error} />;
 
   return (
     <div className="h-[calc(100vh-4rem)] flex flex-col overflow-hidden fixed inset-x-0 top-14 bottom-0">
@@ -277,18 +202,19 @@ export default function Messages() {
                           </AvatarFallback>
                         </Avatar>
                         <div className="flex flex-col items-start">
-                          <span className="font-medium text-primary">
+                          <span className="font-bold text-primary">
                             {conversation.name}
                           </span>
                           <span className="text-sm text-muted-foreground truncate max-w-[180px] font-light">
                             {conversation.lastMessage}
                           </span>
                         </div>
-                        {conversation.unread > 0 && (
+                        {/* TO FIX THIS LATER (CONVERSATION LIST UNREAD COUNT NOTIFICATION) */}
+                        {/* {conversation.unread > 0 && (
                           <div className="ml-auto bg-primary text-white rounded-full w-5 h-5 flex items-center justify-center text-xs transition-transform duration-500 ease-in-out hover:scale-110">
                             {conversation.unread}
                           </div>
-                        )}
+                        )} */}
                       </Button>
                     ))}
                   </div>
@@ -326,7 +252,6 @@ export default function Messages() {
             <ScrollArea className="flex-1 p-4 pb-36 overflow-y-auto">
               <div className="space-y-4 max-w-2xl mx-auto">
                 {selectedConversation.messages?.map((message) => {
-                  console.log("Rendering message:", message);
                   return (
                     <div
                       key={message.id}
@@ -337,15 +262,17 @@ export default function Messages() {
                       }`}
                     >
                       <div
-                        className={`rounded-lg p-3 max-w-[70%] ${
+                        className={`flex flex-col rounded-2xl p-3 max-w-[70%] min-w-[25%] shadow-md break-words ${
                           message.senderId === user.id
                             ? "bg-primary text-white"
                             : "bg-white text-primary"
                         }`}
                       >
-                        <p className="whitespace-pre-wrap">{message.content}</p>
+                        <p className="whitespace-pre-wrap break-words overflow-hidden">
+                          {message.content}
+                        </p>
                         <span
-                          className={`text-xs ${
+                          className={`text-[11px] flex justify-end font-extralight mt-1 ${
                             message.senderId === user.id
                               ? "text-primary-foreground/70"
                               : "text-muted-foreground"
@@ -366,7 +293,7 @@ export default function Messages() {
               <div className="flex gap-2 max-w-2xl mx-auto">
                 <Input
                   placeholder="Type a message..."
-                  className="flex-1 border border-gray-300 focus:ring-darkgray"
+                  className="flex-1 border border-gray-300 focus:ring-darkgray rounded-full"
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
                   onKeyDown={(e) => {

@@ -28,6 +28,7 @@ import {
   Facebook,
   Twitter,
   Edit,
+  UserCircle2,
 } from "lucide-react";
 import { ProfileSkeleton } from "@/components/LoadingSkeleton";
 import ImageViewerModal from "@/components/ImageViewerModal";
@@ -87,10 +88,11 @@ function UserProfile() {
   return (
     <div>
       <Card className="bg-white border-none rounded-none pb-20">
-        <CardContent className="space-y-4 p-5">
+        <CardContent className="space-y-4 p-3">
           {/* HEADER TITLE */}
-          <CardTitle className="text-lg font-semibold text-gray-600">
-            Hello, {profile?.display_name || "User"}
+          <CardTitle className="flex items-center gap-2 text-base font-medium text-gray-600 px-2 pt-2">
+            <UserCircle2 className="h-5 w-5 text-primary" />
+            Hi, {profile?.display_name || "User"}!
           </CardTitle>
 
           {/* CODE FOR FUTURE POTENTIAL USE ------------------------------------- */}
@@ -106,7 +108,7 @@ function UserProfile() {
           {/* ------------------------------------------------------------------- */}
 
           {/* PROFILE IMAGE */}
-          <div className="h-[450px] w-full relative">
+          <div className="h-[580px] w-full relative">
             {/* IMAGE CONTAINER */}
             <div className="w-full h-full overflow-hidden rounded-2xl">
               <img
@@ -180,31 +182,34 @@ function UserProfile() {
             </div>
           </div>
 
-          {/* ADDITIONAL PHOTOS THUMBNAILS */}
+          {/* PHOTOS SECTION */}
           {profile?.user_profile_images?.length > 1 && (
-            <div className="mt-4">
-              <div className="grid grid-cols-3 gap-4">
-                {profile.user_profile_images
-                  .filter((img) => !img.is_primary)
-                  .sort((a, b) => a.order - b.order)
-                  .map((image, index) => (
-                    <div
-                      key={index}
-                      className="relative aspect-square cursor-pointer"
-                      onClick={() => openImageViewer(index + 1)} // +1 because we skip the primary image
-                    >
-                      <img
-                        src={image.image_url}
-                        alt={`Additional photo ${index + 1}`}
-                        className="w-full h-26 rounded-2xl object-cover border border-gray-200 shadow-md transition-shadow"
-                      />
-                    </div>
-                  ))}
-              </div>
-            </div>
+            <Card className="bg-white border-gray-200 shadow-sm mt-4">
+              <CardContent className="p-3">
+                <h3 className="text-base font-semibold mb-4 px-2">Photos</h3>
+                <div className="grid grid-cols-3 gap-3">
+                  {profile.user_profile_images
+                    .filter((img) => !img.is_primary)
+                    .sort((a, b) => a.order - b.order)
+                    .map((image, index) => (
+                      <div
+                        key={index}
+                        className="relative aspect-square cursor-pointer"
+                        onClick={() => openImageViewer(index + 1)}
+                      >
+                        <img
+                          src={image.image_url}
+                          alt={`Additional photo ${index + 1}`}
+                          className="w-full h-full rounded-lg object-cover border border-gray-200 shadow-sm transition-all hover:shadow-md hover:scale-[0.98]"
+                        />
+                      </div>
+                    ))}
+                </div>
+              </CardContent>
+            </Card>
           )}
 
-          <div className="space-y-4 mt-8">
+          <div className="space-y-4">
             {/* ABOUT ME SECTION -------------------- */}
             <Card className="bg-white border-gray-200 shadow-sm">
               <CardContent className="p-6">

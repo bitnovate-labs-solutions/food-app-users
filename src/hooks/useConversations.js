@@ -1,11 +1,68 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useEffect } from "react";
+import { toast } from "sonner";
 
 export const useConversations = (userId) => {
-  const { data: currentUserProfile, isLoading: isProfileLoading } = useUserProfile({ id: userId });
+  const { data: currentUserProfile, isLoading: isProfileLoading } =
+    useUserProfile({ id: userId });
   const queryClient = useQueryClient();
+
+  // Add mutation for marking messages as read
+  const markMessagesAsRead = useMutation({
+    mutationFn: async (conversationId) => {
+      const { error } = await supabase
+        .from("messages")
+        .update({ is_read: true })
+        .eq("conversation_id", conversationId)
+        .eq("is_read", false)
+        .neq("sender_id", userId);
+
+      if (error) throw error;
+
+      // Invalidate queries to refresh the data
+      queryClient.invalidateQueries(["conversations", userId]);
+    },
+  });
+
+  // Add mutation for sending messages
+  const sendMessage = useMutation({
+    mutationFn: async ({ conversationId, content }) => {
+      // Save message to database
+      const { data: message, error } = await supabase
+        .from("messages")
+        .insert({
+          conversation_id: conversationId,
+          sender_id: userId,
+          message_content: content,
+          created_at: new Date().toISOString(),
+          is_read: false,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Update conversation's updated_at timestamp
+      const { error: updateError } = await supabase
+        .from("conversations")
+        .update({ updated_at: new Date().toISOString() })
+        .eq("id", conversationId);
+
+      if (updateError) throw updateError;
+
+      return message;
+    },
+    onSuccess: () => {
+      // Invalidate queries to trigger a refresh
+      queryClient.invalidateQueries(["conversations", userId]);
+    },
+    onError: (error) => {
+      console.error("Error in sendMessage:", error);
+      toast.error("Failed to send message");
+    },
+  });
 
   // Set up real-time subscription
   useEffect(() => {
@@ -13,40 +70,40 @@ export const useConversations = (userId) => {
 
     // Create a channel for both messages and conversations
     const channel = supabase
-      .channel('realtime-updates')
+      .channel("realtime-updates")
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
-          schema: 'public',
-          table: 'messages',
-          filter: `conversation_id=in.(select id from conversations where treater_id=${currentUserProfile.id} or treatee_id=${currentUserProfile.id})`
+          event: "*", // Listen to all events (INSERT, UPDATE, DELETE)
+          schema: "public",
+          table: "messages",
+          filter: `conversation_id=in.(select id from conversations where treater_id=${currentUserProfile.id} or treatee_id=${currentUserProfile.id})`,
         },
         async (payload) => {
-          console.log('Message change received:', payload);
+          console.log("Message change received:", payload);
           // Trigger a refetch to get fresh data
-          queryClient.invalidateQueries(['conversations', userId]);
+          queryClient.invalidateQueries(["conversations", userId]);
         }
       )
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: '*', // Listen to all events
-          schema: 'public',
-          table: 'conversations',
-          filter: `treater_id=eq.${currentUserProfile.id} or treatee_id=eq.${currentUserProfile.id}`
+          event: "*", // Listen to all events
+          schema: "public",
+          table: "conversations",
+          filter: `treater_id=eq.${currentUserProfile.id} or treatee_id=eq.${currentUserProfile.id}`,
         },
         async (payload) => {
-          console.log('Conversation change received:', payload);
+          console.log("Conversation change received:", payload);
           // Trigger a refetch to get fresh data
-          queryClient.invalidateQueries(['conversations', userId]);
+          queryClient.invalidateQueries(["conversations", userId]);
         }
       )
       .subscribe();
 
     // Set up periodic refetch every 5 seconds as a backup
     const intervalId = setInterval(() => {
-      queryClient.invalidateQueries(['conversations', userId]);
+      queryClient.invalidateQueries(["conversations", userId]);
     }, 5000);
 
     return () => {
@@ -55,7 +112,7 @@ export const useConversations = (userId) => {
     };
   }, [currentUserProfile, userId, queryClient]);
 
-  return useQuery({
+  const result = useQuery({
     queryKey: ["conversations", userId],
     queryFn: async () => {
       if (!currentUserProfile) {
@@ -104,22 +161,26 @@ export const useConversations = (userId) => {
         // Transform the data to match the expected format
         const transformedConversations = conversations.map((conv) => {
           // Calculate unread count
-          const unreadCount = conv.messages?.filter(
-            msg => !msg.is_read && msg.sender_id !== userId
-          ).length || 0;
-          
+          const unreadCount =
+            conv.messages?.filter(
+              (msg) => !msg.is_read && msg.sender_id !== userId
+            ).length || 0;
+
           // Transform messages
-          const messages = conv.messages?.map(msg => ({
-            id: msg.id,
-            senderId: msg.sender_id,
-            content: msg.message_content,
-            timestamp: msg.created_at,
-            read: msg.is_read
-          })) || [];
+          const messages =
+            conv.messages?.map((msg) => ({
+              id: msg.id,
+              senderId: msg.sender_id,
+              content: msg.message_content,
+              timestamp: msg.created_at,
+              read: msg.is_read,
+            })) || [];
 
           // Sort messages by timestamp
-          messages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-          
+          messages.sort(
+            (a, b) => new Date(a.timestamp) - new Date(b.timestamp)
+          );
+
           return {
             id: conv.id,
             name:
@@ -133,7 +194,7 @@ export const useConversations = (userId) => {
             lastMessage: messages[messages.length - 1]?.content || "",
             unread: unreadCount,
             messages: messages,
-            updated_at: conv.updated_at
+            updated_at: conv.updated_at,
           };
         });
 
@@ -149,4 +210,10 @@ export const useConversations = (userId) => {
     staleTime: 0,
     refetchInterval: 3000, // Refetch every 3 seconds
   });
+
+  return {
+    ...result,
+    markMessagesAsRead,
+    sendMessage,
+  };
 };

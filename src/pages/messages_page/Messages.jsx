@@ -4,6 +4,7 @@ import { useConversations } from "@/hooks/useConversations";
 import { useMessageNotifications } from "@/hooks/useMessageNotifications";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 // COMPONENTS
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -56,6 +57,8 @@ export default function Messages() {
     }
   }, [selectedConversation]);
 
+  const queryClient = useQueryClient();
+
   const handleConversationSelect = async (conversation) => {
     setSelectedConversation(conversation);
     setIsDrawerOpen(false);
@@ -63,17 +66,46 @@ export default function Messages() {
     // Mark messages as read
     try {
       const { error } = await supabase
-        .from("messages")
+        .from('messages')
         .update({ is_read: true })
-        .eq("conversation_id", conversation.id)
-        .eq("is_read", false)
-        .neq("sender_id", user.id);
+        .eq('conversation_id', conversation.id)
+        .eq('is_read', false)
+        .neq('sender_id', user.id);
 
       if (error) {
-        console.error("Error marking messages as read:", error);
+        console.error('Error marking messages as read:', error);
+      } else {
+        // Update the local state to reflect read status
+        const updatedConversation = {
+          ...conversation,
+          messages: conversation.messages.map(msg => ({
+            ...msg,
+            read: msg.sender_id === user.id ? msg.read : true
+          })),
+          unread: 0
+        };
+        setSelectedConversation(updatedConversation);
+
+        // Update the conversations list in the cache
+        queryClient.setQueryData(['conversations', user.id], (oldData) => {
+          if (!oldData) return oldData;
+          return oldData.map(conv => {
+            if (conv.id === conversation.id) {
+              return {
+                ...conv,
+                unread: 0,
+                messages: conv.messages.map(msg => ({
+                  ...msg,
+                  read: msg.sender_id === user.id ? msg.read : true
+                }))
+              };
+            }
+            return conv;
+          });
+        });
       }
     } catch (error) {
-      console.error("Error in handleConversationSelect:", error);
+      console.error('Error in handleConversationSelect:', error);
     }
   };
 

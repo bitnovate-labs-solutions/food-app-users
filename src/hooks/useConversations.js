@@ -21,6 +21,8 @@ export const useConversations = (userId) => {
           table: 'messages',
         },
         async (payload) => {
+          console.log('New message received:', payload);
+          
           // Get the conversation for this message
           const { data: conversation } = await supabase
             .from('conversations')
@@ -51,27 +53,66 @@ export const useConversations = (userId) => {
             queryClient.setQueryData(['conversations', userId], (oldData) => {
               if (!oldData) return oldData;
 
-              return oldData.map((conv) => {
-                if (conv.id === conversation.id) {
-                  const newMessage = {
-                    id: payload.new.id,
-                    senderId: payload.new.sender_id,
-                    content: payload.new.message_content,
-                    timestamp: payload.new.created_at,
-                    read: payload.new.is_read
-                  };
+              const newMessage = {
+                id: payload.new.id,
+                senderId: payload.new.sender_id,
+                content: payload.new.message_content,
+                timestamp: payload.new.created_at,
+                read: payload.new.is_read
+              };
 
-                  return {
-                    ...conv,
-                    messages: [...(conv.messages || []), newMessage],
-                    lastMessage: payload.new.message_content,
-                    unread: payload.new.sender_id !== userId ? conv.unread + 1 : conv.unread
-                  };
-                }
-                return conv;
-              });
+              const updatedConv = {
+                id: conversation.id,
+                name: conversation.treater.user_id === userId
+                  ? conversation.treatee.display_name
+                  : conversation.treater.display_name,
+                avatar: conversation.treater.user_id === userId
+                  ? conversation.treatee.user_profile_images[0]?.image_url
+                  : conversation.treater.user_profile_images[0]?.image_url,
+                lastMessage: payload.new.message_content,
+                unread: payload.new.sender_id !== userId ? 1 : 0,
+                updated_at: new Date().toISOString(),
+                messages: [newMessage]
+              };
+
+              // Remove the old conversation if it exists
+              const otherConvs = oldData.filter(c => c.id !== conversation.id);
+              
+              // Add the updated conversation at the top
+              return [updatedConv, ...otherConvs];
             });
           }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'messages',
+        },
+        async (payload) => {
+          console.log('Message update received:', payload);
+          
+          // Handle message updates (like marking as read)
+          queryClient.setQueryData(['conversations', userId], (oldData) => {
+            if (!oldData) return oldData;
+
+            return oldData.map((conv) => {
+              if (conv.id === payload.new.conversation_id) {
+                const updatedMessages = conv.messages.map(msg => 
+                  msg.id === payload.new.id ? { ...msg, read: payload.new.is_read } : msg
+                );
+                
+                return {
+                  ...conv,
+                  messages: updatedMessages,
+                  unread: updatedMessages.filter(msg => !msg.read && msg.sender_id !== userId).length
+                };
+              }
+              return conv;
+            });
+          });
         }
       )
       .subscribe();

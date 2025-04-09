@@ -11,129 +11,54 @@ export const useConversations = (userId) => {
   useEffect(() => {
     if (!currentUserProfile) return;
 
+    // Create a channel for both messages and conversations
     const channel = supabase
-      .channel('conversations')
+      .channel('realtime-updates')
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
+          event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
           schema: 'public',
           table: 'messages',
+          filter: `conversation_id=in.(select id from conversations where treater_id=${currentUserProfile.id} or treatee_id=${currentUserProfile.id})`
         },
         async (payload) => {
-          console.log('New message received:', payload);
-          
-          // Get the conversation for this message
-          const { data: conversation } = await supabase
-            .from('conversations')
-            .select(`
-              *,
-              treater:treater_id (
-                id,
-                user_id,
-                display_name,
-                user_profile_images!inner (
-                  image_url
-                )
-              ),
-              treatee:treatee_id (
-                id,
-                user_id,
-                display_name,
-                user_profile_images!inner (
-                  image_url
-                )
-              )
-            `)
-            .eq('id', payload.new.conversation_id)
-            .single();
-
-          if (conversation && (conversation.treater_id === currentUserProfile.id || conversation.treatee_id === currentUserProfile.id)) {
-            // Get the existing conversations from the cache
-            const existingData = queryClient.getQueryData(['conversations', userId]);
-            if (!existingData) return;
-
-            // Create the new message object
-            const newMessage = {
-              id: payload.new.id,
-              senderId: payload.new.sender_id,
-              content: payload.new.message_content,
-              timestamp: payload.new.created_at,
-              read: payload.new.is_read
-            };
-
-            // Find and update the existing conversation
-            const updatedConversations = existingData.map(conv => {
-              if (conv.id === conversation.id) {
-                return {
-                  ...conv,
-                  lastMessage: payload.new.message_content,
-                  messages: [...(conv.messages || []), newMessage],
-                  unread: payload.new.sender_id !== userId ? conv.unread + 1 : conv.unread,
-                  updated_at: new Date().toISOString()
-                };
-              }
-              return conv;
-            });
-
-            // Sort conversations by updated_at
-            updatedConversations.sort((a, b) => 
-              new Date(b.updated_at) - new Date(a.updated_at)
-            );
-
-            // Update the cache immediately
-            queryClient.setQueryData(['conversations', userId], updatedConversations);
-          }
+          console.log('Message change received:', payload);
+          // Trigger a refetch to get fresh data
+          queryClient.invalidateQueries(['conversations', userId]);
         }
       )
       .on(
         'postgres_changes',
         {
-          event: 'UPDATE',
+          event: '*', // Listen to all events
           schema: 'public',
-          table: 'messages',
+          table: 'conversations',
+          filter: `treater_id=eq.${currentUserProfile.id} or treatee_id=eq.${currentUserProfile.id}`
         },
         async (payload) => {
-          console.log('Message update received:', payload);
-          
-          const existingData = queryClient.getQueryData(['conversations', userId]);
-          if (!existingData) return;
-
-          const updatedConversations = existingData.map(conv => {
-            if (conv.id === payload.new.conversation_id) {
-              return {
-                ...conv,
-                messages: conv.messages.map(msg => 
-                  msg.id === payload.new.id 
-                    ? { ...msg, read: payload.new.is_read }
-                    : msg
-                ),
-                unread: conv.messages.filter(msg => 
-                  !msg.read && msg.senderId !== userId
-                ).length
-              };
-            }
-            return conv;
-          });
-
-          queryClient.setQueryData(['conversations', userId], updatedConversations);
+          console.log('Conversation change received:', payload);
+          // Trigger a refetch to get fresh data
+          queryClient.invalidateQueries(['conversations', userId]);
         }
       )
       .subscribe();
 
+    // Set up periodic refetch every 5 seconds as a backup
+    const intervalId = setInterval(() => {
+      queryClient.invalidateQueries(['conversations', userId]);
+    }, 5000);
+
     return () => {
       supabase.removeChannel(channel);
+      clearInterval(intervalId);
     };
   }, [currentUserProfile, userId, queryClient]);
 
   return useQuery({
     queryKey: ["conversations", userId],
     queryFn: async () => {
-      console.log("Fetching conversations for userId:", userId);
-      console.log("Current user profile:", currentUserProfile);
-
       if (!currentUserProfile) {
-        console.log("No current user profile, returning empty array");
         return [];
       }
 
@@ -174,10 +99,7 @@ export const useConversations = (userId) => {
           )
           .order("updated_at", { ascending: false });
 
-        if (error) {
-          console.error("Error fetching conversations:", error);
-          throw error;
-        }
+        if (error) throw error;
 
         // Transform the data to match the expected format
         const transformedConversations = conversations.map((conv) => {
@@ -225,5 +147,6 @@ export const useConversations = (userId) => {
     refetchOnWindowFocus: true,
     refetchOnMount: true,
     staleTime: 0,
+    refetchInterval: 3000, // Refetch every 3 seconds
   });
 };

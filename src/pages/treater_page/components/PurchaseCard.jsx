@@ -123,6 +123,7 @@ function PurchaseCard({ item, onShowQR, onShowDetails }) {
         isOpen={showInterestedUsers}
         onClose={() => setShowInterestedUsers(false)}
         interestedUsers={interestedUsers}
+        purchaseId={item.id}
       />
     </>
   );

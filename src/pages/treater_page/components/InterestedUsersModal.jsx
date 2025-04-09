@@ -11,15 +11,22 @@ import ImageWithFallback from "@/components/ImageWithFallback";
 import { useState } from "react";
 import UserProfileCard from "@/components/UserProfileCard";
 import { Button } from "@/components/ui/button";
+import { useChatRequest } from "@/hooks/useChatRequest";
+import { useAuth } from "@/context/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 export default function InterestedUsersModal({
   isOpen,
   onClose,
   interestedUsers,
+  purchaseId,
 }) {
   const [selectedUser, setSelectedUser] = useState(null);
   const [selectedUserIndex, setSelectedUserIndex] = useState(null);
   const [isDetailsShown, setIsDetailsShown] = useState(false);
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const chatRequest = useChatRequest();
 
   // HANDLE SWIPE LEFT
   const handleSwipeLeft = () => {
@@ -34,6 +41,26 @@ export default function InterestedUsersModal({
     if (selectedUserIndex > 0) {
       setSelectedUserIndex(selectedUserIndex - 1);
       setSelectedUser(interestedUsers[selectedUserIndex - 1].treatee);
+    }
+  };
+
+  const handleChatClick = async (e, treatee) => {
+    e.stopPropagation();
+    try {
+      console.log("Treatee data:", treatee);
+      console.log("Current user:", user);
+      console.log("Purchase ID:", purchaseId);
+
+      const conversation = await chatRequest.mutateAsync({
+        treaterId: user.id, // This is auth.users.id
+        treateeId: treatee.user_id, // This should be auth.users.id, not user_profiles.id
+        purchaseId: purchaseId,
+      });
+
+      // If conversation already exists or was created successfully, navigate to messages
+      navigate("/messages", { state: { conversationId: conversation.id } });
+    } catch (error) {
+      console.error("Error starting chat:", error);
     }
   };
 
@@ -112,14 +139,7 @@ export default function InterestedUsersModal({
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 rounded-full bg-primary/10 text-primary transition-colors duration-200"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            // Handle chat functionality
-                            console.log(
-                              "Chat with:",
-                              interest.treatee.display_name
-                            );
-                          }}
+                          onClick={(e) => handleChatClick(e, interest.treatee)}
                         >
                           <MessageCircle className="h-4 w-4" />
                         </Button>

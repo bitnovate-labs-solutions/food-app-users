@@ -10,7 +10,11 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { mockConversations } from "@/mock_data/messages";
 
 export default function Messages() {
-  const [selectedConversation, setSelectedConversation] = useState(null);
+  const [selectedConversation, setSelectedConversation] = useState(() => {
+    // Try to get the last selected conversation from localStorage
+    const savedConversation = localStorage.getItem("selectedConversation");
+    return savedConversation ? JSON.parse(savedConversation) : null;
+  });
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [newMessage, setNewMessage] = useState("");
   const messagesEndRef = useRef(null);
@@ -22,6 +26,16 @@ export default function Messages() {
   useEffect(() => {
     scrollToBottom();
   }, [selectedConversation?.messages]);
+
+  // Save selected conversation to localStorage whenever it changes
+  useEffect(() => {
+    if (selectedConversation) {
+      localStorage.setItem(
+        "selectedConversation",
+        JSON.stringify(selectedConversation)
+      );
+    }
+  }, [selectedConversation]);
 
   const handleConversationSelect = (conversation) => {
     setSelectedConversation(conversation);
@@ -39,10 +53,12 @@ export default function Messages() {
       timestamp: new Date().toISOString(),
     };
 
-    setSelectedConversation({
+    const updatedConversation = {
       ...selectedConversation,
       messages: [...selectedConversation.messages, newMessageObj],
-    });
+    };
+
+    setSelectedConversation(updatedConversation);
     setNewMessage("");
   };
 

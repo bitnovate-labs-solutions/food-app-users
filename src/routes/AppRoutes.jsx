@@ -20,7 +20,7 @@ import CreateProfile from "@/pages/CreateProfile";
 import EditProfile from "@/pages/edit_profile_page/EditProfile";
 import AuthCallback from "@/routes/AuthCallback";
 import Connect from "@/pages/connect_page/Connect";
-import TestSkeletons from "@/pages/test-skeletons";
+import TestSkeletons from "@/pages/test-skeletons_temp";
 
 // TEMP TESTING
 import LoadingComponent from "@/components/LoadingComponent";

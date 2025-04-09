@@ -85,7 +85,8 @@ export default function TreatersModal({ isOpen, onClose, users }) {
                             {user.occupation || "Occupation not specified"}
                           </p>
                         </div>
-                        <Button
+                        {/* CODE FOR FUTURE USE (TBC) =============================== */}
+                        {/* <Button
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 text-primary hover:text-primary/80 hover:bg-primary/10"
@@ -96,7 +97,7 @@ export default function TreatersModal({ isOpen, onClose, users }) {
                           }}
                         >
                           <MessageCircle className="h-5 w-5" />
-                        </Button>
+                        </Button> */}
                       </div>
                     </div>
                   </div>

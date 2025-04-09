@@ -109,6 +109,9 @@ export default function Messages() {
       if (error) {
         console.error("Error marking messages as read:", error);
       } else {
+        // Invalidate and refetch the conversations query to get fresh data
+        await queryClient.invalidateQueries(["conversations", user.id]);
+        
         // Update the local state to reflect read status
         const updatedConversation = {
           ...conversation,
@@ -119,6 +122,7 @@ export default function Messages() {
           unread: 0,
         };
         setSelectedConversation(updatedConversation);
+        
         // Scroll to bottom instantly after selecting conversation
         setTimeout(() => {
           messagesEndRef.current?.scrollIntoView({ behavior: "instant" });
@@ -171,25 +175,7 @@ export default function Messages() {
 
       console.log("Saved message:", message);
 
-      // Update local state
-      const newMessageObj = {
-        id: message.id,
-        senderId: user.id,
-        content: message.message_content,
-        timestamp: message.created_at,
-        read: message.is_read,
-      };
-
-      console.log("New message object:", newMessageObj);
-
-      const updatedConversation = {
-        ...selectedConversation,
-        messages: [...(selectedConversation.messages || []), newMessageObj],
-      };
-
-      console.log("Updated conversation:", updatedConversation);
-
-      setSelectedConversation(updatedConversation);
+      // Clear input immediately
       setNewMessage("");
 
       // Update conversation's updated_at timestamp
@@ -201,6 +187,9 @@ export default function Messages() {
       if (updateError) {
         console.error("Error updating conversation timestamp:", updateError);
       }
+
+      // Invalidate queries to trigger a refresh
+      await queryClient.invalidateQueries(["conversations", user.id]);
     } catch (error) {
       console.error("Error in handleSendMessage:", error);
       toast.error("Failed to send message");

@@ -132,14 +132,16 @@ export function AuthProvider({ children }) {
 
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
+
+      // Clear all localStorage items
+      localStorage.clear();
+      
+      setUser(null);
+      navigate("/auth", { replace: true });
     } catch (error) {
       console.error("Sign out error:", error);
       // Still attempt to clear everything even if there's an error
-      for (const key of Object.keys(localStorage)) {
-        if (key.startsWith("sb-")) {
-          localStorage.removeItem(key);
-        }
-      }
+      localStorage.clear();
       setUser(null);
       navigate("/auth", { replace: true });
     }

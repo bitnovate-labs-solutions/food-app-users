@@ -14,14 +14,40 @@ import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 import { useMessageCleanup } from "@/hooks/useMessageCleanup";
 import MockDataPopulator from "@/components/messages/MockDataPopulator";
+import { useMessageNotifications } from "@/hooks/useMessageNotifications";
 
 function ConversationsList({ onSelectConversation }) {
   const { user } = useAuth();
   const [conversations, setConversations] = useState([]);
+  const [userProfileId, setUserProfileId] = useState(null);
+
+  // Get user's profile ID
+  useEffect(() => {
+    async function getUserProfileId() {
+      if (!user) return;
+      
+      const { data: profile, error } = await supabase
+        .from("user_profiles")
+        .select("id")
+        .eq("user_id", user.id)
+        .single();
+
+      if (error) {
+        console.error("Error fetching user profile:", error);
+        return;
+      }
+
+      setUserProfileId(profile.id);
+    }
+
+    getUserProfileId();
+  }, [user]);
 
   // Fetch conversations
   useEffect(() => {
     async function fetchConversations() {
+      if (!userProfileId) return;
+
       try {
         const { data: conversations, error } = await supabase
           .from("conversations")
@@ -29,22 +55,22 @@ function ConversationsList({ onSelectConversation }) {
             *,
             treater:treater_id!conversations_treater_id_fkey (
               id,
-              email,
+              user_id,
               user_profiles (
-                full_name,
+                display_name,
                 avatar_url
               )
             ),
             treatee:treatee_id!conversations_treatee_id_fkey (
               id,
-              email,
+              user_id,
               user_profiles (
-                full_name,
+                display_name,
                 avatar_url
               )
             )
           `)
-          .or(`treater_id.eq.${user.id},treatee_id.eq.${user.id}`)
+          .or(`treater_id.eq.${userProfileId},treatee_id.eq.${userProfileId}`)
           .order("updated_at", { ascending: false });
 
         if (error) throw error;
@@ -56,10 +82,8 @@ function ConversationsList({ onSelectConversation }) {
       }
     }
 
-    if (user) {
-      fetchConversations();
-    }
-  }, [user]);
+    fetchConversations();
+  }, [userProfileId]);
 
   if (conversations.length === 0) {
     return (
@@ -80,7 +104,7 @@ function ConversationsList({ onSelectConversation }) {
     <div className="space-y-2">
       {conversations.map((conversation) => {
         const otherUser =
-          conversation.treater_id === user.id
+          conversation.treater_id === userProfileId
             ? conversation.treatee
             : conversation.treater;
 
@@ -92,11 +116,11 @@ function ConversationsList({ onSelectConversation }) {
             onClick={() => onSelectConversation(conversation)}
           >
             <Avatar className="h-12 w-12">
-              <AvatarImage src={otherUser.avatar_url} />
-              <AvatarFallback>{otherUser.display_name?.[0]}</AvatarFallback>
+              <AvatarImage src={otherUser.user_profiles?.avatar_url} />
+              <AvatarFallback>{otherUser.user_profiles?.display_name?.[0]}</AvatarFallback>
             </Avatar>
             <div className="flex flex-col items-start">
-              <span className="font-medium">{otherUser.display_name}</span>
+              <span className="font-medium">{otherUser.user_profiles?.display_name}</span>
               <span className="text-sm text-muted-foreground">
                 {formatDistanceToNow(new Date(conversation.updated_at), {
                   addSuffix: true,
@@ -113,13 +137,41 @@ function ConversationsList({ onSelectConversation }) {
 function MessagesList() {
   const [selectedConversation, setSelectedConversation] = useState(null);
   const { user } = useAuth();
+  const [userProfileId, setUserProfileId] = useState(null);
+
+  // Get user's profile ID
+  useEffect(() => {
+    async function getUserProfileId() {
+      if (!user) return;
+      
+      const { data: profile, error } = await supabase
+        .from("user_profiles")
+        .select("id")
+        .eq("user_id", user.id)
+        .single();
+
+      if (error) {
+        console.error("Error fetching user profile:", error);
+        return;
+      }
+
+      setUserProfileId(profile.id);
+    }
+
+    getUserProfileId();
+  }, [user]);
+
+  // Add message notifications
+  useMessageNotifications();
 
   const handleStartConversation = async (treateeId) => {
+    if (!userProfileId) return;
+
     try {
       const { data, error } = await supabase
         .from("conversations")
         .insert({
-          treater_id: user.id,
+          treater_id: userProfileId,
           treatee_id: treateeId,
           status: "active",
           created_at: new Date().toISOString(),
@@ -140,7 +192,7 @@ function MessagesList() {
 
   if (selectedConversation) {
     const otherUser =
-      selectedConversation.treater_id === user.id
+      selectedConversation.treater_id === userProfileId
         ? selectedConversation.treatee
         : selectedConversation.treater;
 
@@ -155,10 +207,10 @@ function MessagesList() {
             Back
           </Button>
           <Avatar className="h-8 w-8">
-            <AvatarImage src={otherUser.avatar_url} />
-            <AvatarFallback>{otherUser.display_name?.[0]}</AvatarFallback>
+            <AvatarImage src={otherUser.user_profiles?.avatar_url} />
+            <AvatarFallback>{otherUser.user_profiles?.display_name?.[0]}</AvatarFallback>
           </Avatar>
-          <span className="font-medium">{otherUser.display_name}</span>
+          <span className="font-medium">{otherUser.user_profiles?.display_name}</span>
         </div>
         <PresetMessageChat
           conversationId={selectedConversation.id}

@@ -120,7 +120,12 @@ export default function AppHeader({ title, subtitle, isHomePage, isProfilePage }
     <div className="fixed top-0 left-0 right-0 max-w-sm mx-auto bg-white border-b border-gray-200 shadow-md z-10">
       <div className="pt-3">
         <div className="grid grid-cols-5">
-          <div className="col-start-2 col-span-3">
+          {/* LEFT SIDE BUTTONS -------------------- */}
+          <div className="flex justify-start">
+            {/* {user && isHomePage && <NotificationBell />} */}
+          </div>
+
+          <div className="col-span-3">
             {/* HEADER TITLE -------------------- */}
             <h1 className="text-base font-semibold mb-4 text-center text-gray-800">
               {title}

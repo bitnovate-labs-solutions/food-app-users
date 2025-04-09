@@ -35,6 +35,15 @@ export default function Messages() {
     const savedConversation = localStorage.getItem("selectedConversation");
     return savedConversation ? JSON.parse(savedConversation) : null;
   });
+
+  // Clear localStorage if there are no conversations
+  useEffect(() => {
+    if (!isLoading && conversations.length === 0) {
+      localStorage.removeItem("selectedConversation");
+      setSelectedConversation(null);
+    }
+  }, [conversations, isLoading]);
+
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [newMessage, setNewMessage] = useState("");
   const messagesEndRef = useRef(null);

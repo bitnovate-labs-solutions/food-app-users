@@ -48,6 +48,18 @@ export default function Messages() {
   const [newMessage, setNewMessage] = useState("");
   const messagesEndRef = useRef(null);
 
+  // Prevent body scrolling when drawer is open
+  useEffect(() => {
+    if (isDrawerOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [isDrawerOpen]);
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -75,38 +87,38 @@ export default function Messages() {
     // Mark messages as read
     try {
       const { error } = await supabase
-        .from('messages')
+        .from("messages")
         .update({ is_read: true })
-        .eq('conversation_id', conversation.id)
-        .eq('is_read', false)
-        .neq('sender_id', user.id);
+        .eq("conversation_id", conversation.id)
+        .eq("is_read", false)
+        .neq("sender_id", user.id);
 
       if (error) {
-        console.error('Error marking messages as read:', error);
+        console.error("Error marking messages as read:", error);
       } else {
         // Update the local state to reflect read status
         const updatedConversation = {
           ...conversation,
-          messages: conversation.messages.map(msg => ({
+          messages: conversation.messages.map((msg) => ({
             ...msg,
-            read: msg.sender_id === user.id ? msg.read : true
+            read: msg.sender_id === user.id ? msg.read : true,
           })),
-          unread: 0
+          unread: 0,
         };
         setSelectedConversation(updatedConversation);
 
         // Update the conversations list in the cache
-        queryClient.setQueryData(['conversations', user.id], (oldData) => {
+        queryClient.setQueryData(["conversations", user.id], (oldData) => {
           if (!oldData) return oldData;
-          return oldData.map(conv => {
+          return oldData.map((conv) => {
             if (conv.id === conversation.id) {
               return {
                 ...conv,
                 unread: 0,
-                messages: conv.messages.map(msg => ({
+                messages: conv.messages.map((msg) => ({
                   ...msg,
-                  read: msg.sender_id === user.id ? msg.read : true
-                }))
+                  read: msg.sender_id === user.id ? msg.read : true,
+                })),
               };
             }
             return conv;
@@ -114,7 +126,7 @@ export default function Messages() {
         });
       }
     } catch (error) {
-      console.error('Error in handleConversationSelect:', error);
+      console.error("Error in handleConversationSelect:", error);
     }
   };
 
@@ -195,10 +207,10 @@ export default function Messages() {
   }
 
   return (
-    <div className="h-[calc(100vh-4rem)]">
+    <div className="h-[calc(100vh-4rem)] flex flex-col overflow-hidden fixed inset-x-0 top-14 bottom-0">
       {/* Main Message Area */}
-      <div className="h-full flex flex-col">
-        <div className="p-4 border-b border-gray-200 flex items-center gap-4 bg-white shadow-md sticky">
+      <div className="h-full flex flex-col relative">
+        <div className="p-4 border-b border-gray-200 flex items-center gap-4 bg-white shadow-md sticky top-0 z-20">
           {/* MESSAGE LEFT DRAWER -------------------------------------------------------------- */}
           <Sheet open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
             {/* DRAWER HAMBURGER BUTTON */}
@@ -214,7 +226,7 @@ export default function Messages() {
 
             <SheetContent
               side="left"
-              className="w-[300px] h-[calc(100vh-3rem)] top-[3rem] p-0 bg-white border-r border-gray-200 shadow-lg transition-transform duration-500 ease-in-out z-60"
+              className="w-[300px] h-[calc(100vh-3rem)] top-[3rem] p-0 bg-white border-r border-gray-200 shadow-lg transition-transform duration-500 ease-in-out z-60 fixed"
             >
               {/* DRAWER TITLE */}
               <div className="p-4 border-b border-gray-200">
@@ -305,7 +317,7 @@ export default function Messages() {
         {selectedConversation ? (
           // CONVERSATION SELECTED
           <>
-            <ScrollArea className="flex-1 p-4">
+            <ScrollArea className="flex-1 p-4 pb-36 overflow-y-auto">
               <div className="space-y-4 max-w-2xl mx-auto">
                 {selectedConversation.messages?.map((message) => {
                   console.log("Rendering message:", message);
@@ -344,7 +356,7 @@ export default function Messages() {
             </ScrollArea>
 
             {/* MESSAGE INPUT */}
-            <div className="p-4 bg-white border-t border-gray-200 mb-[4.3rem] z-50">
+            <div className="p-4 bg-white border-t border-gray-200 fixed bottom-[5.2rem] left-0 right-0 z-20">
               <div className="flex gap-2 max-w-2xl mx-auto">
                 <Input
                   placeholder="Type a message..."

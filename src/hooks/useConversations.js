@@ -11,8 +11,8 @@ export const useConversations = (userId) => {
   useEffect(() => {
     if (!currentUserProfile) return;
 
-    const subscription = supabase
-      .channel('messages')
+    const channel = supabase
+      .channel('conversations')
       .on(
         'postgres_changes',
         {
@@ -49,48 +49,40 @@ export const useConversations = (userId) => {
             .single();
 
           if (conversation && (conversation.treater_id === currentUserProfile.id || conversation.treatee_id === currentUserProfile.id)) {
-            // Update the query cache with the new message
-            queryClient.setQueryData(['conversations', userId], (oldData) => {
-              if (!oldData) return oldData;
+            // Get the existing conversations from the cache
+            const existingData = queryClient.getQueryData(['conversations', userId]);
+            if (!existingData) return;
 
-              const newMessage = {
-                id: payload.new.id,
-                senderId: payload.new.sender_id,
-                content: payload.new.message_content,
-                timestamp: payload.new.created_at,
-                read: payload.new.is_read
-              };
+            // Create the new message object
+            const newMessage = {
+              id: payload.new.id,
+              senderId: payload.new.sender_id,
+              content: payload.new.message_content,
+              timestamp: payload.new.created_at,
+              read: payload.new.is_read
+            };
 
-              const updatedConv = {
-                id: conversation.id,
-                name: conversation.treater.user_id === userId
-                  ? conversation.treatee.display_name
-                  : conversation.treater.display_name,
-                avatar: conversation.treater.user_id === userId
-                  ? conversation.treatee.user_profile_images[0]?.image_url
-                  : conversation.treater.user_profile_images[0]?.image_url,
-                lastMessage: payload.new.message_content,
-                unread: payload.new.sender_id !== userId ? 1 : 0,
-                updated_at: new Date().toISOString(),
-                messages: []
-              };
-
-              // Find the existing conversation
-              const existingConv = oldData.find(c => c.id === conversation.id);
-              if (existingConv) {
-                // Keep existing messages and add the new one
-                updatedConv.messages = [...existingConv.messages, newMessage];
-                updatedConv.unread = existingConv.unread + (payload.new.sender_id !== userId ? 1 : 0);
-              } else {
-                updatedConv.messages = [newMessage];
+            // Find and update the existing conversation
+            const updatedConversations = existingData.map(conv => {
+              if (conv.id === conversation.id) {
+                return {
+                  ...conv,
+                  lastMessage: payload.new.message_content,
+                  messages: [...(conv.messages || []), newMessage],
+                  unread: payload.new.sender_id !== userId ? conv.unread + 1 : conv.unread,
+                  updated_at: new Date().toISOString()
+                };
               }
-
-              // Remove the old conversation if it exists
-              const otherConvs = oldData.filter(c => c.id !== conversation.id);
-              
-              // Add the updated conversation at the top
-              return [updatedConv, ...otherConvs];
+              return conv;
             });
+
+            // Sort conversations by updated_at
+            updatedConversations.sort((a, b) => 
+              new Date(b.updated_at) - new Date(a.updated_at)
+            );
+
+            // Update the cache immediately
+            queryClient.setQueryData(['conversations', userId], updatedConversations);
           }
         }
       )
@@ -104,31 +96,33 @@ export const useConversations = (userId) => {
         async (payload) => {
           console.log('Message update received:', payload);
           
-          // Handle message updates (like marking as read)
-          queryClient.setQueryData(['conversations', userId], (oldData) => {
-            if (!oldData) return oldData;
+          const existingData = queryClient.getQueryData(['conversations', userId]);
+          if (!existingData) return;
 
-            return oldData.map((conv) => {
-              if (conv.id === payload.new.conversation_id) {
-                const updatedMessages = conv.messages.map(msg => 
-                  msg.id === payload.new.id ? { ...msg, read: payload.new.is_read } : msg
-                );
-                
-                return {
-                  ...conv,
-                  messages: updatedMessages,
-                  unread: updatedMessages.filter(msg => !msg.read && msg.sender_id !== userId).length
-                };
-              }
-              return conv;
-            });
+          const updatedConversations = existingData.map(conv => {
+            if (conv.id === payload.new.conversation_id) {
+              return {
+                ...conv,
+                messages: conv.messages.map(msg => 
+                  msg.id === payload.new.id 
+                    ? { ...msg, read: payload.new.is_read }
+                    : msg
+                ),
+                unread: conv.messages.filter(msg => 
+                  !msg.read && msg.senderId !== userId
+                ).length
+              };
+            }
+            return conv;
           });
+
+          queryClient.setQueryData(['conversations', userId], updatedConversations);
         }
       )
       .subscribe();
 
     return () => {
-      subscription.unsubscribe();
+      supabase.removeChannel(channel);
     };
   }, [currentUserProfile, userId, queryClient]);
 
@@ -185,17 +179,8 @@ export const useConversations = (userId) => {
           throw error;
         }
 
-        console.log("Raw conversations data:", conversations);
-
-        if (!conversations || conversations.length === 0) {
-          console.log("No conversations found");
-          return [];
-        }
-
         // Transform the data to match the expected format
         const transformedConversations = conversations.map((conv) => {
-          console.log("Processing conversation:", conv);
-          
           // Calculate unread count
           const unreadCount = conv.messages?.filter(
             msg => !msg.is_read && msg.sender_id !== userId
@@ -213,7 +198,7 @@ export const useConversations = (userId) => {
           // Sort messages by timestamp
           messages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
           
-          const transformed = {
+          return {
             id: conv.id,
             name:
               conv.treater.user_id === userId
@@ -228,12 +213,8 @@ export const useConversations = (userId) => {
             messages: messages,
             updated_at: conv.updated_at
           };
-
-          console.log("Transformed conversation:", transformed);
-          return transformed;
         });
 
-        console.log("Final transformed conversations:", transformedConversations);
         return transformedConversations;
       } catch (error) {
         console.error("Error in useConversations:", error);
@@ -243,7 +224,6 @@ export const useConversations = (userId) => {
     enabled: !!userId && !!currentUserProfile && !isProfileLoading,
     refetchOnWindowFocus: true,
     refetchOnMount: true,
-    staleTime: 0, // Consider data always stale
-    cacheTime: 1000 * 60, // Keep unused data in cache for 1 minute only
+    staleTime: 0,
   });
 };

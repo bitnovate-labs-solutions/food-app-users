@@ -98,7 +98,9 @@ export default function UserProfileCard({
   return (
     <>
       <Card
-        className={`overflow-hidden border-none shadow-2xl rounded-2xl mb-20 mt-20 ${className}`}
+        className={`overflow-hidden border-none shadow-2xl rounded-2xl ${
+          location.pathname === "/connect" ? "mb-20 mt-20" : ""
+        } ${className}`}
       >
         {/* CLOSE BUTTON - Outside swipeable area */}
         {onClose && (
@@ -317,8 +319,6 @@ export default function UserProfileCard({
                 </div>
               </div>
 
-              <div className="border-b border-gray-300 mb-5 mx-2"></div>
-
               {/* PURCHASED ITEMS SECTION - Only on Connect page and for treaters */}
               {location.pathname === "/connect" && user.role === "treater" && (
                 <Card className="bg-white border-gray-100 shadow-lg">
@@ -351,7 +351,7 @@ export default function UserProfileCard({
                                     to="/treatee"
                                     className="block w-[145px] snap-start"
                                   >
-                                    <div className="bg-white border border-gray-100 rounded-lg overflow-hidden shadow-md transition-shadow duration-200">
+                                    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden transition-shadow duration-200">
                                       <div className="relative aspect-square">
                                         <ImageWithFallback
                                           src={

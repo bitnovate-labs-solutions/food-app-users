@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { QrCode, Users, Package, Info } from "lucide-react";
 import ImageWithFallback from "@/components/ImageWithFallback";
-import InterestedUsersModal from "./InterestedUsersModal";
+import InterestedTreateesModal from "./InterestedTreateesModal";
 
 function PurchaseCard({ item, onShowQR, onShowDetails }) {
   const [showInterestedUsers, setShowInterestedUsers] = useState(false);
@@ -119,7 +119,7 @@ function PurchaseCard({ item, onShowQR, onShowDetails }) {
         </CardContent>
       </Card>
 
-      <InterestedUsersModal
+      <InterestedTreateesModal
         isOpen={showInterestedUsers}
         onClose={() => setShowInterestedUsers(false)}
         interestedUsers={interestedUsers}

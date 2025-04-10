@@ -14,8 +14,9 @@ import { Button } from "@/components/ui/button";
 import { useChatRequest } from "@/hooks/useChatRequest";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
-export default function InterestedUsersModal({
+export default function InterestedTreateesModal({
   isOpen,
   onClose,
   interestedUsers,
@@ -47,20 +48,35 @@ export default function InterestedUsersModal({
   const handleChatClick = async (e, treatee) => {
     e.stopPropagation();
     try {
-      console.log("Treatee data:", treatee);
-      console.log("Current user:", user);
-      console.log("Purchase ID:", purchaseId);
+      // Make sure we have all required data
+      if (!user?.id || !treatee?.user_id || !purchaseId) {
+        console.error("Missing required data for chat request:", {
+          userId: user?.id,
+          treateeId: treatee?.user_id,
+          purchaseId,
+        });
+        return;
+      }
 
+      // Create the conversation
       const conversation = await chatRequest.mutateAsync({
-        treaterId: user.id, // This is auth.users.id
-        treateeId: treatee.user_id, // This should be auth.users.id, not user_profiles.id
-        purchaseId: purchaseId,
+        treaterId: user.id,
+        treateeId: treatee.user_id,
+        purchaseId,
       });
 
-      // If conversation already exists or was created successfully, navigate to messages
-      navigate("/messages", { state: { conversationId: conversation.id } });
+      // Only navigate if we have a valid conversation
+      if (conversation?.id) {
+        navigate("/messages", { state: { conversationId: conversation.id } });
+      } else {
+        console.error("No conversation ID returned from chat request");
+        toast.error("Failed to start conversation");
+      }
     } catch (error) {
       console.error("Error starting chat:", error);
+      toast.error("Failed to start conversation", {
+        description: error.message,
+      });
     }
   };
 

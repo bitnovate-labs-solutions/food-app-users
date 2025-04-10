@@ -1,46 +1,47 @@
+// Purpose of this hook: handle the creation and management of chat conversations between 2 users (treater/treatee)
+//  Creates a new chat conversation between "treater" and "treatee"
+
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 
+// Helper function to fetch a single user profile
+const fetchUserProfile = async (userId) => {
+  const { data, error } = await supabase
+    .from("user_profiles")
+    .select("id")
+    .eq("user_id", userId) // takes a userId as input
+    .single();
+
+  if (error) {
+    console.error(`Error fetching user profile for ${userId}:`, error);
+    throw error;
+  }
+
+  return data; // returns the profile data or throws an error
+};
+
 export const useChatRequest = () => {
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient(); // Initializes the query client for cache management
 
   return useMutation({
     mutationFn: async ({ treaterId, treateeId, purchaseId }) => {
-      console.log("Starting chat request with:", { treaterId, treateeId, purchaseId });
+      // Fetch both user profiles in parallel
+      const [treaterProfile, treateeProfile] = await Promise.all([
+        fetchUserProfile(treaterId),
+        fetchUserProfile(treateeId),
+      ]);
 
-      // First, get the profile IDs for both users
-      const { data: treaterProfile, error: treaterError } = await supabase
-        .from("user_profiles")
-        .select("id")
-        .eq("user_id", treaterId)
-        .single();
-
-      if (treaterError) {
-        console.error("Error fetching treater profile:", treaterError);
-        throw treaterError;
-      }
-
-      const { data: treateeProfile, error: treateeError } = await supabase
-        .from("user_profiles")
-        .select("id")
-        .eq("user_id", treateeId)
-        .single();
-
-      if (treateeError) {
-        console.error("Error fetching treatee profile:", treateeError);
-        throw treateeError;
-      }
-
-      // Check if conversation already exists
-      const { data: existingConversation, error: checkError } = await supabase
+      // Check for existing conversation
+      const { data: existingConversation, error: checkError } = await supabase // Queries the conversations table for an existing chat
         .from("conversations")
         .select("*")
-        .eq("treater_id", treaterProfile.id)
+        .eq("treater_id", treaterProfile.id) // Checks for a conversation between the two users
         .eq("treatee_id", treateeProfile.id)
         .single();
 
-      if (checkError && checkError.code !== "PGRST116") { // PGRST116 is "no rows returned"
+      if (checkError && checkError.code !== "PGRST116") {
+        // PGRST116 is "no rows returned"
         console.error("Error checking for existing conversation:", checkError);
         throw checkError;
       }
@@ -71,9 +72,9 @@ export const useChatRequest = () => {
 
       return conversation;
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["conversations"] });
-      toast.success("Message sent successfully!");
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["conversations"] }); // Invalidates the conversations query cache
+      toast.success("Message sent successfully!"); // Shows success notification to user
     },
     onError: (error) => {
       console.error("Chat request failed:", error);

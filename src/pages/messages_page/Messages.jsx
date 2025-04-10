@@ -3,6 +3,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useConversations } from "@/hooks/useConversations";
 import { useMessageNotifications } from "@/hooks/useMessageNotifications";
 import { formatTime } from "@/utils/formatTime";
+import { useParams, useNavigate } from "react-router-dom";
 
 // COMPONENTS
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -15,6 +16,8 @@ import ErrorComponent from "@/components/ErrorComponent";
 
 export default function Messages() {
   const { user } = useAuth();
+  const { conversationId: urlConversationId } = useParams();
+  const navigate = useNavigate();
 
   // Add the message notifications hook
   useMessageNotifications(user?.id);
@@ -32,41 +35,25 @@ export default function Messages() {
   const [newMessage, setNewMessage] = useState("");
   const messagesEndRef = useRef(null);
 
-  // Restore selected conversation from sessionStorage when conversations load
+  // Update selected conversation based on URL parameter
   useEffect(() => {
-    if (conversations.length > 0 && !selectedConversation) {
-      const savedConversationId = sessionStorage.getItem(
-        "selectedConversationId"
-      );
-      if (savedConversationId) {
-        const conversation = conversations.find(
-          (c) => c.id === savedConversationId
-        );
+    if (conversations.length > 0) {
+      if (urlConversationId) {
+        const conversation = conversations.find((c) => String(c.id) === String(urlConversationId));
         if (conversation) {
           setSelectedConversation(conversation);
         }
+      } else if (!selectedConversation) {
+        const savedConversationId = sessionStorage.getItem("selectedConversationId");
+        if (savedConversationId) {
+          const conversation = conversations.find((c) => String(c.id) === String(savedConversationId));
+          if (conversation) {
+            navigate(`/messages/${conversation.id}`, { replace: true });
+          }
+        }
       }
     }
-  }, [conversations, selectedConversation]);
-
-  // Save selected conversation ID to sessionStorage
-  useEffect(() => {
-    if (selectedConversation) {
-      sessionStorage.setItem("selectedConversationId", selectedConversation.id);
-    }
-  }, [selectedConversation?.id]);
-
-  // Update selected conversation when conversations data changes
-  useEffect(() => {
-    if (selectedConversation && conversations) {
-      const updatedConversation = conversations.find(
-        (c) => c.id === selectedConversation.id
-      );
-      if (updatedConversation) {
-        setSelectedConversation(updatedConversation);
-      }
-    }
-  }, [conversations]);
+  }, [conversations, urlConversationId, navigate]);
 
   // Scroll to bottom on initial load and new messages
   useEffect(() => {
@@ -90,6 +77,12 @@ export default function Messages() {
 
   // HANDLE CONVERSATION SELECT
   const handleConversationSelect = async (conversation) => {
+    if (!conversation) return;
+
+    // Update the URL first
+    navigate(`/messages/${conversation.id}`, { replace: false });
+    
+    // Then update the selected conversation
     setSelectedConversation(conversation);
     setIsDrawerOpen(false);
 

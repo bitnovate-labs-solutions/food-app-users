@@ -107,6 +107,7 @@ export default function AppRoutes() {
         {/* MESSAGES PAGE */}
         <Route element={<Layout title="Messages" />}>
           <Route path="/messages" element={<Messages />} />
+          <Route path="/messages/:conversationId" element={<Messages />} />
         </Route>
       </Route>
     </Routes>

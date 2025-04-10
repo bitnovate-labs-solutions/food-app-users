@@ -67,7 +67,7 @@ export default function InterestedTreateesModal({
 
       // Only navigate if we have a valid conversation
       if (conversation?.id) {
-        navigate("/messages", { state: { conversationId: conversation.id } });
+        navigate(`/messages/${conversation.id}`);
       } else {
         console.error("No conversation ID returned from chat request");
         toast.error("Failed to start conversation");

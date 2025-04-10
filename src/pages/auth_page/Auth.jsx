@@ -304,20 +304,18 @@ export default function Auth() {
           </form>
 
           {/* SWITCH BETWEEN SIGN UP & LOG IN */}
-          {isExistingUser && (
-            <div className="text-center">
-              <button
-                onClick={() =>
-                  setActiveTab(activeTab === "login" ? "signup" : "login")
-                }
-                className="text-sm text-lightgray hover:underline"
-              >
-                {activeTab === "login"
-                  ? "Don't have an account? Sign up"
-                  : "Already have an account? Log in"}
-              </button>
-            </div>
-          )}
+          <div className="text-center">
+            <button
+              onClick={() =>
+                setActiveTab(activeTab === "login" ? "signup" : "login")
+              }
+              className="text-sm text-lightgray hover:underline"
+            >
+              {activeTab === "login"
+                ? "Don't have an account? Sign up"
+                : "Already have an account? Log in"}
+            </button>
+          </div>
         </div>
       </div>
     </div>

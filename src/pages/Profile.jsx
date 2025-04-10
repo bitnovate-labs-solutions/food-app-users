@@ -195,7 +195,7 @@ function UserProfile() {
                     .map((image, index) => (
                       <div
                         key={index}
-                        className="relative aspect-square cursor-pointer"
+                        className="relative aspect-square cursor-pointer overflow-hidden"
                         onClick={() => openImageViewer(index + 1)}
                       >
                         <img

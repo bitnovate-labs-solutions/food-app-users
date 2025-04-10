@@ -103,9 +103,9 @@ export default function ExploreCard({ item }) {
               <h4 className="text-sm font-medium text-gray-700">Treaters</h4>
             </div>
             <div className="flex items-center gap-2">
-              <div className="bg-primary/10 px-3 py-1.5 rounded-full">
+              <div className="bg-primary/10 px-3 py-1.5 rounded-xl w-[72px] text-center">
                 <span className="text-primary text-sm font-medium">
-                  +3 joined
+                  3 joined
                 </span>
               </div>
               <Button
@@ -126,9 +126,9 @@ export default function ExploreCard({ item }) {
               <h4 className="text-sm font-medium text-gray-700">Treatee</h4>
             </div>
             <div className="flex items-center gap-2">
-              <div className="bg-red-50 px-3 py-1.5 rounded-full">
+              <div className="bg-red-50 px-3 py-1.5 rounded-xl w-[72px] text-center">
                 <span className="text-red-500 text-sm font-medium">
-                  +20 spots
+                  20 spots
                 </span>
               </div>
               <Button
@@ -136,9 +136,7 @@ export default function ExploreCard({ item }) {
                 size="sm"
                 className="border-primary text-primary hover:bg-primary/10 rounded-full flex-1"
                 onClick={handleJoin}
-                // disabled={hasJoined}
               >
-                {/* {hasJoined ? "Joined" : "Join"} */}
                 Join
               </Button>
             </div>

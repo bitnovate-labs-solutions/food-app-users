@@ -6,9 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 export function NotificationSettings() {
   const {
     isSubscribed,
-    requestPermission,
     subscribeToPushNotifications,
-    unsubscribeFromPushNotifications
+    unsubscribeFromPushNotifications,
   } = usePushNotifications();
 
   const handleToggle = async () => {
@@ -31,9 +30,7 @@ export function NotificationSettings() {
             checked={isSubscribed}
             onCheckedChange={handleToggle}
           />
-          <Label htmlFor="push-notifications">
-            Push Notifications
-          </Label>
+          <Label htmlFor="push-notifications">Push Notifications</Label>
         </div>
         <p className="text-sm text-gray-500 mt-2">
           Receive notifications for new messages even when the app is closed
@@ -41,4 +38,4 @@ export function NotificationSettings() {
       </CardContent>
     </Card>
   );
-} 
+}

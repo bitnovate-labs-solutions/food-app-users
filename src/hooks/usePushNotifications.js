@@ -17,12 +17,25 @@ export const usePushNotifications = () => {
 
         // Register service worker
         const reg = await navigator.serviceWorker.register('/sw.js');
+        console.log('Service Worker registered:', reg);
         setRegistration(reg);
 
         // Check if we already have a subscription
         const existingSubscription = await reg.pushManager.getSubscription();
+        console.log('Existing subscription:', existingSubscription);
+        
         if (existingSubscription) {
           setIsSubscribed(true);
+          
+          // Verify subscription in user_settings
+          const { data: { user } } = await supabase.auth.getUser();
+          const { data: settings } = await supabase
+            .from('user_settings')
+            .select('push_subscription')
+            .eq('user_id', user?.id)
+            .single();
+            
+          console.log('Current settings:', settings);
         }
       } catch (error) {
         console.error('Error setting up push notifications:', error);
@@ -32,53 +45,80 @@ export const usePushNotifications = () => {
     setupPushNotifications();
   }, []);
 
-  const requestPermission = async () => {
-    try {
-      const permission = await Notification.requestPermission();
-      if (permission === 'granted') {
-        toast.success('Push notifications enabled!');
-        return true;
-      } else {
-        toast.error('Push notifications permission denied');
-        return false;
-      }
-    } catch (error) {
-      console.error('Error requesting permission:', error);
-      toast.error('Failed to enable push notifications');
-      return false;
-    }
-  };
-
   const subscribeToPushNotifications = async () => {
     try {
       if (!registration) {
+        console.error('Service worker not registered');
         toast.error('Service worker not registered');
         return;
       }
 
       // Request permission first
-      const hasPermission = await requestPermission();
-      if (!hasPermission) return;
+      const permission = await Notification.requestPermission();
+      console.log('Notification permission:', permission);
+      
+      if (permission !== 'granted') {
+        toast.error('Push notifications permission denied');
+        return;
+      }
 
-      // Subscribe to push notifications using Supabase's built-in functionality
-      const subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: process.env.VITE_SUPABASE_PUBLIC_KEY
-      });
+      // Use a test VAPID public key
+      const publicKey = 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U';
+      console.log('Using VAPID public key:', publicKey);
 
-      // Store subscription in Supabase
-      const { error } = await supabase
-        .from('user_settings')
-        .upsert({
-          user_id: supabase.auth.user()?.id,
-          push_subscription: subscription.toJSON(),
-          updated_at: new Date().toISOString()
+      if (!publicKey) {
+        console.error('VAPID public key not found');
+        toast.error('Push notification configuration error');
+        return;
+      }
+
+      try {
+        // Convert the base64 public key to a Uint8Array
+        const applicationServerKey = urlBase64ToUint8Array(publicKey);
+        console.log('Converted application server key:', applicationServerKey);
+
+        // Subscribe to push notifications
+        const subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: applicationServerKey
         });
 
-      if (error) throw error;
+        console.log('New subscription:', subscription.toJSON());
 
-      setIsSubscribed(true);
-      toast.success('Successfully subscribed to push notifications!');
+        // Store subscription in Supabase
+        const { data: { user } } = await supabase.auth.getUser();
+        const { data, error } = await supabase
+          .from('user_settings')
+          .upsert({
+            user_id: user?.id,
+            push_subscription: subscription.toJSON(),
+            updated_at: new Date().toISOString()
+          }, {
+            onConflict: 'user_id',
+            ignoreDuplicates: false
+          })
+          .select();
+
+        if (error) {
+          console.error('Error storing subscription:', error);
+          throw error;
+        }
+
+        console.log('Stored subscription data:', data);
+
+        setIsSubscribed(true);
+        toast.success('Successfully subscribed to push notifications!');
+      } catch (subscribeError) {
+        console.error('Error during subscription process:', subscribeError);
+        if (subscribeError.name === 'NotAllowedError') {
+          toast.error('Push notifications are not allowed');
+        } else if (subscribeError.name === 'NotSupportedError') {
+          toast.error('Push notifications are not supported');
+        } else {
+          toast.error('Failed to subscribe to push notifications');
+        }
+        throw subscribeError;
+      }
     } catch (error) {
       console.error('Error subscribing to push notifications:', error);
       toast.error('Failed to subscribe to push notifications');
@@ -87,24 +127,34 @@ export const usePushNotifications = () => {
 
   const unsubscribeFromPushNotifications = async () => {
     try {
-      if (!registration) return;
+      if (!registration) {
+        console.error('Service worker not registered');
+        return;
+      }
 
       // Get current subscription
       const subscription = await registration.pushManager.getSubscription();
+      console.log('Current subscription to unsubscribe:', subscription);
+
       if (subscription) {
         await subscription.unsubscribe();
+        console.log('Successfully unsubscribed from push service');
       }
 
       // Remove subscription from Supabase
+      const { data: { user } } = await supabase.auth.getUser();
       const { error } = await supabase
         .from('user_settings')
         .update({
           push_subscription: null,
           updated_at: new Date().toISOString()
         })
-        .eq('user_id', supabase.auth.user()?.id);
+        .eq('user_id', user?.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error removing subscription:', error);
+        throw error;
+      }
 
       setIsSubscribed(false);
       toast.success('Successfully unsubscribed from push notifications');
@@ -116,8 +166,22 @@ export const usePushNotifications = () => {
 
   return {
     isSubscribed,
-    requestPermission,
     subscribeToPushNotifications,
     unsubscribeFromPushNotifications
   };
-}; 
+};
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding)
+    .replace(/\-/g, '+')
+    .replace(/_/g, '/');
+
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+} 

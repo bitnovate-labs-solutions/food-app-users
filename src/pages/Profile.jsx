@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import { ProfileSkeleton } from "@/components/LoadingSkeleton";
 import ImageViewerModal from "@/components/ImageViewerModal";
+import { NotificationSettings } from "@/components/NotificationSettings";
 
 // ASSETS
 import defaultImage from "@/assets/images/default-avatar.jpg";
@@ -359,6 +360,9 @@ function UserProfile() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* NOTIFICATION SETTINGS SECTION -------------------- */}
+            <NotificationSettings />
 
             {/* INTERESTS SECTION -------------------- */}
             <Card className="bg-white border-gray-200 shadow-sm">

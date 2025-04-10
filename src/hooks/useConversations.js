@@ -64,47 +64,55 @@ export const useConversations = (userId) => {
     },
   });
 
-  // Set up real-time subscription
+  // REALTIME SUBSCRIPTION ======================================================
   useEffect(() => {
     if (!currentUserProfile) return;
 
-    // Create a channel for both messages and conversations
-    const channel = supabase
-      .channel("realtime-updates")
-      .on(
-        "postgres_changes",
-        {
-          event: "*", // Listen to all events (INSERT, UPDATE, DELETE)
-          schema: "public",
-          table: "messages",
-          filter: `conversation_id=in.(select id from conversations where treater_id=${currentUserProfile.id} or treatee_id=${currentUserProfile.id})`,
-        },
-        async (payload) => {
-          console.log("Message change received:", payload);
-          // Trigger a refetch to get fresh data
-          queryClient.invalidateQueries(["conversations", userId]);
-        }
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "*", // Listen to all events
-          schema: "public",
-          table: "conversations",
-          filter: `treater_id=eq.${currentUserProfile.id} or treatee_id=eq.${currentUserProfile.id}`,
-        },
-        async (payload) => {
-          console.log("Conversation change received:", payload);
-          // Trigger a refetch to get fresh data
-          queryClient.invalidateQueries(["conversations", userId]);
-        }
-      )
-      .subscribe();
+    // Create a channel
+    const channel = supabase.channel("realtime-updates");
 
-    // Set up periodic refetch every 5 seconds as a backup
+    // Subscribe to conversations table changes
+    channel.on(
+      "postgres_changes",
+      {
+        event: "*", // Listen to all events (INSERT, UPDATE, DELETE)
+        schema: "public",
+        table: "conversations",
+        filter: `treater_id=eq.${currentUserProfile.id} or treatee_id=eq.${currentUserProfile.id}`,
+      },
+      () => {
+        console.log("Conversation change received");
+        queryClient.invalidateQueries(["conversations", userId]); // Trigger a refetch to get fresh data
+      }
+    );
+
+    // Listen to all messages (and filter client-side if needed)
+    channel.on(
+      "postgres_changes",
+      {
+        event: "*", // Listen to all events
+        schema: "public",
+        table: "messages",
+      },
+      (payload) => {
+        const message = payload.new;
+        if (
+          message &&
+          (message.treater_id === currentUserProfile.id ||
+            message.treatee_id === currentUserProfile.id)
+        ) {
+          console.log("Message change received");
+          queryClient.invalidateQueries(["conversations", userId]);
+        }
+      }
+    );
+
+    channel.subscribe();
+
+    // OPTIONAL: Fallback refetch (polling) every 15 seconds
     const intervalId = setInterval(() => {
       queryClient.invalidateQueries(["conversations", userId]);
-    }, 5000);
+    }, 15000);
 
     return () => {
       supabase.removeChannel(channel);
@@ -112,6 +120,7 @@ export const useConversations = (userId) => {
     };
   }, [currentUserProfile, userId, queryClient]);
 
+  // USEQUERY ======================================================
   const result = useQuery({
     queryKey: ["conversations", userId],
     queryFn: async () => {

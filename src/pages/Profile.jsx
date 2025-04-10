@@ -195,13 +195,13 @@ function UserProfile() {
                     .map((image, index) => (
                       <div
                         key={index}
-                        className="relative aspect-square cursor-pointer overflow-hidden"
+                        className="relative w-full pb-[100%] cursor-pointer overflow-hidden"
                         onClick={() => openImageViewer(index + 1)}
                       >
                         <img
                           src={image.image_url}
                           alt={`Additional photo ${index + 1}`}
-                          className="w-full h-full rounded-lg object-contain bg-gray-100 border border-gray-200 shadow-sm transition-all hover:shadow-md hover:scale-[0.98]"
+                          className="absolute inset-0 w-full h-full rounded-lg object-cover border border-gray-200 shadow-sm transition-all hover:shadow-md hover:scale-[0.98]"
                         />
                       </div>
                     ))}

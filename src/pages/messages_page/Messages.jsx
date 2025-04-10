@@ -39,14 +39,20 @@ export default function Messages() {
   useEffect(() => {
     if (conversations.length > 0) {
       if (urlConversationId) {
-        const conversation = conversations.find((c) => String(c.id) === String(urlConversationId));
+        const conversation = conversations.find(
+          (c) => String(c.id) === String(urlConversationId)
+        );
         if (conversation) {
           setSelectedConversation(conversation);
         }
       } else if (!selectedConversation) {
-        const savedConversationId = sessionStorage.getItem("selectedConversationId");
+        const savedConversationId = sessionStorage.getItem(
+          "selectedConversationId"
+        );
         if (savedConversationId) {
-          const conversation = conversations.find((c) => String(c.id) === String(savedConversationId));
+          const conversation = conversations.find(
+            (c) => String(c.id) === String(savedConversationId)
+          );
           if (conversation) {
             navigate(`/messages/${conversation.id}`, { replace: true });
           }
@@ -81,7 +87,7 @@ export default function Messages() {
 
     // Update the URL first
     navigate(`/messages/${conversation.id}`, { replace: false });
-    
+
     // Then update the selected conversation
     setSelectedConversation(conversation);
     setIsDrawerOpen(false);
@@ -131,7 +137,7 @@ export default function Messages() {
   if (error) return <ErrorComponent message={error} />;
 
   return (
-    <div className="h-[calc(100vh-4rem)] flex flex-col overflow-hidden fixed inset-x-0 top-14 bottom-0">
+    <div className="h-[calc(100vh-4rem)] max-w-sm mx-auto flex flex-col overflow-hidden fixed inset-x-0 top-14 bottom-0">
       {/* Main Message Area */}
       <div className="h-full flex flex-col relative">
         <div className="p-4 border-b border-gray-200 flex items-center gap-4 bg-white shadow-md sticky top-0 z-20">
@@ -185,10 +191,10 @@ export default function Messages() {
                         className="w-full h-16 justify-start gap-4 p-4 transition-all duration-500 ease-in-out rounded-lg"
                         onClick={() => handleConversationSelect(conversation)}
                       >
-                        <Avatar className="h-10 w-10 transition-transform duration-500 ease-in-out hover:scale-105">
+                        <Avatar className="h-12 w-12 transition-transform duration-500 ease-in-out hover:scale-105">
                           <AvatarImage
                             src={conversation.avatar}
-                            className="object-contain"
+                            className="object-cover"
                           />
                           <AvatarFallback>
                             {conversation.name[0]}
@@ -220,8 +226,11 @@ export default function Messages() {
           {selectedConversation ? (
             // CONVERSATION SELECTED
             <>
-              <Avatar className="h-10 w-10">
-                <AvatarImage src={selectedConversation.avatar} />
+              <Avatar className="h-11 w-11">
+                <AvatarImage
+                  src={selectedConversation.avatar}
+                  className="object-cover"
+                />
                 <AvatarFallback>{selectedConversation.name[0]}</AvatarFallback>
               </Avatar>
               <div>
@@ -242,7 +251,7 @@ export default function Messages() {
         {selectedConversation ? (
           // CONVERSATION SELECTED
           <>
-            <ScrollArea className="flex-1 p-4 pb-36 overflow-y-auto">
+            <ScrollArea className="flex-1 px-4 pb-36 overflow-y-auto">
               <div className="space-y-4 max-w-2xl mx-auto">
                 {selectedConversation.messages?.map((message) => {
                   return (
@@ -282,7 +291,7 @@ export default function Messages() {
             </ScrollArea>
 
             {/* MESSAGE INPUT */}
-            <div className="p-4 bg-white border-t border-gray-200 fixed bottom-[5.2rem] left-0 right-0 z-20">
+            <div className="max-w-sm mx-auto p-4 bg-white border-t border-gray-200 fixed bottom-[5.2rem] left-0 right-0 z-20">
               <div className="flex gap-2 max-w-2xl mx-auto">
                 <Input
                   placeholder="Type a message..."

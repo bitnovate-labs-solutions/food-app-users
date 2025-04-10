@@ -11,7 +11,7 @@ export const usePushNotifications = () => {
       try {
         // Check if service worker and push manager are supported
         if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-          console.log('Push notifications are not supported');
+          console.log('Push notifications are not supported in this browser');
           return;
         }
 
@@ -29,16 +29,33 @@ export const usePushNotifications = () => {
           
           // Verify subscription in user_settings
           const { data: { user } } = await supabase.auth.getUser();
-          const { data: settings } = await supabase
+          if (!user) {
+            console.log('No user logged in');
+            return;
+          }
+
+          const { data: settings, error: settingsError } = await supabase
             .from('user_settings')
             .select('push_subscription')
-            .eq('user_id', user?.id)
+            .eq('user_id', user.id)
             .single();
             
+          if (settingsError) {
+            console.error('Error fetching user settings:', settingsError);
+            return;
+          }
+
           console.log('Current settings:', settings);
+          
+          // Verify the subscription is still valid
+          if (!settings?.push_subscription) {
+            console.log('No valid subscription found in settings');
+            setIsSubscribed(false);
+          }
         }
       } catch (error) {
         console.error('Error setting up push notifications:', error);
+        toast.error('Failed to set up push notifications');
       }
     }
 
@@ -62,63 +79,62 @@ export const usePushNotifications = () => {
         return;
       }
 
-      // Use a test VAPID public key
-      const publicKey = 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U';
-      console.log('Using VAPID public key:', publicKey);
+      // Get the VAPID public key from Supabase
+      const { data: vapidKey, error: keyError } = await supabase
+        .from('config')
+        .select('value')
+        .eq('key', 'vapid_public_key')
+        .single();
 
-      if (!publicKey) {
-        console.error('VAPID public key not found');
+      if (keyError || !vapidKey?.value) {
+        console.error('Error getting VAPID key:', keyError);
         toast.error('Push notification configuration error');
         return;
       }
 
-      try {
-        // Convert the base64 public key to a Uint8Array
-        const applicationServerKey = urlBase64ToUint8Array(publicKey);
-        console.log('Converted application server key:', applicationServerKey);
+      console.log('Using VAPID public key:', vapidKey.value);
 
-        // Subscribe to push notifications
-        const subscription = await registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: applicationServerKey
-        });
+      // Convert the base64 public key to a Uint8Array
+      const applicationServerKey = urlBase64ToUint8Array(vapidKey.value);
+      console.log('Converted application server key:', applicationServerKey);
 
-        console.log('New subscription:', subscription.toJSON());
+      // Subscribe to push notifications
+      const subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: applicationServerKey
+      });
 
-        // Store subscription in Supabase
-        const { data: { user } } = await supabase.auth.getUser();
-        const { data, error } = await supabase
-          .from('user_settings')
-          .upsert({
-            user_id: user?.id,
-            push_subscription: subscription.toJSON(),
-            updated_at: new Date().toISOString()
-          }, {
-            onConflict: 'user_id',
-            ignoreDuplicates: false
-          })
-          .select();
+      console.log('New subscription:', subscription.toJSON());
 
-        if (error) {
-          console.error('Error storing subscription:', error);
-          throw error;
-        }
-
-        console.log('Stored subscription data:', data);
-
-        setIsSubscribed(true);
-        toast.success('Successfully subscribed to push notifications!');
-      } catch (subscribeError) {
-        console.error('Error during subscription process:', subscribeError);
-        if (subscribeError.name === 'NotAllowedError') {
-          toast.error('Push notifications are not allowed');
-        } else if (subscribeError.name === 'NotSupportedError') {
-          toast.error('Push notifications are not supported');
-        } else {
-          toast.error('Failed to subscribe to push notifications');
-        }
-        throw subscribeError;
+      // Store subscription in Supabase
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.error('No user logged in');
+        toast.error('You must be logged in to enable push notifications');
+        return;
       }
+
+      const { data, error } = await supabase
+        .from('user_settings')
+        .upsert({
+          user_id: user.id,
+          push_subscription: subscription.toJSON(),
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'user_id',
+          ignoreDuplicates: false
+        })
+        .select();
+
+      if (error) {
+        console.error('Error storing subscription:', error);
+        throw error;
+      }
+
+      console.log('Stored subscription data:', data);
+
+      setIsSubscribed(true);
+      toast.success('Successfully subscribed to push notifications!');
     } catch (error) {
       console.error('Error subscribing to push notifications:', error);
       toast.error('Failed to subscribe to push notifications');
@@ -143,13 +159,18 @@ export const usePushNotifications = () => {
 
       // Remove subscription from Supabase
       const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.error('No user logged in');
+        return;
+      }
+
       const { error } = await supabase
         .from('user_settings')
         .update({
           push_subscription: null,
           updated_at: new Date().toISOString()
         })
-        .eq('user_id', user?.id);
+        .eq('user_id', user.id);
 
       if (error) {
         console.error('Error removing subscription:', error);

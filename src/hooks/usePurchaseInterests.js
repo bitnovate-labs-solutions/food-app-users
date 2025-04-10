@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 
 // Get interested users for a purchase (Fetches all users interested in a specific purchase)
 // - Gets their profile information and images
@@ -67,6 +68,37 @@ const expressInterest = async ({ purchaseId, treateeId }) => {
 
 // React query hook to fetch interested users (for Treaters to see who's interested in their purchase)
 export const useInterestedUsers = (purchaseId) => {
+  const queryClient = useQueryClient();
+
+  // Set up realtime subscription
+  useEffect(() => {
+    if (!purchaseId) return;
+
+    // Create a channel for this purchase's interests
+    const channel = supabase
+      .channel(`purchase-interests-${purchaseId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*", // Listen to all events (INSERT, UPDATE, DELETE)
+          schema: "public",
+          table: "purchase_interests",
+          filter: `purchase_id=eq.${purchaseId}`,
+        },
+        (payload) => {
+          console.log("Purchase interest change received:", payload);
+          // Invalidate and refetch
+          queryClient.invalidateQueries(["interestedUsers", purchaseId]);
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscription
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [purchaseId, queryClient]);
+
   return useQuery({
     queryKey: ["interestedUsers", purchaseId],
     queryFn: () => getInterestedUsers(purchaseId),

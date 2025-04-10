@@ -3,10 +3,12 @@ import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
+import { usePushNotifications } from './usePushNotifications';
 
 export const useMessageNotifications = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { isSubscribed } = usePushNotifications();
 
   useEffect(() => {
     if (!user) return;
@@ -51,19 +53,31 @@ export const useMessageNotifications = () => {
               .single();
 
             if (otherUser) {
+              // Show in-app notification
               toast.info(`New message from ${otherUser.display_name}`, {
                 duration: 5000,
                 action: {
                   label: 'View',
                   onClick: () => {
-                    navigate('/messages', { 
-                      state: { 
-                        conversationId: payload.new.id 
-                      } 
-                    });
+                    navigate(`/messages/${payload.new.id}`);
                   },
                 },
               });
+
+              // Send push notification if subscribed
+              if (isSubscribed && 'serviceWorker' in navigator) {
+                const registration = await navigator.serviceWorker.ready;
+                registration.showNotification('New Message', {
+                  body: `New message from ${otherUser.display_name}`,
+                  icon: '/pwa-192x192.png',
+                  badge: '/pwa-192x192.png',
+                  vibrate: [100, 50, 100],
+                  data: {
+                    url: '/messages',
+                    conversationId: payload.new.id
+                  }
+                });
+              }
             }
           }
         )
@@ -75,5 +89,5 @@ export const useMessageNotifications = () => {
     };
 
     setupSubscription();
-  }, [user, navigate]);
+  }, [user, navigate, isSubscribed]);
 }; 

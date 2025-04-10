@@ -30,6 +30,7 @@ export default defineConfig({
         display: "standalone",
         start_url: "/",
         orientation: "portrait", // 👈 Lock to portrait mode
+        gcm_sender_id: "103953800507", // Required for Chrome push notifications
         icons: [
           {
             src: "pwa-192x192.png",
@@ -64,6 +65,9 @@ export default defineConfig({
             },
           },
         ],
+        // Add push notification support
+        clientsClaim: true,
+        skipWaiting: true,
       },
     }),
   ],

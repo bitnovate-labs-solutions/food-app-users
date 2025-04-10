@@ -52,6 +52,9 @@ export default function TreaterCard({
               <ImageWithFallback
                 src={item.image_url}
                 alt={item.name}
+                width={90}
+                height={90}
+                quality={75}
                 loading="lazy"
                 className="w-full h-full object-cover"
               />

@@ -1,21 +1,67 @@
 // To replace the fallback image with a Lucide React CircleAlert icon (or any other image) when an image fails to load
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { CircleAlert } from "lucide-react";
 import { motion } from "framer-motion";
 
-const ImageWithFallback = ({ src, alt, className, style, ...props }) => {
+const ImageWithFallback = ({ 
+  src, 
+  alt, 
+  className, 
+  style, 
+  width,
+  height,
+  quality = 80,
+  ...props 
+}) => {
   const [error, setError] = useState(false);
+  const [optimizedSrc, setOptimizedSrc] = useState(null);
 
-  return error ? (
-    <div className={`flex items-center justify-center ${className}`}>
-      <CircleAlert size={48} className="text-gray-400" />
-    </div>
-  ) : (
+  useEffect(() => {
+    if (!src) return;
+
+    // Create a new Image object to preload
+    const img = new Image();
+    img.src = src;
+    
+    img.onload = () => {
+      // If width and height are provided, use them for optimization
+      if (width && height) {
+        // Here you would typically use an image optimization service
+        // For now, we'll just use the original src
+        setOptimizedSrc(src);
+      } else {
+        setOptimizedSrc(src);
+      }
+    };
+
+    img.onerror = () => {
+      setError(true);
+    };
+
+    return () => {
+      img.onload = null;
+      img.onerror = null;
+    };
+  }, [src, width, height, quality]);
+
+  if (error) {
+    return (
+      <div className={`flex items-center justify-center ${className}`}>
+        <CircleAlert size={48} className="text-gray-400" />
+      </div>
+    );
+  }
+
+  return (
     <motion.img
-      src={src}
+      src={optimizedSrc || src}
       alt={alt}
       className={className}
       style={style}
+      width={width}
+      height={height}
+      loading="lazy"
+      decoding="async"
       onError={() => setError(true)}
       {...props}
     />

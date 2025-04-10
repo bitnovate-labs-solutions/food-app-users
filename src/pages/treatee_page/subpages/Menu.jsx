@@ -99,6 +99,9 @@ export default function Menu() {
             item={item}
             isLiked={false}
             onLike={() => {}}
+            imageWidth={360}
+            imageHeight={240}
+            imageQuality={80}
           />
         ))
       )}

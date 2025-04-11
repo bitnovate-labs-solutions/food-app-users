@@ -22,6 +22,7 @@ export default defineConfig({
       },
       filename: "firebase-messaging-sw.js", // firebase FCM custom sw
       strategies: "injectManifest",
+      srcDir: "src",
       injectManifest: {
         swSrc: "src/firebase-messaging-sw.js", // input
         swDest: "firebase-messaging-sw.js", // output in /dist

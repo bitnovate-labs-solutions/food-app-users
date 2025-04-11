@@ -20,11 +20,11 @@ export default defineConfig({
         enabled: true,
         type: "module",
       },
-      filename: "firebase-messaging-sw.js", // firebase FCM custom sw
       strategies: "injectManifest",
-      srcDir: "src",
+      srcDir: "src/sw", // 👈 directory where your SW lives
+      filename: "firebase-messaging-sw.js", // output file name in /dist
       injectManifest: {
-        swSrc: "src/firebase-messaging-sw.js", // input
+        swSrc: "src/sw/firebase-messaging-sw.js", // input
         swDest: "firebase-messaging-sw.js", // output in /dist
       },
       includeAssets: ["favicon.ico", "apple-touch-icon.png", "mask-icon.svg"],

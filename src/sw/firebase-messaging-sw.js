@@ -21,4 +21,5 @@ self.addEventListener("notificationclick", (event) => {
   event.waitUntil(self.clients.openWindow(url));
 });
 
-self.__WB_MANIFEST = self.__WB_MANIFEST || [];
+// Required for Workbox injectManifest
+self.__WB_MANIFEST;

@@ -20,6 +20,8 @@ export default defineConfig({
         enabled: true,
         type: "module",
       },
+      filename: "firebase-messaging-sw.js", // firebase FCM custom sw
+      strategies: "injectManifest",
       includeAssets: ["favicon.ico", "apple-touch-icon.png", "mask-icon.svg"],
       manifest: {
         name: "TreatYourDate",

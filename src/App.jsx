@@ -22,14 +22,15 @@ const queryClient = new QueryClient({
 function App() {
   useEffect(() => {
     // Register service worker
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
-          .then(registration => {
-            console.log('ServiceWorker registration successful');
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker
+          .register("/firebase-messaging-sw.js")
+          .then((registration) => {
+            console.log("ServiceWorker registration successful", registration);
           })
-          .catch(err => {
-            console.log('ServiceWorker registration failed: ', err);
+          .catch((err) => {
+            console.log("ServiceWorker registration failed: ", err);
           });
       });
     }

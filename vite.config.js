@@ -20,12 +20,6 @@ export default defineConfig({
         enabled: true,
         type: "module",
       },
-      strategies: "injectManifest",
-      filename: "firebase-messaging-sw.js", // output file name in /dist
-      injectManifest: {
-        swSrc: "src/sw/firebase-messaging-sw.js", // input
-        swDest: "firebase-messaging-sw.js", // output in /dist
-      },
       includeAssets: ["favicon.ico", "apple-touch-icon.png", "mask-icon.svg"],
       manifest: {
         name: "TreatYourDate",

@@ -17,7 +17,8 @@ export default defineConfig({
       registerType: "autoUpdate",
       injectRegister: "auto",
       devOptions: {
-        enabled: true,
+        // enabled: true,
+        enabled: false,
         type: "module",
       },
       includeAssets: ["favicon.ico", "apple-touch-icon.png", "mask-icon.svg"],

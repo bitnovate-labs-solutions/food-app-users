@@ -21,7 +21,6 @@ export default defineConfig({
         type: "module",
       },
       strategies: "injectManifest",
-      srcDir: "src/sw", // 👈 directory where your SW lives
       filename: "firebase-messaging-sw.js", // output file name in /dist
       injectManifest: {
         swSrc: "src/sw/firebase-messaging-sw.js", // input

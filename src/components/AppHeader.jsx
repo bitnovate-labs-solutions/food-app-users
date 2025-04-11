@@ -77,10 +77,16 @@ export default function AppHeader({ title, subtitle, isHomePage, isProfilePage }
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
-      await queryClient.invalidateQueries();
-      toast.success("Data refreshed successfully", {
-        duration: 1000,
-      });
+      if (isProfilePage) {
+        // For profile page, do a full app refresh
+        window.location.reload();
+      } else {
+        // For other pages, just refresh React Query data
+        await queryClient.invalidateQueries();
+        toast.success("Data refreshed successfully", {
+          duration: 1000,
+        });
+      }
     } catch (error) {
       toast.error("Failed to refresh data", error);
     } finally {

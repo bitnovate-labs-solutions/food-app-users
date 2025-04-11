@@ -48,7 +48,7 @@ export const useMessageNotifications = () => {
             
             const { data: otherUser } = await supabase
               .from('user_profiles')
-              .select('display_name')
+              .select('display_name, user_id')
               .eq('id', otherUserId)
               .single();
 
@@ -65,18 +65,31 @@ export const useMessageNotifications = () => {
               });
 
               // Send push notification if subscribed
-              if (isSubscribed && 'serviceWorker' in navigator) {
-                const registration = await navigator.serviceWorker.ready;
-                registration.showNotification('New Message', {
-                  body: `New message from ${otherUser.display_name}`,
-                  icon: '/pwa-192x192.png',
-                  badge: '/pwa-192x192.png',
-                  vibrate: [100, 50, 100],
-                  data: {
-                    url: '/messages',
-                    conversationId: payload.new.id
+              if (isSubscribed) {
+                try {
+                  const response = await fetch('/api/send-notification', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+                    },
+                    body: JSON.stringify({
+                      recipientId: otherUser.user_id,
+                      title: 'New Message',
+                      body: `New message from ${otherUser.display_name}`,
+                      data: {
+                        url: '/messages',
+                        conversationId: payload.new.id
+                      }
+                    }),
+                  });
+
+                  if (!response.ok) {
+                    console.error('Failed to send push notification');
                   }
-                });
+                } catch (error) {
+                  console.error('Error sending push notification:', error);
+                }
               }
             }
           }

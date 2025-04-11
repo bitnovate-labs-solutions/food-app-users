@@ -1,4 +1,3 @@
-// public/firebase-messaging-sw.js
 self.addEventListener("push", (event) => {
   if (!event.data) return;
 
@@ -21,3 +20,5 @@ self.addEventListener("notificationclick", (event) => {
   const url = event.notification.data?.url || "/";
   event.waitUntil(self.clients.openWindow(url));
 });
+
+self.__WB_MANIFEST = self.__WB_MANIFEST || [];

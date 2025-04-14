@@ -6,7 +6,7 @@ import { Toaster } from "@/components/ui/sonner";
 import AppRoutes from "@/routes/AppRoutes";
 import { PWAPrompt } from "./components/PWAPrompt";
 import { FilterProvider } from "./context/FilterContext";
-import { useEffect } from "react";
+// import { useEffect } from "react";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -20,21 +20,21 @@ const queryClient = new QueryClient({
 });
 
 function App() {
-  useEffect(() => {
-    // Register service worker
-    if ("serviceWorker" in navigator) {
-      window.addEventListener("load", () => {
-        navigator.serviceWorker
-          .register("/firebase-messaging-sw.js")
-          .then((registration) => {
-            console.log("ServiceWorker registration successful", registration);
-          })
-          .catch((err) => {
-            console.log("ServiceWorker registration failed: ", err);
-          });
-      });
-    }
-  }, []);
+  // useEffect(() => {
+  //   // Register service worker
+  //   if ("serviceWorker" in navigator) {
+  //     // window.addEventListener("load", () => {
+  //     navigator.serviceWorker
+  //       .register("/firebase-messaging-sw.js", { scope: "/" })
+  //       .then((registration) => {
+  //         console.log("ServiceWorker registration successful", registration);
+  //       })
+  //       .catch((err) => {
+  //         console.log("ServiceWorker registration failed: ", err);
+  //       });
+  //     // });
+  //   }
+  // }, []);
 
   return (
     <QueryClientProvider client={queryClient}>

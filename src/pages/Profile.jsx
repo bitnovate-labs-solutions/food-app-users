@@ -32,7 +32,7 @@ import {
 } from "lucide-react";
 import { ProfileSkeleton } from "@/components/LoadingSkeleton";
 import ImageViewerModal from "@/components/ImageViewerModal";
-import { NotificationSettings } from "@/components/NotificationSettings";
+import { NotificationRequest } from "@/components/NotificationButton";
 
 // ASSETS
 import defaultImage from "@/assets/images/default-avatar.jpg";
@@ -73,6 +73,12 @@ function UserProfile() {
 
   const handlePreviousImage = () => {
     setSelectedImageIndex((prev) => (prev > 0 ? prev - 1 : prev));
+  };
+
+  const handlePushNotification = async () => {
+    if (user) {
+      await sendNotification("Just Completed Testing");
+    }
   };
 
   const handleNextImage = () => {
@@ -362,7 +368,7 @@ function UserProfile() {
             </Card>
 
             {/* NOTIFICATION SETTINGS SECTION -------------------- */}
-            <NotificationSettings />
+            <NotificationRequest />
 
             {/* INTERESTS SECTION -------------------- */}
             <Card className="bg-white border-gray-200 shadow-sm">

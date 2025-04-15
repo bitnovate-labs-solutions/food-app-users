@@ -41,20 +41,36 @@ function getCacheSize() {
   }
 }
 
-export function useImageCache(imageUrl) {
+// Helper function to get the actual URL from an image source
+function getImageUrl(imageSource) {
+  // If it's already a string URL, return it
+  if (typeof imageSource === 'string' && (imageSource.startsWith('http') || imageSource.startsWith('/'))) {
+    return imageSource;
+  }
+  // If it's an imported asset (module), return its default export
+  return imageSource?.default || imageSource;
+}
+
+export function useImageCache(imageSource) {
+  const imageUrl = useMemo(() => getImageUrl(imageSource), [imageSource]);
   const cacheKey = useMemo(() => `${CACHE_PREFIX}${imageUrl}`, [imageUrl]);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
   const [cachedUrl, setCachedUrl] = useState(null);
   const loadingRef = useRef(false);
 
-  // Read from cache first
-  const initialUrl = useMemo(() => {
-    if (!imageUrl) return null;
+  // Check cache and set initial state
+  useEffect(() => {
+    if (!imageUrl) {
+      setIsImageLoaded(false);
+      setCachedUrl(null);
+      return;
+    }
 
     // Check global cache first
     if (globalCache.has(imageUrl)) {
       setIsImageLoaded(true);
-      return imageUrl;
+      setCachedUrl(imageUrl);
+      return;
     }
 
     try {
@@ -64,68 +80,60 @@ export function useImageCache(imageUrl) {
         if (Date.now() - timestamp < CACHE_EXPIRY) {
           globalCache.set(url, true);
           setIsImageLoaded(true);
-          return url;
+          setCachedUrl(url);
+          return;
         }
       }
     } catch (error) {
       console.error("Error reading from cache:", error);
     }
-    return null;
-  }, [cacheKey, imageUrl]);
 
-  useEffect(() => {
-    if (!imageUrl || loadingRef.current) return;
+    // If not in cache, start loading
+    if (!loadingRef.current) {
+      loadingRef.current = true;
 
-    // If already in global cache, no need to reload
-    if (globalCache.has(imageUrl)) {
-      setCachedUrl(imageUrl);
-      setIsImageLoaded(true);
-      return;
-    }
-
-    loadingRef.current = true;
-
-    // Clear expired cache entries periodically
-    clearOldCache();
-
-    // Check if we need to clear cache due to size
-    if (getCacheSize() > MAX_CACHE_SIZE) {
+      // Clear expired cache entries periodically
       clearOldCache();
-    }
 
-    // Preload the image in the background with priority
-    const img = new Image();
-    img.loading = "eager";
-    img.decoding = "async";
-    img.src = imageUrl;
-    
-    img.onload = () => {
-      try {
-        const cacheData = {
-          url: imageUrl,
-          timestamp: Date.now()
-        };
-        localStorage.setItem(cacheKey, JSON.stringify(cacheData));
-        globalCache.set(imageUrl, true);
-        setCachedUrl(imageUrl);
-        setIsImageLoaded(true);
-      } catch (error) {
-        console.error("Error caching image:", error);
+      // Check if we need to clear cache due to size
+      if (getCacheSize() > MAX_CACHE_SIZE) {
         clearOldCache();
-      } finally {
-        loadingRef.current = false;
       }
-    };
 
-    img.onerror = () => {
-      loadingRef.current = false;
-      console.error("Error loading image:", imageUrl);
-    };
+      // Preload the image in the background with priority
+      const img = new Image();
+      img.loading = "eager";
+      img.decoding = "async";
+      img.src = imageUrl;
+      
+      img.onload = () => {
+        try {
+          const cacheData = {
+            url: imageUrl,
+            timestamp: Date.now()
+          };
+          localStorage.setItem(cacheKey, JSON.stringify(cacheData));
+          globalCache.set(imageUrl, true);
+          setCachedUrl(imageUrl);
+          setIsImageLoaded(true);
+        } catch (error) {
+          console.error("Error caching image:", error);
+          clearOldCache();
+        } finally {
+          loadingRef.current = false;
+        }
+      };
 
-    return () => {
-      img.onload = null;
-      img.onerror = null;
-    };
+      img.onerror = () => {
+        loadingRef.current = false;
+        console.error("Error loading image:", imageUrl);
+      };
+
+      return () => {
+        img.onload = null;
+        img.onerror = null;
+      };
+    }
   }, [imageUrl, cacheKey]);
 
   return { cachedUrl, isImageLoaded };

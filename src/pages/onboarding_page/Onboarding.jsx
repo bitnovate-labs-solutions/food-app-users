@@ -4,34 +4,19 @@ import { useNavigate } from "react-router-dom";
 // import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
-import { useImageCache } from "@/hooks/useImageCache";
 import { onboardingSteps } from "./data/onboarding_data";
 
 // COMPONENTS
 import { Button } from "@/components/ui/button";
-import { Image } from "lucide-react";
 import LoadingComponent from "@/components/LoadingComponent";
 import RenderDescription from "./components/RenderDescription";
 
 export default function Onboarding() {
   const [currentStep, setCurrentStep] = useState(0);
-  const [isImageLoaded, setIsImageLoaded] = useState(false);
   const navigate = useNavigate();
   // const queryClient = useQueryClient();
   const { user } = useAuth();
   const { data: profile, isLoading } = useUserProfile(user);
-
-  // Get the current step's image URL
-  const currentImageUrl = onboardingSteps[currentStep]?.image;
-
-  // Use the hook correctly for the current step's image
-  const { cachedUrl, isImageLoaded: imageLoaded } =
-    useImageCache(currentImageUrl);
-
-  // Update the loading state
-  useEffect(() => {
-    setIsImageLoaded(imageLoaded);
-  }, [imageLoaded]);
 
   // CHECK AUTH STATE AND REDIRECT BASED ON ROLE
   useEffect(() => {
@@ -73,20 +58,12 @@ export default function Onboarding() {
         {/* WELCOME IMAGE */}
         {onboardingSteps[currentStep].image && (
           <div className="flex justify-center items-center mb-6 w-full max-w-[300px] h-[250px]">
-            {isImageLoaded && cachedUrl ? (
-              <img
-                src={cachedUrl}
-                alt={`Step ${currentStep + 1}`}
-                className="w-full h-full object-cover rounded-lg transition-opacity duration-300 opacity-100"
-                loading="eager"
-                decoding="async"
-              />
-            ) : (
-              <div className="w-full h-full bg-gray-100 rounded-lg flex flex-col items-center justify-center">
-                <Image className="w-12 h-12 text-gray-400 mb-2" />
-                <span className="text-sm text-gray-400">Loading image...</span>
-              </div>
-            )}
+            <img
+              src={onboardingSteps[currentStep].image}
+              alt={`Step ${currentStep + 1}`}
+              className="w-full h-full object-cover rounded-lg"
+              loading="eager"
+            />
           </div>
         )}
 

@@ -47,17 +47,21 @@ const Explore = () => {
       });
     }, options);
 
+    // Capture current refs value
+    const currentSlideRefs = slideRefs.current;
+
     // Observe each slide
-    slideRefs.current.forEach((slide) => {
+    currentSlideRefs.forEach((slide) => {
       if (slide) observer.observe(slide);
     });
 
     return () => {
-      slideRefs.current.forEach((slide) => {
+      // Use captured refs value in cleanup
+      currentSlideRefs.forEach((slide) => {
         if (slide) observer.unobserve(slide);
       });
     };
-  }, [voucherUpdates.length]);
+  }, [voucherUpdates]);
 
   // LOADING AND ERROR HANDLING
   if (isLoadingRestaurants || isLoadingFoodCategories)

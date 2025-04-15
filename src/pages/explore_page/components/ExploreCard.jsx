@@ -35,7 +35,7 @@ export default function ExploreCard({ item }) {
   return (
     <Card className="overflow-hidden mb-6 bg-white rounded-xl hover:shadow-lg transition-all duration-300 border border-gray-100">
       {/* Card Header with Image */}
-      <div className="relative w-full h-[200px] group">
+      <div className="relative w-full h-[160px] group">
         <img
           src={item.image_url}
           alt={item.name}
@@ -69,21 +69,28 @@ export default function ExploreCard({ item }) {
           </Button>
         </div>
 
-        {/* Restaurant Info */}
+        {/* RESTAURANT INFO */}
         <div className="absolute bottom-4 left-4 right-4">
-          <h3 className="text-2xl font-bold text-white mb-2">{item.name}</h3>
-          <div className="flex items-center gap-4 text-white/90 text-sm">
+          <h3 className="text-lg font-bold text-white mb-2">{item.name}</h3>
+          <div className="flex gap-2 text-white/90 text-sm">
+            {/* STAR ICON */}
             <div className="flex items-center gap-1">
               <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
               <span>{item.rating}</span>
             </div>
-            <div className="flex items-center gap-1">
-              <MapPin className="h-4 w-4" />
-              <span>{item.location}</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <Clock className="h-4 w-4" />
-              <span>{formatDate(item.created_at)}</span>
+
+            <div className="grid grid-cols-3">
+              {/* LOCATION */}
+              <div className="col-span-2 flex items-center gap-1 overflow-hidden whitespace-nowrap text-ellipsis">
+                <MapPin className="h-4 w-4 flex-shrink-0" />
+                <span className="truncate">{item.location}</span>
+              </div>
+
+              {/* DATE */}
+              <div className="flex justify-center items-center gap-1">
+                <Clock className="h-4 w-4" />
+                <span>{formatDate(item.created_at)}</span>
+              </div>
             </div>
           </div>
         </div>

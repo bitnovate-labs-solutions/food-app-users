@@ -32,12 +32,12 @@ const Explore = () => {
   useEffect(() => {
     const options = {
       root: scrollRef.current,
-      rootMargin: '0px',
-      threshold: 0.5
+      rootMargin: "0px",
+      threshold: 0.5,
     };
 
     const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
+      entries.forEach((entry) => {
         if (entry.isIntersecting) {
           const index = slideRefs.current.indexOf(entry.target);
           if (index !== -1) {
@@ -48,12 +48,12 @@ const Explore = () => {
     }, options);
 
     // Observe each slide
-    slideRefs.current.forEach(slide => {
+    slideRefs.current.forEach((slide) => {
       if (slide) observer.observe(slide);
     });
 
     return () => {
-      slideRefs.current.forEach(slide => {
+      slideRefs.current.forEach((slide) => {
         if (slide) observer.unobserve(slide);
       });
     };
@@ -71,25 +71,25 @@ const Explore = () => {
   return (
     <div className="container mx-auto px-4 pt-5 pb-20">
       <div className="mb-10">
-        <h2 className="text-xl text-gray-900 font-semibold mb-2">Popular</h2>
+        <h2 className="text-gray-900 font-semibold mb-2">Popular</h2>
         <div className="relative">
           {/* CAROUSEL */}
           <div
             ref={scrollRef}
             className="flex overflow-x-auto no-scrollbar snap-x snap-mandatory scroll-smooth touch-pan-x"
             style={{
-              scrollSnapType: 'x mandatory',
-              WebkitOverflowScrolling: 'touch',
+              scrollSnapType: "x mandatory",
+              WebkitOverflowScrolling: "touch",
             }}
           >
             {voucherUpdates.map((item, index) => (
               <div
                 key={item.id}
-                ref={el => slideRefs.current[index] = el}
+                ref={(el) => (slideRefs.current[index] = el)}
                 className="flex-none w-full snap-center px-[1px]"
-                style={{ 
-                  scrollSnapAlign: 'center',
-                  scrollSnapStop: 'always'
+                style={{
+                  scrollSnapAlign: "center",
+                  scrollSnapStop: "always",
                 }}
               >
                 <VoucherCard item={item} />
@@ -105,9 +105,9 @@ const Explore = () => {
                 onClick={() => {
                   if (scrollRef.current && slideRefs.current[index]) {
                     slideRefs.current[index].scrollIntoView({
-                      behavior: 'smooth',
-                      block: 'nearest',
-                      inline: 'center'
+                      behavior: "smooth",
+                      block: "nearest",
+                      inline: "center",
                     });
                   }
                 }}
@@ -137,7 +137,7 @@ const Explore = () => {
 
       {/* WHAT'S TRENDING */}
       <div>
-        <h2 className="text-xl font-semibold mb-4">What&apos;s Trending</h2>
+        <h2 className="font-semibold mb-4">What&apos;s Trending</h2>
         <div className="gap-2">
           {restaurants.map((item) => (
             <ExploreCard key={item.id} item={item} />

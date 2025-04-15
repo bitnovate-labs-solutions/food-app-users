@@ -5,7 +5,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useImageCache } from "@/hooks/useImageCache";
 import { ErrorFallback } from "@/components/ErrorFallback";
 import { ErrorBoundary } from "react-error-boundary";
-import { useQueryClient } from "@tanstack/react-query";
+// import { useQueryClient } from "@tanstack/react-query";
 
 // COMPONENTS
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
@@ -32,7 +32,6 @@ import {
 } from "lucide-react";
 import { ProfileSkeleton } from "@/components/LoadingSkeleton";
 import ImageViewerModal from "@/components/ImageViewerModal";
-import { NotificationRequest } from "@/components/NotificationButton";
 
 // ASSETS
 import defaultImage from "@/assets/images/default-avatar.jpg";
@@ -42,17 +41,17 @@ function UserProfile() {
   const { data: profile, isLoading, error } = useUserProfile(user);
   const navigate = useNavigate();
   const location = useLocation();
-  const queryClient = useQueryClient();
+  // const queryClient = useQueryClient();
 
   // Prefetch profile data
-  useEffect(() => {
-    if (user?.id) {
-      queryClient.prefetchQuery({
-        queryKey: ["profile", user.id],
-        queryFn: () => fetchProfile(user.id),
-      });
-    }
-  }, [user?.id, queryClient]);
+  // useEffect(() => {
+  //   if (user?.id) {
+  //     queryClient.prefetchQuery({
+  //       queryKey: ["profile", user.id],
+  //       queryFn: () => fetchProfile(user.id),
+  //     });
+  //   }
+  // }, [user?.id, queryClient]);
 
   // Scroll to top when navigating from edit profile
   useEffect(() => {
@@ -83,12 +82,6 @@ function UserProfile() {
 
   const handlePreviousImage = () => {
     setSelectedImageIndex((prev) => (prev > 0 ? prev - 1 : prev));
-  };
-
-  const handlePushNotification = async () => {
-    if (user) {
-      await sendNotification("Just Completed Testing");
-    }
   };
 
   const handleNextImage = () => {
@@ -129,10 +122,10 @@ function UserProfile() {
             {/* IMAGE CONTAINER */}
             <div className="w-full h-full overflow-hidden rounded-2xl">
               <img
-                src={isImageLoaded ? (cachedUrl || defaultImage) : defaultImage}
+                src={isImageLoaded ? cachedUrl || defaultImage : defaultImage}
                 alt="Profile"
                 className={`w-full h-full object-cover transition-opacity duration-300 ${
-                  isImageLoaded ? 'opacity-100' : 'opacity-50'
+                  isImageLoaded ? "opacity-100" : "opacity-50"
                 }`}
                 loading="eager"
                 decoding="async"
@@ -382,7 +375,7 @@ function UserProfile() {
             </Card>
 
             {/* NOTIFICATION SETTINGS SECTION -------------------- */}
-            <NotificationRequest />
+            {/* <NotificationRequest /> !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! */}
 
             {/* INTERESTS SECTION -------------------- */}
             <Card className="bg-white border-gray-200 shadow-sm">

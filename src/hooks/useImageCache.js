@@ -56,6 +56,7 @@ export function useImageCache(imageSource) {
   const cacheKey = useMemo(() => `${CACHE_PREFIX}${imageUrl}`, [imageUrl]);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
   const [cachedUrl, setCachedUrl] = useState(null);
+  const [error, setError] = useState(null);
   const loadingRef = useRef(false);
 
   // Check cache and set initial state
@@ -63,14 +64,32 @@ export function useImageCache(imageSource) {
     if (!imageUrl) {
       setIsImageLoaded(false);
       setCachedUrl(null);
+      setError(null);
       return;
     }
 
+    // Reset states when image source changes
+    setIsImageLoaded(false);
+    setError(null);
+
     // Check global cache first
     if (globalCache.has(imageUrl)) {
-      setIsImageLoaded(true);
-      setCachedUrl(imageUrl);
-      return;
+      // Verify the image is actually loaded
+      const img = new Image();
+      img.src = imageUrl;
+      img.onload = () => {
+        setIsImageLoaded(true);
+        setCachedUrl(imageUrl);
+      };
+      img.onerror = () => {
+        // If image in cache fails to load, clear it
+        globalCache.delete(imageUrl);
+        setError('Failed to load cached image');
+      };
+      return () => {
+        img.onload = null;
+        img.onerror = null;
+      };
     }
 
     try {
@@ -78,14 +97,28 @@ export function useImageCache(imageSource) {
       if (cached) {
         const { url, timestamp } = JSON.parse(cached);
         if (Date.now() - timestamp < CACHE_EXPIRY) {
-          globalCache.set(url, true);
-          setIsImageLoaded(true);
-          setCachedUrl(url);
-          return;
+          // Verify the cached image is still valid
+          const img = new Image();
+          img.src = url;
+          img.onload = () => {
+            globalCache.set(url, true);
+            setIsImageLoaded(true);
+            setCachedUrl(url);
+          };
+          img.onerror = () => {
+            // If cached image fails to load, clear it
+            localStorage.removeItem(cacheKey);
+            setError('Failed to load cached image');
+          };
+          return () => {
+            img.onload = null;
+            img.onerror = null;
+          };
         }
       }
     } catch (error) {
       console.error("Error reading from cache:", error);
+      setError('Error reading from cache');
     }
 
     // If not in cache, start loading
@@ -116,9 +149,11 @@ export function useImageCache(imageSource) {
           globalCache.set(imageUrl, true);
           setCachedUrl(imageUrl);
           setIsImageLoaded(true);
+          setError(null);
         } catch (error) {
           console.error("Error caching image:", error);
           clearOldCache();
+          setError('Error caching image');
         } finally {
           loadingRef.current = false;
         }
@@ -127,14 +162,16 @@ export function useImageCache(imageSource) {
       img.onerror = () => {
         loadingRef.current = false;
         console.error("Error loading image:", imageUrl);
+        setError('Failed to load image');
       };
 
       return () => {
         img.onload = null;
         img.onerror = null;
+        loadingRef.current = false;
       };
     }
   }, [imageUrl, cacheKey]);
 
-  return { cachedUrl, isImageLoaded };
+  return { cachedUrl, isImageLoaded, error };
 }

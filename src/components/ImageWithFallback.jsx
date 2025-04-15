@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { CircleAlert } from "lucide-react";
 import { motion } from "framer-motion";
+import { useImageCache } from "@/hooks/useImageCache";
 
 const ImageWithFallback = ({ 
   src, 
@@ -14,35 +15,12 @@ const ImageWithFallback = ({
   ...props 
 }) => {
   const [error, setError] = useState(false);
-  const [optimizedSrc, setOptimizedSrc] = useState(null);
+  const { cachedUrl, isImageLoaded } = useImageCache(src);
 
   useEffect(() => {
     if (!src) return;
-
-    // Create a new Image object to preload
-    const img = new Image();
-    img.src = src;
-    
-    img.onload = () => {
-      // If width and height are provided, use them for optimization
-      if (width && height) {
-        // Here you would typically use an image optimization service
-        // For now, we'll just use the original src
-        setOptimizedSrc(src);
-      } else {
-        setOptimizedSrc(src);
-      }
-    };
-
-    img.onerror = () => {
-      setError(true);
-    };
-
-    return () => {
-      img.onload = null;
-      img.onerror = null;
-    };
-  }, [src, width, height, quality]);
+    setError(false);
+  }, [src]);
 
   if (error) {
     return (
@@ -54,7 +32,7 @@ const ImageWithFallback = ({
 
   return (
     <motion.img
-      src={optimizedSrc || src}
+      src={isImageLoaded ? (cachedUrl || src) : src}
       alt={alt}
       className={className}
       style={style}

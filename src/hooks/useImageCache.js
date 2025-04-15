@@ -1,8 +1,11 @@
-import { useMemo, useEffect, useState } from "react";
+import { useMemo, useEffect, useState, useRef } from "react";
 
 const CACHE_PREFIX = 'img_cache_';
 const MAX_CACHE_SIZE = 5 * 1024 * 1024; // 5MB
 const CACHE_EXPIRY = 24 * 60 * 60 * 1000; // 24 hours
+
+// Global cache to prevent reloading
+const globalCache = new Map();
 
 function clearOldCache() {
   try {
@@ -12,9 +15,10 @@ function clearOldCache() {
     for (const key of keys) {
       const item = localStorage.getItem(key);
       if (item) {
-        const { timestamp } = JSON.parse(item);
+        const { url, timestamp } = JSON.parse(item);
         if (now - timestamp > CACHE_EXPIRY) {
           localStorage.removeItem(key);
+          globalCache.delete(url);
         }
       }
     }
@@ -40,14 +44,25 @@ function getCacheSize() {
 export function useImageCache(imageUrl) {
   const cacheKey = useMemo(() => `${CACHE_PREFIX}${imageUrl}`, [imageUrl]);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
+  const [cachedUrl, setCachedUrl] = useState(null);
+  const loadingRef = useRef(false);
 
-  // Read from localStorage first to avoid re-renders
+  // Read from cache first
   const initialUrl = useMemo(() => {
+    if (!imageUrl) return null;
+
+    // Check global cache first
+    if (globalCache.has(imageUrl)) {
+      setIsImageLoaded(true);
+      return imageUrl;
+    }
+
     try {
       const cached = localStorage.getItem(cacheKey);
       if (cached) {
         const { url, timestamp } = JSON.parse(cached);
         if (Date.now() - timestamp < CACHE_EXPIRY) {
+          globalCache.set(url, true);
           setIsImageLoaded(true);
           return url;
         }
@@ -55,13 +70,20 @@ export function useImageCache(imageUrl) {
     } catch (error) {
       console.error("Error reading from cache:", error);
     }
-    return imageUrl;
+    return null;
   }, [cacheKey, imageUrl]);
 
-  const [cachedUrl, setCachedUrl] = useState(initialUrl);
-
   useEffect(() => {
-    if (!imageUrl) return;
+    if (!imageUrl || loadingRef.current) return;
+
+    // If already in global cache, no need to reload
+    if (globalCache.has(imageUrl)) {
+      setCachedUrl(imageUrl);
+      setIsImageLoaded(true);
+      return;
+    }
+
+    loadingRef.current = true;
 
     // Clear expired cache entries periodically
     clearOldCache();
@@ -84,12 +106,20 @@ export function useImageCache(imageUrl) {
           timestamp: Date.now()
         };
         localStorage.setItem(cacheKey, JSON.stringify(cacheData));
+        globalCache.set(imageUrl, true);
         setCachedUrl(imageUrl);
         setIsImageLoaded(true);
       } catch (error) {
         console.error("Error caching image:", error);
         clearOldCache();
+      } finally {
+        loadingRef.current = false;
       }
+    };
+
+    img.onerror = () => {
+      loadingRef.current = false;
+      console.error("Error loading image:", imageUrl);
     };
 
     return () => {

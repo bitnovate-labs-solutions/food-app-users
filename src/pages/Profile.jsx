@@ -1,11 +1,11 @@
 import { Suspense, useState, useEffect } from "react";
-// import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useImageCache } from "@/hooks/useImageCache";
 import { ErrorFallback } from "@/components/ErrorFallback";
 import { ErrorBoundary } from "react-error-boundary";
+import { useQueryClient } from "@tanstack/react-query";
 
 // COMPONENTS
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
@@ -38,11 +38,21 @@ import { NotificationRequest } from "@/components/NotificationButton";
 import defaultImage from "@/assets/images/default-avatar.jpg";
 
 function UserProfile() {
-  // const [imageSrc, setImageSrc] = useState(null);
   const { user } = useAuth();
-  const { data: profile, isLoading, error } = useUserProfile(user); // Fetch data from user_profiles
+  const { data: profile, isLoading, error } = useUserProfile(user);
   const navigate = useNavigate();
   const location = useLocation();
+  const queryClient = useQueryClient();
+
+  // Prefetch profile data
+  useEffect(() => {
+    if (user?.id) {
+      queryClient.prefetchQuery({
+        queryKey: ["profile", user.id],
+        queryFn: () => fetchProfile(user.id),
+      });
+    }
+  }, [user?.id, queryClient]);
 
   // Scroll to top when navigating from edit profile
   useEffect(() => {
@@ -51,8 +61,8 @@ function UserProfile() {
     }
   }, [location]);
 
-  // Use custom caching hook
-  const cachedImageUrl = useImageCache(
+  // Use optimized image caching
+  const { cachedUrl, isImageLoaded } = useImageCache(
     profile?.user_profile_images?.[0].image_url
   );
 
@@ -119,9 +129,13 @@ function UserProfile() {
             {/* IMAGE CONTAINER */}
             <div className="w-full h-full overflow-hidden rounded-2xl">
               <img
-                src={cachedImageUrl || defaultImage}
+                src={isImageLoaded ? (cachedUrl || defaultImage) : defaultImage}
                 alt="Profile"
-                className="w-full h-full object-cover"
+                className={`w-full h-full object-cover transition-opacity duration-300 ${
+                  isImageLoaded ? 'opacity-100' : 'opacity-50'
+                }`}
+                loading="eager"
+                decoding="async"
                 style={{
                   objectPosition: `${
                     profile?.user_profile_images?.[0]?.position?.x || 50

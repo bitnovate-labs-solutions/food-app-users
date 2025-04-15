@@ -39,6 +39,7 @@ function getCacheSize() {
 
 export function useImageCache(imageUrl) {
   const cacheKey = useMemo(() => `${CACHE_PREFIX}${imageUrl}`, [imageUrl]);
+  const [isImageLoaded, setIsImageLoaded] = useState(false);
 
   // Read from localStorage first to avoid re-renders
   const initialUrl = useMemo(() => {
@@ -47,6 +48,7 @@ export function useImageCache(imageUrl) {
       if (cached) {
         const { url, timestamp } = JSON.parse(cached);
         if (Date.now() - timestamp < CACHE_EXPIRY) {
+          setIsImageLoaded(true);
           return url;
         }
       }
@@ -69,8 +71,10 @@ export function useImageCache(imageUrl) {
       clearOldCache();
     }
 
-    // Preload the image in the background
+    // Preload the image in the background with priority
     const img = new Image();
+    img.loading = "eager";
+    img.decoding = "async";
     img.src = imageUrl;
     
     img.onload = () => {
@@ -81,6 +85,7 @@ export function useImageCache(imageUrl) {
         };
         localStorage.setItem(cacheKey, JSON.stringify(cacheData));
         setCachedUrl(imageUrl);
+        setIsImageLoaded(true);
       } catch (error) {
         console.error("Error caching image:", error);
         clearOldCache();
@@ -93,5 +98,5 @@ export function useImageCache(imageUrl) {
     };
   }, [imageUrl, cacheKey]);
 
-  return cachedUrl;
+  return { cachedUrl, isImageLoaded };
 }

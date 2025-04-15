@@ -8,6 +8,8 @@ import {
 // import { Calendar, MapPin, Heart } from "lucide-react";
 import ImageWithFallback from "@/components/ImageWithFallback";
 import { useImageCache } from "@/hooks/useImageCache";
+import { useState, useEffect } from "react";
+import defaultImage from "@/assets/images/default-avatar.jpg";
 
 export default function TreateeDetails({
   item,
@@ -16,10 +18,23 @@ export default function TreateeDetails({
   onLike,
   isLiked,
 }) {
-  const cachedImageUrl = useImageCache(item.image_url || []);
-  const restaurantImageUrl = useImageCache(
-    item?.purchase_items?.[0].menu_packages?.restaurant?.image_url || []
+  const [isPackageImageLoaded, setIsPackageImageLoaded] = useState(false);
+  const [isRestaurantImageLoaded, setIsRestaurantImageLoaded] = useState(false);
+  
+  // Use the hook correctly for both images
+  const { cachedUrl: packageImageUrl, isImageLoaded: packageImageLoaded } = useImageCache(item.image_url);
+  const { cachedUrl: restaurantImageUrl, isImageLoaded: restaurantImageLoaded } = useImageCache(
+    item?.purchase_items?.[0].menu_packages?.restaurant?.image_url
   );
+  
+  // Update loading states
+  useEffect(() => {
+    setIsPackageImageLoaded(packageImageLoaded);
+  }, [packageImageLoaded]);
+  
+  useEffect(() => {
+    setIsRestaurantImageLoaded(restaurantImageLoaded);
+  }, [restaurantImageLoaded]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -34,9 +49,13 @@ export default function TreateeDetails({
           {/* PACKAGE IMAGE */}
           <div className="relative w-full h-[250px] rounded-lg overflow-hidden">
             <ImageWithFallback
-              src={cachedImageUrl}
+              src={isPackageImageLoaded ? (packageImageUrl || defaultImage) : defaultImage}
               alt={item.name}
-              className="w-full h-full object-cover"
+              className={`w-full h-full object-cover transition-opacity duration-300 ${
+                isPackageImageLoaded ? 'opacity-100' : 'opacity-50'
+              }`}
+              loading="eager"
+              decoding="async"
             />
           </div>
 
@@ -54,9 +73,13 @@ export default function TreateeDetails({
             <h3 className="font-semibold">Restaurant</h3>
             <div className="relative w-full h-[200px] rounded-lg overflow-hidden">
               <ImageWithFallback
-                src={restaurantImageUrl}
+                src={isRestaurantImageLoaded ? (restaurantImageUrl || defaultImage) : defaultImage}
                 alt={item?.purchase_items?.[0].menu_packages?.restaurant?.name}
-                className="w-full h-full object-cover"
+                className={`w-full h-full object-cover transition-opacity duration-300 ${
+                  isRestaurantImageLoaded ? 'opacity-100' : 'opacity-50'
+                }`}
+                loading="eager"
+                decoding="async"
               />
             </div>
           </div>

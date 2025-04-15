@@ -440,7 +440,7 @@ export default function Messages() {
             {remainingMessages <= 2 && !isPromptDismissed && (
               <div
                 ref={promptRef}
-                className="bg-white border-t border-gray-100 p-4 text-center space-y-2 fixed bottom-[10rem] left-4 right-4 z-30 rounded-xl shadow-lg cursor-pointer transition-all duration-200 touch-pan-x"
+                className="bg-white border-t border-gray-100 p-4 text-center space-y-2 fixed bottom-[10rem] left-4 right-4 z-30 rounded-xl shadow-lg cursor-pointer transition-all duration-200 touch-pan-x max-w-sm mx-auto"
                 onClick={() => setShowPlatformDialog(true)}
                 onTouchStart={handleTouchStart}
                 onTouchMove={handleTouchMove}

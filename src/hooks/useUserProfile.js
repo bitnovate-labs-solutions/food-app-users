@@ -53,6 +53,9 @@ export function useUserProfile(authUser) {
     enabled: !!authUser?.id,
     retry: false, // Don't retry on error for new users
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+    cacheTime: 1000 * 60 * 30, // Keep in cache for 30 minutes
+    refetchOnWindowFocus: false, // Don't refetch on window focus
+    refetchOnMount: false, // Don't refetch on mount if data is fresh
     suspense: true,
   });
 }

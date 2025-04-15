@@ -9,51 +9,29 @@ import { onboardingSteps } from "./data/onboarding_data";
 
 // COMPONENTS
 import { Button } from "@/components/ui/button";
+import { Image } from "lucide-react";
 import LoadingComponent from "@/components/LoadingComponent";
 import RenderDescription from "./components/RenderDescription";
 
-// Prefetch and cache API data
-// const prefetchData = async (queryClient) => {
-//   try {
-//     // Fetch initial data
-//     const { data: foodData } = await supabase
-//       .from("foods")
-//       .select(
-//         `
-//         *,
-//         restaurants (*),
-//         user_selections (
-//           id,
-//           user_profile_id,
-//           role,
-//           user_profiles (*)
-//         )
-//       `
-//       )
-//       .order("available_date", { ascending: true });
-
-//     // Cache the data
-//     queryClient.setQueryData(["foodItems"], foodData);
-
-//     // Cache images
-//     foodData?.forEach((item) => {
-//       const img = new Image();
-//       img.src = item.image_url || item.restaurants?.image_url;
-//     });
-//   } catch (error) {
-//     console.error("Prefetch error:", error);
-//   }
-// };
-
 export default function Onboarding() {
   const [currentStep, setCurrentStep] = useState(0);
+  const [isImageLoaded, setIsImageLoaded] = useState(false);
   const navigate = useNavigate();
   // const queryClient = useQueryClient();
   const { user } = useAuth();
   const { data: profile, isLoading } = useUserProfile(user);
 
-  // Cache all onboarding images
-  const cachedImages = onboardingSteps.map((step) => useImageCache(step.image));
+  // Get the current step's image URL
+  const currentImageUrl = onboardingSteps[currentStep]?.image;
+
+  // Use the hook correctly for the current step's image
+  const { cachedUrl, isImageLoaded: imageLoaded } =
+    useImageCache(currentImageUrl);
+
+  // Update the loading state
+  useEffect(() => {
+    setIsImageLoaded(imageLoaded);
+  }, [imageLoaded]);
 
   // CHECK AUTH STATE AND REDIRECT BASED ON ROLE
   useEffect(() => {
@@ -94,13 +72,21 @@ export default function Onboarding() {
       <div className="flex-1 flex flex-col items-center justify-center p-4">
         {/* WELCOME IMAGE */}
         {onboardingSteps[currentStep].image && (
-          <div className="flex justify-center items-center mb-6">
-            <img
-              src={cachedImages[currentStep]}
-              alt="Welcome"
-              loading={currentStep === 0 ? "eager" : "lazy"}
-              className="w-45 h-auto object-cover flex-shrink-0"
-            />
+          <div className="flex justify-center items-center mb-6 w-full max-w-[300px] h-[250px]">
+            {isImageLoaded && cachedUrl ? (
+              <img
+                src={cachedUrl}
+                alt={`Step ${currentStep + 1}`}
+                className="w-full h-full object-cover rounded-lg transition-opacity duration-300 opacity-100"
+                loading="eager"
+                decoding="async"
+              />
+            ) : (
+              <div className="w-full h-full bg-gray-100 rounded-lg flex flex-col items-center justify-center">
+                <Image className="w-12 h-12 text-gray-400 mb-2" />
+                <span className="text-sm text-gray-400">Loading image...</span>
+              </div>
+            )}
           </div>
         )}
 

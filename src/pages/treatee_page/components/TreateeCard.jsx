@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Calendar, Heart, MapPin, Users, Package } from "lucide-react";
 import { useImageCache } from "@/hooks/useImageCache";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ImageWithFallback from "@/components/ImageWithFallback";
 import TreateeDetails from "./TreateeDetails";
 import TreatersModal from "./TreatersModal";
@@ -11,12 +11,22 @@ import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import defaultImage from "@/assets/images/default-avatar.jpg";
 
 export default function TreateeCard({ item, onLike, isLiked }) {
   const [showAllUsers, setShowAllUsers] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [showTreaters, setShowTreaters] = useState(false);
-  const cachedImageUrl = useImageCache(item.image_url || []);
+  const [isImageLoaded, setIsImageLoaded] = useState(false);
+  
+  // Use the hook correctly with loading state
+  const { cachedUrl, isImageLoaded: imageLoaded } = useImageCache(item.image_url);
+  
+  // Update the loading state
+  useEffect(() => {
+    setIsImageLoaded(imageLoaded);
+  }, [imageLoaded]);
+
   const { user } = useAuth();
   const expressInterest = useExpressInterest();
 
@@ -77,9 +87,13 @@ export default function TreateeCard({ item, onLike, isLiked }) {
       <div className="relative w-full h-[145px] overflow-hidden">
         {/* CARD IMAGE */}
         <ImageWithFallback
-          src={cachedImageUrl}
+          src={isImageLoaded ? (cachedUrl || defaultImage) : defaultImage}
           alt={item.name}
-          className="absolute inset-0 w-full h-full object-cover"
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
+            isImageLoaded ? 'opacity-100' : 'opacity-50'
+          }`}
+          loading="eager"
+          decoding="async"
         />
 
         {/* IMAGE OVERLAY */}

@@ -14,6 +14,7 @@ const Explore = () => {
   const [activeCategory, setActiveCategory] = useState("All");
   const [currentSlide, setCurrentSlide] = useState(0);
   const scrollRef = useRef(null);
+  const scrollTimeout = useRef(null);
 
   // HOOKS
   const {
@@ -27,14 +28,20 @@ const Explore = () => {
     error: errorFoodCategories,
   } = useFoodCategoryEnum();
 
-  // Handle scroll events to update current slide
+  // Handle scroll events to update current slide with debouncing
   const handleScroll = () => {
-    if (scrollRef.current) {
-      const scrollPosition = scrollRef.current.scrollLeft;
-      const cardWidth = scrollRef.current.offsetWidth;
-      const newSlide = Math.round(scrollPosition / cardWidth);
-      setCurrentSlide(newSlide);
+    if (scrollTimeout.current) {
+      clearTimeout(scrollTimeout.current);
     }
+
+    scrollTimeout.current = setTimeout(() => {
+      if (scrollRef.current) {
+        const scrollPosition = scrollRef.current.scrollLeft;
+        const cardWidth = scrollRef.current.offsetWidth;
+        const newSlide = Math.round(scrollPosition / cardWidth);
+        setCurrentSlide(newSlide);
+      }
+    }, 50); // 50ms debounce delay
   };
 
   // Add scroll event listener
@@ -42,7 +49,12 @@ const Explore = () => {
     const scrollElement = scrollRef.current;
     if (scrollElement) {
       scrollElement.addEventListener("scroll", handleScroll);
-      return () => scrollElement.removeEventListener("scroll", handleScroll);
+      return () => {
+        if (scrollTimeout.current) {
+          clearTimeout(scrollTimeout.current);
+        }
+        scrollElement.removeEventListener("scroll", handleScroll);
+      };
     }
   }, []);
 
@@ -63,12 +75,17 @@ const Explore = () => {
           {/* CAROUSEL */}
           <div
             ref={scrollRef}
-            className="flex overflow-x-auto no-scrollbar snap-x snap-mandatory scroll-smooth"
+            className="flex overflow-x-auto no-scrollbar snap-x snap-mandatory scroll-smooth touch-pan-x"
+            style={{
+              scrollSnapType: 'x mandatory',
+              WebkitOverflowScrolling: 'touch',
+            }}
           >
             {voucherUpdates.map((item) => (
               <div
                 key={item.id}
                 className="flex-none w-full snap-center px-[1px]"
+                style={{ scrollSnapAlign: 'center' }}
               >
                 <VoucherCard item={item} />
               </div>

@@ -6,7 +6,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Card } from "@/components/ui/card";
-import { Users, MessageCircle } from "lucide-react";
+import { Users, MessageCircle, SendIcon } from "lucide-react";
 import ImageWithFallback from "@/components/ImageWithFallback";
 import { useState } from "react";
 import UserProfileCard from "@/components/UserProfileCard";
@@ -15,6 +15,7 @@ import { useChatRequest } from "@/hooks/useChatRequest";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { Input } from "@/components/ui/input";
 
 export default function InterestedTreateesModal({
   isOpen,
@@ -25,6 +26,11 @@ export default function InterestedTreateesModal({
   const [selectedUser, setSelectedUser] = useState(null);
   const [selectedUserIndex, setSelectedUserIndex] = useState(null);
   const [isDetailsShown, setIsDetailsShown] = useState(false);
+  const [showMessageDialog, setShowMessageDialog] = useState(false);
+  const [selectedTreatee, setSelectedTreatee] = useState(null);
+  const [initialMessage, setInitialMessage] = useState(
+    "Hey you! 😊\nJust saw we matched—love that!\nShall we hop over to WhatsApp to chat more? See you there, cheers! 👋"
+  );
   const { user } = useAuth();
   const navigate = useNavigate();
   const chatRequest = useChatRequest();
@@ -47,26 +53,38 @@ export default function InterestedTreateesModal({
 
   const handleChatClick = async (e, treatee) => {
     e.stopPropagation();
+    setSelectedTreatee(treatee);
+    setShowMessageDialog(true);
+  };
+
+  const handleSendMessage = async () => {
     try {
       // Make sure we have all required data
-      if (!user?.id || !treatee?.user_id || !purchaseId) {
+      if (!user?.id || !selectedTreatee?.user_id || !purchaseId) {
         console.error("Missing required data for chat request:", {
           userId: user?.id,
-          treateeId: treatee?.user_id,
+          treateeId: selectedTreatee?.user_id,
           purchaseId,
         });
         return;
       }
 
-      // Create the conversation
-      const conversation = await chatRequest.mutateAsync({
+      // Create the conversation with initial message
+      const { conversation, message } = await chatRequest.mutateAsync({
         treaterId: user.id,
-        treateeId: treatee.user_id,
+        treateeId: selectedTreatee.user_id,
         purchaseId,
+        initialMessage: initialMessage.trim(),
       });
+
+      // Reset state
+      setShowMessageDialog(false);
+      setSelectedTreatee(null);
 
       // Only navigate if we have a valid conversation
       if (conversation?.id) {
+        // Wait a moment for the message to be properly synced
+        await new Promise(resolve => setTimeout(resolve, 500));
         navigate(`/messages/${conversation.id}`);
       } else {
         console.error("No conversation ID returned from chat request");
@@ -165,6 +183,68 @@ export default function InterestedTreateesModal({
                 </Card>
               ))
             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* MESSAGE DIALOG */}
+      <Dialog open={showMessageDialog} onOpenChange={setShowMessageDialog}>
+        <DialogContent className="sm:max-w-[425px] p-6 bg-white border border-white/20 shadow-md rounded-2xl">
+          <DialogHeader className="space-y-6">
+            {/* Treatee Profile Header */}
+            <div className="flex flex-col items-center text-center">
+              <div className="h-24 w-24 rounded-full overflow-hidden border-2 border-white shadow-md mb-3">
+                <ImageWithFallback
+                  src={selectedTreatee?.user_profile_images?.[0]?.image_url}
+                  alt={selectedTreatee?.display_name}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div>
+                <DialogTitle className="text-xl font-semibold">
+                  {selectedTreatee?.display_name}
+                  {/* CODE FOR FUTURE USE (TBC) ---------------------- */}
+                  {/* , {selectedTreatee?.age} */}
+                </DialogTitle>
+                {/* CODE FOR FUTURE USE (TBC) ---------------------- */}
+                {/* <DialogDescription className="text-sm text-gray-500">
+                  {selectedTreatee?.occupation || "No occupation listed"}
+                </DialogDescription> */}
+              </div>
+            </div>
+            {/* CODE FOR FUTURE USE (TBC) ---------------------- */}
+            {/* <div className="border-t border-gray-100 pt-2">
+              <h4 className="text-sm font-light text-lightgray mb-2">
+                Edit your message
+              </h4>
+            </div> */}
+          </DialogHeader>
+          <div className="space-y-4 mt-2">
+            <textarea
+              value={initialMessage}
+              onChange={(e) => setInitialMessage(e.target.value)}
+              className="w-full h-32 p-3 text-sm border border-gray-200 rounded-lg focus:ring-primary focus:border-primary resize-none focus:outline-none"
+              placeholder="Type your message..."
+            />
+            <div className="flex items-center">
+              {/* CODE FOR FUTURE USE (TBC) ---------------------- */}
+              {/* <Button
+                variant="outline"
+                onClick={() => {
+                  setShowMessageDialog(false);
+                  setSelectedTreatee(null);
+                }}
+              >
+                Cancel
+              </Button> */}
+              <Button
+                onClick={handleSendMessage}
+                className="bg-primary text-white w-full shadow-md"
+              >
+                Message
+                <SendIcon />
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

@@ -9,7 +9,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { BellOff, BellRing } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import { urlB64ToUint8Array } from "@/utils/urlB64ToUint8Array";
 
 export function NotificationRequest() {
   const { data: user, isLoading } = useUserProfile();
@@ -31,55 +30,55 @@ export function NotificationRequest() {
   //   }
   // };
 
-  const subscribeUser = async () => {
-    if ("serviceWorker" in navigator) {
-      try {
-        // Check if service worker is already registered
-        const registration = await navigator.serviceWorker.getRegistration();
+  // const subscribeUser = async () => {
+  //   if ("serviceWorker" in navigator) {
+  //     try {
+  //       // Check if service worker is already registered
+  //       const registration = await navigator.serviceWorker.getRegistration();
 
-        if (registration) {
-          generateSubscribeEndPoint(registration);
-        } else {
-          // Register the service worker
-          const newRegistration = await navigator.serviceWorker.register(
-            "/sw.js"
-          );
+  //       if (registration) {
+  //         generateSubscribeEndPoint(registration);
+  //       } else {
+  //         // Register the service worker
+  //         const newRegistration = await navigator.serviceWorker.register(
+  //           "/sw.js"
+  //         );
 
-          // Subscribe to push notifications
-          generateSubscribeEndPoint(newRegistration);
-        }
-      } catch (error) {
-        toast.error(
-          "Error during service worker registration or subscription",
-          error
-        );
-      }
-    }
-  };
+  //         // Subscribe to push notifications
+  //         generateSubscribeEndPoint(newRegistration);
+  //       }
+  //     } catch (error) {
+  //       toast.error(
+  //         "Error during service worker registration or subscription",
+  //         error
+  //       );
+  //     }
+  //   }
+  // };
 
-  // generate the key using web-push generate-vapid-keys, save the public key in .env.local
-  const generateSubscribeEndPoint = async (newRegistration) => {
-    const applicationServerKey = urlB64ToUint8Array(
-      import.meta.env.VITE_PUBLIC_VAPID_KEY
-    );
+  // // generate the key using web-push generate-vapid-keys, save the public key in .env.local
+  // const generateSubscribeEndPoint = async (newRegistration) => {
+  //   const applicationServerKey = urlB64ToUint8Array(
+  //     import.meta.env.VITE_PUBLIC_VAPID_KEY
+  //   );
 
-    const options = {
-      applicationServerKey,
-      userVisibility: true, // this ensures the delivery of notifications that are visible to the user, eliminating silent notifications (mandatory in Chrome, optional in Firefox)
-    };
+  //   const options = {
+  //     applicationServerKey,
+  //     userVisibility: true, // this ensures the delivery of notifications that are visible to the user, eliminating silent notifications (mandatory in Chrome, optional in Firefox)
+  //   };
 
-    const subscription = await newRegistration.pushManager.subscribe(options);
+  //   const subscription = await newRegistration.pushManager.subscribe(options);
 
-    const { error } = await supabase
-      .from("notification")
-      .insert({ notification_json: JSON.stringify(subscription) });
+  //   const { error } = await supabase
+  //     .from("notification")
+  //     .insert({ notification_json: JSON.stringify(subscription) });
 
-    if (error) {
-      toast.error(error.message);
-    } else {
-      queryClient.invalidateQueries({ queryKey: ["user"] });
-    }
-  };
+  //   if (error) {
+  //     toast.error(error.message);
+  //   } else {
+  //     queryClient.invalidateQueries({ queryKey: ["user"] });
+  //   }
+  // };
 
   // CHECK PERMISSION STATUS WHEN COMPONENT MOUNTS
   const showNotification = () => {

@@ -30,6 +30,9 @@ import {
   Check,
   X,
   Trash2,
+  XCircle,
+  XIcon,
+  XCircleIcon,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/lib/supabase";
@@ -721,9 +724,12 @@ export default function EditProfile() {
 
             {/* ADDITIONAL PHOTOS */}
             <div>
-              <div className="grid grid-cols-3 gap-4 my-4">
+              <div className="grid grid-cols-3 gap-4 my-4 pt-6">
                 {[...Array(3)].map((_, index) => (
-                  <div key={index} className="relative">
+                  <div
+                    key={index}
+                    className="relative border border-gray-200 rounded-2xl"
+                  >
                     <label className="block cursor-pointer">
                       {additionalImages[index] ? (
                         <div className="relative aspect-square group">
@@ -768,9 +774,9 @@ export default function EditProfile() {
                           e.stopPropagation();
                           handleRemoveAdditionalImage(index);
                         }}
-                        className="absolute -top-2 -right-2 z-10 bg-red-500 text-white rounded-full w-6 h-6 flex justify-center items-center p-2"
+                        className="absolute -top-1 -right-1 text-primary z-10 rounded-full w-4 h-4 flex justify-center items-center"
                       >
-                        x
+                        <XCircleIcon />
                       </button>
                     )}
                   </div>

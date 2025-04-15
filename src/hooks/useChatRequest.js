@@ -21,16 +21,41 @@ const fetchUserProfile = async (userId) => {
   return data; // returns the profile data or throws an error
 };
 
+// Helper function to create a message
+const createMessage = async (conversationId, senderId, messageContent) => {
+  const { data: message, error: messageError } = await supabase
+    .from("messages")
+    .insert({
+      conversation_id: conversationId,
+      sender_id: senderId,
+      message_content: messageContent,
+      created_at: new Date().toISOString(),
+      is_read: false,
+    })
+    .select()
+    .single();
+
+  if (messageError) {
+    console.error("Error creating message:", messageError);
+    throw messageError;
+  }
+
+  return message;
+};
+
 export const useChatRequest = () => {
   const queryClient = useQueryClient(); // Initializes the query client for cache management
 
   return useMutation({
-    mutationFn: async ({ treaterId, treateeId, purchaseId }) => {
+    mutationFn: async ({ treaterId, treateeId, purchaseId, initialMessage }) => {
       // Fetch both user profiles in parallel
       const [treaterProfile, treateeProfile] = await Promise.all([
         fetchUserProfile(treaterId),
         fetchUserProfile(treateeId),
       ]);
+
+      let conversation;
+      let createdMessage = null;
 
       // Check for existing conversation
       const { data: existingConversation, error: checkError } = await supabase // Queries the conversations table for an existing chat
@@ -46,31 +71,38 @@ export const useChatRequest = () => {
         throw checkError;
       }
 
-      // If conversation exists, return it
+      // If conversation exists, use it, otherwise create new one
       if (existingConversation) {
         console.log("Existing conversation found:", existingConversation);
-        return existingConversation;
+        conversation = existingConversation;
+      } else {
+        // Create new conversation using profile IDs
+        const { data: newConversation, error: conversationError } = await supabase
+          .from("conversations")
+          .insert({
+            treater_id: treaterProfile.id,
+            treatee_id: treateeProfile.id,
+            purchase_id: purchaseId,
+            status: "pending",
+            created_at: new Date().toISOString(),
+          })
+          .select()
+          .single();
+
+        if (conversationError) {
+          console.error("Conversation error:", conversationError);
+          throw conversationError;
+        }
+
+        conversation = newConversation;
       }
 
-      // Create new conversation using profile IDs
-      const { data: conversation, error: conversationError } = await supabase
-        .from("conversations")
-        .insert({
-          treater_id: treaterProfile.id,
-          treatee_id: treateeProfile.id,
-          purchase_id: purchaseId,
-          status: "pending",
-          created_at: new Date().toISOString(),
-        })
-        .select()
-        .single();
-
-      if (conversationError) {
-        console.error("Conversation error:", conversationError);
-        throw conversationError;
+      // Create initial message for both new and existing conversations
+      if (initialMessage && conversation) {
+        createdMessage = await createMessage(conversation.id, treaterId, initialMessage);
       }
 
-      return conversation;
+      return { conversation, message: createdMessage };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["conversations"] }); // Invalidates the conversations query cache

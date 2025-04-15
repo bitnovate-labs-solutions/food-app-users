@@ -14,7 +14,7 @@ const Explore = () => {
   const [activeCategory, setActiveCategory] = useState("All");
   const [currentSlide, setCurrentSlide] = useState(0);
   const scrollRef = useRef(null);
-  const scrollTimeout = useRef(null);
+  const slideRefs = useRef([]);
 
   // HOOKS
   const {
@@ -28,35 +28,36 @@ const Explore = () => {
     error: errorFoodCategories,
   } = useFoodCategoryEnum();
 
-  // Handle scroll events to update current slide with debouncing
-  const handleScroll = () => {
-    if (scrollTimeout.current) {
-      clearTimeout(scrollTimeout.current);
-    }
-
-    scrollTimeout.current = setTimeout(() => {
-      if (scrollRef.current) {
-        const scrollPosition = scrollRef.current.scrollLeft;
-        const cardWidth = scrollRef.current.offsetWidth;
-        const newSlide = Math.round(scrollPosition / cardWidth);
-        setCurrentSlide(newSlide);
-      }
-    }, 50); // 50ms debounce delay
-  };
-
-  // Add scroll event listener
+  // Set up Intersection Observer
   useEffect(() => {
-    const scrollElement = scrollRef.current;
-    if (scrollElement) {
-      scrollElement.addEventListener("scroll", handleScroll);
-      return () => {
-        if (scrollTimeout.current) {
-          clearTimeout(scrollTimeout.current);
+    const options = {
+      root: scrollRef.current,
+      rootMargin: '0px',
+      threshold: 0.5
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const index = slideRefs.current.indexOf(entry.target);
+          if (index !== -1) {
+            setCurrentSlide(index);
+          }
         }
-        scrollElement.removeEventListener("scroll", handleScroll);
-      };
-    }
-  }, []);
+      });
+    }, options);
+
+    // Observe each slide
+    slideRefs.current.forEach(slide => {
+      if (slide) observer.observe(slide);
+    });
+
+    return () => {
+      slideRefs.current.forEach(slide => {
+        if (slide) observer.unobserve(slide);
+      });
+    };
+  }, [voucherUpdates.length]);
 
   // LOADING AND ERROR HANDLING
   if (isLoadingRestaurants || isLoadingFoodCategories)
@@ -81,11 +82,15 @@ const Explore = () => {
               WebkitOverflowScrolling: 'touch',
             }}
           >
-            {voucherUpdates.map((item) => (
+            {voucherUpdates.map((item, index) => (
               <div
                 key={item.id}
+                ref={el => slideRefs.current[index] = el}
                 className="flex-none w-full snap-center px-[1px]"
-                style={{ scrollSnapAlign: 'center' }}
+                style={{ 
+                  scrollSnapAlign: 'center',
+                  scrollSnapStop: 'always'
+                }}
               >
                 <VoucherCard item={item} />
               </div>
@@ -95,11 +100,21 @@ const Explore = () => {
           {/* PAGINATION DOTS */}
           <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 flex gap-2">
             {voucherUpdates.map((_, index) => (
-              <div
+              <button
                 key={index}
+                onClick={() => {
+                  if (scrollRef.current && slideRefs.current[index]) {
+                    slideRefs.current[index].scrollIntoView({
+                      behavior: 'smooth',
+                      block: 'nearest',
+                      inline: 'center'
+                    });
+                  }
+                }}
                 className={`w-2 h-2 rounded-full transition-colors duration-200 ${
                   currentSlide === index ? "bg-primary" : "bg-gray-300"
                 }`}
+                aria-label={`Go to slide ${index + 1}`}
               />
             ))}
           </div>

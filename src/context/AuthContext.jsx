@@ -1,4 +1,10 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+} from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { useQueryClient } from "@tanstack/react-query";
@@ -11,12 +17,10 @@ const AuthContext = createContext({});
 export function AuthProvider({ children }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-
-  // USESTATES
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // SESSION CHECK
+  // SESSION CHECK --------------------------------------------------
   useEffect(() => {
     // Get initial session
     const initializeAuth = async () => {
@@ -61,7 +65,7 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
-  // CHECK USER PROFILE in 'user_profiles' table
+  // CHECK USER PROFILE in 'user_profiles' table --------------------------------------------------
   const checkUserProfile = async (userId) => {
     try {
       const { data: profile, error } = await supabase
@@ -84,7 +88,7 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // SIGN IN
+  // SIGN IN --------------------------------------------------
   const signIn = async (credentials) => {
     try {
       const { data, error } = await supabase.auth.signInWithPassword(
@@ -102,7 +106,7 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // SIGN UP
+  // SIGN UP --------------------------------------------------
   const signUp = async (credentials) => {
     try {
       const { data, error } = await supabase.auth.signUp({
@@ -124,8 +128,8 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // SIGN OUT
-  const signOut = async () => {
+  // SIGN OUT --------------------------------------------------
+  const signOut = useCallback(async () => {
     try {
       // Clear React Query cache first
       queryClient.clear();
@@ -136,7 +140,7 @@ export function AuthProvider({ children }) {
       // Clear all storage
       localStorage.clear();
       sessionStorage.clear();
-      
+
       setUser(null);
       navigate("/auth", { replace: true });
     } catch (error) {
@@ -147,7 +151,7 @@ export function AuthProvider({ children }) {
       setUser(null);
       navigate("/auth", { replace: true });
     }
-  };
+  }, []);
 
   const value = {
     signUp,
@@ -157,7 +161,7 @@ export function AuthProvider({ children }) {
     checkUserProfile,
   };
 
-  // LOADING ANIMATION
+  // LOADING ANIMATION --------------------------------------------------
   if (loading && !user) {
     return (
       <LoadingComponent type="screen" text="Setting up your experience..." />

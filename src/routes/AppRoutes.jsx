@@ -20,10 +20,10 @@ import CreateProfile from "@/pages/CreateProfile";
 import EditProfile from "@/pages/edit_profile_page/EditProfile";
 import AuthCallback from "@/routes/AuthCallback";
 import Connect from "@/pages/connect_page/Connect";
-import TestSkeletons from "@/pages/test-skeletons_temp";
+// import TestSkeletons from "@/pages/test-skeletons_temp";
 
 // TEMP TESTING
-import LoadingComponent from "@/components/LoadingComponent";
+// import LoadingComponent from "@/components/LoadingComponent";
 // import ErrorComponent from "@/components/ErrorComponent";
 
 export default function AppRoutes() {
@@ -37,7 +37,7 @@ export default function AppRoutes() {
       <Route path="/auth/callback" element={<AuthCallback />} />
 
       {/* FOR TESTING LOADING COMPONENT UI */}
-      <Route
+      {/* <Route
         path="/loading-test"
         element={
           <LoadingComponent
@@ -46,14 +46,10 @@ export default function AppRoutes() {
             // text="Setting up your experience..."
           />
         }
-      />
-      {/* <Route
-        path="/loading-test"
-        element={<ErrorComponent message="Error Testing" />}
       /> */}
 
       {/* FOR TESTING SKELETON COMPONENTS */}
-      <Route path="/test-skeletons" element={<TestSkeletons />} />
+      {/* <Route path="/test-skeletons" element={<TestSkeletons />} /> */}
 
       {/* WITH LAYOUT */}
       <Route element={<Layout title="Explore" />}>

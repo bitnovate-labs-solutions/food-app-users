@@ -1,9 +1,15 @@
 import { supabase } from "@/lib/supabase";
 import { backOfficeSupabase } from "@/lib/supabase-bo";
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/context/AuthContext";
 
 const getPurchases = async () => {
-  // First get all purchases
+  // Get the current user
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError) throw new Error(authError.message);
+  if (!user) throw new Error("User must be logged in");
+
+  // First get all purchases for the current user
   const { data: purchases, error: purchasesError } = await supabase
     .from("purchases")
     .select(
@@ -14,6 +20,7 @@ const getPurchases = async () => {
         )
     `
     )
+    .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
   if (purchasesError) throw new Error(purchasesError.message);

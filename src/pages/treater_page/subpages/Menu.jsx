@@ -18,12 +18,6 @@ export default function Menu() {
   if (isLoading) return <LoadingComponent type="screen" text="Loading..." />;
   if (error) return <ErrorComponent message={error.message} />;
 
-  // FROM MOCK DATA
-  // const { data: foodItems } = useQuery({
-  //   queryKey: ["foodItems", "menu", filters],
-  //   queryFn: mockApi.getMenuItems,
-  // });
-
   // Filter the food items based on the current filters
   const filteredItems = restaurants?.filter((item) => {
     // Filter by cuisine type

@@ -10,7 +10,7 @@ export default function OrderSuccess() {
   const navigate = useNavigate();
 
   return (
-    <div className="fixed inset-0 bg-white flex flex-col items-center justify-center px-6">
+    <div className="fixed inset-0 bg-white flex flex-col items-center justify-center px-6 max-w-sm mx-auto">
       <div className="max-w-md w-full text-center">
         <div className="relative w-45 h-45 mx-auto">
           <img

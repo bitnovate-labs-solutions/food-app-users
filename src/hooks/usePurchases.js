@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { backOfficeSupabase } from "@/lib/supabase-bo";
 import { useQuery } from "@tanstack/react-query";
 
 const getPurchases = async () => {
@@ -9,27 +10,7 @@ const getPurchases = async () => {
       `*, 
         purchase_items (
             *,
-            menu_packages (
-              id,
-              name,
-              description,
-              price,
-              package_type,
-              menu_images (
-                id,
-                image_url
-              ),
-              restaurant:restaurants!inner (
-                id,
-                name,
-                location,
-                address,
-                phone_number,
-                image_url, 
-                cuisine_type,
-                food_category
-              )
-            )
+            package_id
         )
     `
     )
@@ -66,10 +47,51 @@ const getPurchases = async () => {
 
   if (profilesError) throw new Error(profilesError.message);
 
+  // Get all menu packages from back office database
+  const packageIds = purchases.flatMap(purchase => 
+    purchase.purchase_items.map(item => item.package_id)
+  );
+  
+  const { data: menuPackages, error: menuError } = await backOfficeSupabase
+    .from("menu_packages")
+    .select(`
+      id,
+      name,
+      description,
+      price,
+      package_type,
+      menu_images (
+        id,
+        image_url
+      ),
+      restaurant:restaurants!inner (
+        id,
+        name,
+        location,
+        address,
+        phone_number,
+        image_url, 
+        cuisine_type,
+        food_category
+      )
+    `)
+    .in("id", packageIds);
+
+  if (menuError) throw new Error(menuError.message);
+
+  // Create a map of menu packages for easy lookup
+  const menuPackageMap = menuPackages.reduce((acc, pkg) => {
+    acc[pkg.id] = pkg;
+    return acc;
+  }, {});
+
   // Group purchases by menu package
   const groupedPurchases = purchases.reduce((acc, purchase) => {
     purchase.purchase_items.forEach((item) => {
-      const menuPackageId = item.menu_packages.id;
+      const menuPackage = menuPackageMap[item.package_id];
+      if (!menuPackage) return; // Skip if menu package not found
+
+      const menuPackageId = menuPackage.id;
       const existingGroup = acc.find(group => group.menuPackageId === menuPackageId);
 
       // Get interests for this purchase
@@ -103,6 +125,7 @@ const getPurchases = async () => {
           user_profiles: treaterProfile ? [treaterProfile] : [],
           purchase_items: [{
             ...item,
+            menu_packages: menuPackage,
             quantity: item.quantity
           }],
           likes: purchase.likes || 0,
@@ -120,5 +143,9 @@ export const usePurchasedItems = () => {
   return useQuery({
     queryKey: ["purchasedItems"],
     queryFn: getPurchases,
+    staleTime: 1000 * 60 * 5, // Data is considered fresh for 5 minutes
+    cacheTime: 1000 * 60 * 30, // Keep unused data in cache for 30 minutes
+    refetchOnWindowFocus: false, // Don't refetch when window regains focus
+    refetchOnMount: false, // Don't refetch when component mounts if data is fresh
   });
 };

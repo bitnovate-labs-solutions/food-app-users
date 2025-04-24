@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useFilters } from "@/context/FilterContext";
-import { useRestaurants } from "@/hooks/useRestaurants";
+import { useRestaurantsBO } from "@/hooks/useRestaurantsBO";
 
 // COMPONENTS
 import TreaterCard from "../components/TreaterCard";
@@ -12,7 +12,7 @@ export default function Menu() {
   const [expandedId, setExpandedId] = useState(null);
   const { filters } = useFilters();
 
-  const { data: restaurants, isLoading, error } = useRestaurants();
+  const { data: restaurants, isLoading, error } = useRestaurantsBO();
 
   // LOADING AND ERROR HANDLERS
   if (isLoading) return <LoadingComponent type="screen" text="Loading..." />;

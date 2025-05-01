@@ -21,6 +21,10 @@ function PurchaseCard({ item, onShowQR, onShowDetails }) {
   const menuPackage = purchaseItem?.menu_packages;
   const restaurant = menuPackage?.restaurant;
 
+  // ✅ Correct: Only count UNUSED vouchers
+  const unusedVouchers =
+    purchaseItem?.voucher_instances?.filter((v) => !v.used) || [];
+
   return (
     <>
       <Card className="overflow-hidden transition-all duration-300 bg-white border border-gray-200 rounded-2xl shadow-xl">
@@ -68,7 +72,7 @@ function PurchaseCard({ item, onShowQR, onShowDetails }) {
               <div className="w-full flex justify-center items-center gap-2 ml-2 text-white">
                 <Package className="h-4 w-4" />
                 <span className="text-sm font-bold">
-                  x {purchaseItem?.quantity || 0}
+                  x {unusedVouchers.length}
                 </span>
               </div>
             </div>
@@ -131,9 +135,12 @@ function PurchaseCard({ item, onShowQR, onShowDetails }) {
 
 // Memoize the component to prevent unnecessary re-renders
 export default memo(PurchaseCard, (prevProps, nextProps) => {
-  return (
-    prevProps.item?.id === nextProps.item?.id &&
-    prevProps.item?.purchase_items?.[0]?.quantity ===
-      nextProps.item?.purchase_items?.[0]?.quantity
-  );
+  const prevVouchers =
+    prevProps.item?.purchase_items?.[0]?.voucher_instances || [];
+  const nextVouchers =
+    nextProps.item?.purchase_items?.[0]?.voucher_instances || [];
+
+  if (prevVouchers.length !== nextVouchers.length) return false;
+
+  return prevVouchers.every((v, i) => v.used === nextVouchers[i].used);
 });

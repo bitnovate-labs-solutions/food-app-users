@@ -57,7 +57,7 @@ export default function Cart() {
 
       // Invalidate relevant queries to trigger refetch
       queryClient.invalidateQueries(["foodItems"]);
-      queryClient.invalidateQueries(["foodItems", "purchased"]);
+      queryClient.invalidateQueries(["purchasedItems"]);
 
       // Show success state
       setOrderComplete(true);

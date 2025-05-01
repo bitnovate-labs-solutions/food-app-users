@@ -5,7 +5,10 @@ import { useAuth } from "@/context/AuthContext";
 
 const getPurchases = async () => {
   // Get the current user
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
   if (authError) throw new Error(authError.message);
   if (!user) throw new Error("User must be logged in");
 
@@ -14,9 +17,10 @@ const getPurchases = async () => {
     .from("purchases")
     .select(
       `*, 
-        purchase_items (
+        purchase_items!inner (
             *,
-            package_id
+            package_id,
+            voucher_instances (*) 
         )
     `
     )
@@ -55,13 +59,14 @@ const getPurchases = async () => {
   if (profilesError) throw new Error(profilesError.message);
 
   // Get all menu packages from back office database
-  const packageIds = purchases.flatMap(purchase => 
-    purchase.purchase_items.map(item => item.package_id)
+  const packageIds = purchases.flatMap((purchase) =>
+    purchase.purchase_items.map((item) => item.package_id)
   );
-  
+
   const { data: menuPackages, error: menuError } = await backOfficeSupabase
     .from("menu_packages")
-    .select(`
+    .select(
+      `
       id,
       name,
       description,
@@ -81,7 +86,8 @@ const getPurchases = async () => {
         cuisine_type,
         food_category
       )
-    `)
+    `
+    )
     .in("id", packageIds);
 
   if (menuError) throw new Error(menuError.message);
@@ -99,44 +105,86 @@ const getPurchases = async () => {
       if (!menuPackage) return; // Skip if menu package not found
 
       const menuPackageId = menuPackage.id;
-      const existingGroup = acc.find(group => group.menuPackageId === menuPackageId);
+      const existingGroup = acc.find(
+        (group) => group.menuPackageId === menuPackageId
+      );
 
       // Get interests for this purchase
-      const interests = purchaseInterests?.filter(interest => interest.purchase_id === purchase.id) || [];
+      const interests =
+        purchaseInterests?.filter(
+          (interest) => interest.purchase_id === purchase.id
+        ) || [];
 
       if (existingGroup) {
         // Add this purchase's user to the treaters list if not already included
-        const treaterProfile = userProfiles.find(profile => profile.user_id === purchase.user_id);
-        if (treaterProfile && !existingGroup.user_profiles.some(p => p.user_id === treaterProfile.user_id)) {
+        const treaterProfile = userProfiles.find(
+          (profile) => profile.user_id === purchase.user_id
+        );
+        if (
+          treaterProfile &&
+          !existingGroup.user_profiles.some(
+            (p) => p.user_id === treaterProfile.user_id
+          )
+        ) {
           existingGroup.user_profiles.push(treaterProfile);
         }
-        // Update the total quantity
-        existingGroup.purchase_items[0].quantity += item.quantity;
+
+        // Find the existing purchase item for this package
+        const existingItem = existingGroup.purchase_items.find(
+          (pi) => pi.package_id === item.package_id
+        );
+
+        if (existingItem) {
+          // Update the quantity by adding the new quantity
+          existingItem.quantity = (existingItem.quantity || 0) + (item.quantity || 0);
+          // Merge voucher instances
+          existingItem.voucher_instances = [
+            ...(existingItem.voucher_instances || []),
+            ...(item.voucher_instances || [])
+          ];
+        } else {
+          // Add new purchase item if it doesn't exist
+          existingGroup.purchase_items.push({
+            ...item,
+            menu_packages: menuPackage,
+            quantity: item.quantity || 0,
+            voucher_instances: item.voucher_instances || []
+          });
+        }
+
         // Update the total likes
-        existingGroup.likes = (existingGroup.likes || 0) + (purchase.likes || 0);
+        existingGroup.likes =
+          (existingGroup.likes || 0) + (purchase.likes || 0);
         // Keep the most recent purchase date
-        if (new Date(purchase.created_at) > new Date(existingGroup.created_at)) {
+        if (
+          new Date(purchase.created_at) > new Date(existingGroup.created_at)
+        ) {
           existingGroup.created_at = purchase.created_at;
         }
         // Merge purchase interests
         existingGroup.purchase_interests = [
           ...(existingGroup.purchase_interests || []),
-          ...interests
+          ...interests,
         ];
       } else {
         // Create new group
-        const treaterProfile = userProfiles.find(profile => profile.user_id === purchase.user_id);
+        const treaterProfile = userProfiles.find(
+          (profile) => profile.user_id === purchase.user_id
+        );
         acc.push({
           ...purchase,
           menuPackageId,
           user_profiles: treaterProfile ? [treaterProfile] : [],
-          purchase_items: [{
-            ...item,
-            menu_packages: menuPackage,
-            quantity: item.quantity
-          }],
+          purchase_items: [
+            {
+              ...item,
+              menu_packages: menuPackage,
+              quantity: item.quantity || 0,
+              voucher_instances: item.voucher_instances || []
+            },
+          ],
           likes: purchase.likes || 0,
-          purchase_interests: interests
+          purchase_interests: interests,
         });
       }
     });
@@ -153,6 +201,6 @@ export const usePurchasedItems = () => {
     staleTime: 1000 * 60 * 5, // Data is considered fresh for 5 minutes
     cacheTime: 1000 * 60 * 30, // Keep unused data in cache for 30 minutes
     refetchOnWindowFocus: false, // Don't refetch when window regains focus
-    refetchOnMount: false, // Don't refetch when component mounts if data is fresh
+    refetchOnMount: true, // Refetch when component mounts to ensure fresh data
   });
 };

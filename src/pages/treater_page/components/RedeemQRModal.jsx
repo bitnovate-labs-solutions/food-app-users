@@ -1,3 +1,4 @@
+// COMPONENTS
 import {
   Dialog,
   DialogContent,
@@ -15,10 +16,24 @@ export default function RedeemQRModal({
   onNextQR,
   onPrevQR,
 }) {
-  if (!purchaseItem) return null;
+  if (
+    !purchaseItem ||
+    !purchaseItem.qrCodes ||
+    purchaseItem.qrCodes.length === 0
+  ) {
+    return null;
+  }
 
-  const { currentQRCode, totalQRCodes, unusedQRCodes, qrIndex } = purchaseItem;
+  const { qrCodes, qrIndex } = purchaseItem;
+  const currentQR = qrCodes[qrIndex];
   const menuPackage = purchaseItem.purchase_items[0]?.menu_packages;
+
+  if (!currentQR) return null;
+
+  // 🔥 Generate proper JSON-encoded QR payload
+  const qrPayload = JSON.stringify({
+    voucher_instance_id: currentQR.id,
+  });
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -45,7 +60,7 @@ export default function RedeemQRModal({
 
             <div className="flex-shrink-0">
               <QRCodeSVG
-                value={currentQRCode}
+                value={qrPayload} // JSON string payload
                 size={200}
                 level="H"
                 includeMargin={true}
@@ -78,9 +93,9 @@ export default function RedeemQRModal({
           {/* QR Code Progress */}
           <div className="text-center text-sm text-muted-foreground">
             <p>
-              QR Code {qrIndex + 1} of {totalQRCodes}
+              QR Code {qrIndex + 1} of {qrCodes.length}
             </p>
-            <p>{unusedQRCodes} remaining</p>
+            <p>{qrCodes.length} remaining</p>
           </div>
 
           {/* Instructions */}

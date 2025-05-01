@@ -5,17 +5,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 
-export default function RedeemQRModal({
-  isOpen,
-  onClose,
-  purchaseItem,
-  onNextQR,
-  onPrevQR,
-}) {
+export default function RedeemQRModal({ isOpen, onClose, purchaseItem }) {
   if (
     !purchaseItem ||
     !purchaseItem.qrCodes ||
@@ -45,39 +37,15 @@ export default function RedeemQRModal({
         </DialogHeader>
 
         <div className="flex flex-col items-center space-y-4">
-          {/* QR Code Display with Navigation */}
-          <div className="flex items-center text-primary">
-            <Button
-              variant="outline"
-              onClick={onPrevQR}
-              className="h-12 w-12 rounded-full border-none"
-            >
-              <ChevronLeft
-                style={{ width: "28px", height: "28px" }}
-                className="mx-auto"
-              />
-            </Button>
-
-            <div className="flex-shrink-0">
-              <QRCodeSVG
-                value={qrPayload} // JSON string payload
-                size={200}
-                level="H"
-                includeMargin={true}
-              />
-            </div>
-
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={onNextQR}
-              className="h-12 w-12 rounded-full border-none"
-            >
-              <ChevronRight
-                style={{ width: "28px", height: "28px" }}
-                className="mx-auto"
-              />
-            </Button>
+          {/* QR Code Display */}
+          <div className="flex justify-center">
+            <QRCodeSVG
+              value={qrPayload}
+              size={300}
+              level="H"
+              includeMargin={true}
+              className="bg-white p-4"
+            />
           </div>
 
           {/* Package Info */}

@@ -31,9 +31,12 @@ function PurchaseList() {
   // --- Realtime voucher updates ---
   const handleVoucherUpdate = useCallback(
     (updatedVoucher) => {
+      console.log("Received voucher update:", updatedVoucher); // Debug log
+
       queryClient.setQueryData(["purchasedItems"], (oldData) => {
         if (!oldData) return oldData;
 
+        let voucherJustRedeemed = false;
         let voucherJustFullyRedeemed = false;
 
         const newData = oldData.map((purchaseGroup) => {
@@ -46,13 +49,17 @@ function PurchaseList() {
               updatedItem.voucher_instances = updatedItem.voucher_instances.map(
                 (voucher) => {
                   if (voucher.id === updatedVoucher.id) {
+                    // Check if this voucher was just redeemed
+                    if (!voucher.used && updatedVoucher.used) {
+                      voucherJustRedeemed = true;
+                    }
                     return { ...voucher, ...updatedVoucher };
                   }
                   return voucher;
                 }
               );
 
-              // ✅ After updating vouchers, check if this item's vouchers are ALL used
+              // Check if all vouchers are used
               const hasUnused = updatedItem.voucher_instances.some(
                 (v) => !v.used
               );
@@ -67,10 +74,21 @@ function PurchaseList() {
           return updatedPurchaseGroup;
         });
 
-        // ✅ Trigger toast AFTER cache update
+        // Show toast for individual voucher redemption
+        if (voucherJustRedeemed) {
+          toast.success("✅ Voucher redeemed successfully!", {
+            duration: 3000,
+            position: "top-center",
+          });
+        }
+
+        // Show toast and close modal for fully redeemed purchase
         if (voucherJustFullyRedeemed) {
-          handleCloseQR(); // ✅ Close the modal immediately
-          toast.success("🎉 Voucher Fully Redeemed!");
+          toast.success("🎉 All vouchers have been redeemed!", {
+            duration: 3000,
+            position: "top-center",
+          });
+          handleCloseQR(); // Close the modal
         }
 
         return newData;

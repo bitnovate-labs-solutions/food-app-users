@@ -28,7 +28,14 @@ export default function RedeemQRModal({ isOpen, onClose, purchaseItem }) {
   });
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog 
+      open={isOpen} 
+      onOpenChange={(open) => {
+        if (!open) {
+          onClose();
+        }
+      }}
+    >
       <DialogContent className="sm:max-w-[425px] bg-white rounded-2xl shadow-2xl border-none">
         <DialogHeader>
           <DialogTitle className="text-center text-primary">

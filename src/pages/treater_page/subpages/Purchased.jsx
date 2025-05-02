@@ -74,21 +74,22 @@ function PurchaseList() {
           return updatedPurchaseGroup;
         });
 
-        // Show toast for individual voucher redemption
+        // Show toast for individual voucher redemption and close modal
         if (voucherJustRedeemed) {
           toast.success("✅ Voucher redeemed successfully!", {
             duration: 3000,
             position: "top-center",
           });
+          handleCloseQR(); // Close modal after individual redemption
         }
 
-        // Show toast and close modal for fully redeemed purchase
+        // Show toast for fully redeemed purchase
         if (voucherJustFullyRedeemed) {
           toast.success("🎉 All vouchers have been redeemed!", {
             duration: 3000,
             position: "top-center",
           });
-          handleCloseQR(); // Close the modal
+          handleCloseQR(); // Close modal after full redemption
         }
 
         return newData;

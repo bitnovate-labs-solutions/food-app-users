@@ -4,27 +4,15 @@ import { useConversations } from "@/hooks/useConversations";
 import { useMessageNotifications } from "@/hooks/useMessageNotifications";
 import { formatTime } from "@/utils/formatTime";
 import { useParams, useNavigate } from "react-router-dom";
-import { toast } from "sonner";
 
 // COMPONENTS
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, Menu, MessageSquare, MessageCircle } from "lucide-react";
+import { Send, Menu, MessageSquare } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
 import ErrorComponent from "@/components/ErrorComponent";
-import Whatsapp from "@/assets/whatsapp.png";
-
-// Constants
-const MESSAGE_LIMIT = 5;
 
 // Helper function to format date
 const formatMessageDate = (date) => {
@@ -82,75 +70,7 @@ export default function Messages() {
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [newMessage, setNewMessage] = useState("");
-  const [showPlatformDialog, setShowPlatformDialog] = useState(false);
-  const [isPromptDismissed, setIsPromptDismissed] = useState(false);
-  const [isLimitDialogDismissed, setIsLimitDialogDismissed] = useState(false);
   const messagesEndRef = useRef(null);
-  const touchStartX = useRef(null);
-  const touchStartY = useRef(null);
-  const promptRef = useRef(null);
-
-  // Handle touch events for swipe
-  const handleTouchStart = (e) => {
-    touchStartX.current = e.touches[0].clientX;
-    touchStartY.current = e.touches[0].clientY;
-  };
-
-  const handleTouchMove = (e) => {
-    if (!touchStartX.current || !promptRef.current) return;
-
-    const touchEndX = e.touches[0].clientX;
-    const touchEndY = e.touches[0].clientY;
-
-    // Calculate distance moved
-    const deltaX = touchEndX - touchStartX.current;
-    const deltaY = Math.abs(touchEndY - touchStartY.current);
-
-    // Only handle horizontal swipes (ignore if vertical movement is greater)
-    if (deltaY > Math.abs(deltaX)) return;
-
-    // Apply transform to follow finger
-    promptRef.current.style.transform = `translateX(${deltaX}px)`;
-    promptRef.current.style.opacity = Math.max(0, 1 - Math.abs(deltaX) / 200);
-  };
-
-  const handleTouchEnd = (e) => {
-    if (!touchStartX.current || !promptRef.current) return;
-
-    const touchEndX = e.changedTouches[0].clientX;
-    const deltaX = touchEndX - touchStartX.current;
-
-    // If swiped far enough, dismiss the prompt
-    if (Math.abs(deltaX) > 100) {
-      setIsPromptDismissed(true);
-    } else {
-      // Reset position if not swiped far enough
-      promptRef.current.style.transform = "translateX(0)";
-      promptRef.current.style.opacity = "1";
-    }
-
-    touchStartX.current = null;
-    touchStartY.current = null;
-  };
-
-  // Calculate remaining messages based on user's sent messages
-  const remainingMessages = selectedConversation
-    ? MESSAGE_LIMIT -
-      (selectedConversation.messages?.filter((msg) => msg.senderId === user.id)
-        ?.length || 0)
-    : 0;
-
-  // Add console log to debug message count
-  useEffect(() => {
-    if (selectedConversation) {
-      console.log(
-        "Current user messages:",
-        selectedConversation.messages?.filter((msg) => msg.senderId === user.id)
-          ?.length || 0
-      );
-      console.log("Remaining messages:", remainingMessages);
-    }
-  }, [selectedConversation, remainingMessages]);
 
   // Update selected conversation based on URL parameter
   useEffect(() => {
@@ -225,12 +145,6 @@ export default function Messages() {
   // HANDLE SEND MESSAGE
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !selectedConversation) return;
-
-    // Check message limit
-    if (remainingMessages <= 0) {
-      toast.error("Message limit reached");
-      return;
-    }
 
     try {
       await sendMessage.mutateAsync({
@@ -358,13 +272,6 @@ export default function Messages() {
               </Avatar>
               <div className="flex-1">
                 <h3 className="font-medium">{selectedConversation.name}</h3>
-                {remainingMessages > 0 ? (
-                  <p className="text-xs text-rose-500">
-                    You have {remainingMessages} messages left
-                  </p>
-                ) : (
-                  <p className="text-xs text-rose-500">Message limit reached</p>
-                )}
               </div>
             </>
           ) : (
@@ -436,98 +343,12 @@ export default function Messages() {
               </div>
             </ScrollArea>
 
-            {/* WHATSAPP PROMPT */}
-            {remainingMessages <= 2 && !isPromptDismissed && (
-              <div
-                ref={promptRef}
-                className="bg-white border-t border-gray-100 p-4 text-center space-y-2 fixed bottom-[10rem] left-4 right-4 z-30 rounded-xl shadow-lg cursor-pointer transition-all duration-200 touch-pan-x max-w-sm mx-auto"
-                onClick={() => setShowPlatformDialog(true)}
-                onTouchStart={handleTouchStart}
-                onTouchMove={handleTouchMove}
-                onTouchEnd={handleTouchEnd}
-              >
-                <div className="flex items-center justify-center gap-2 text-primary">
-                  <MessageCircle className="h-4 w-4" />
-                  <span className="text-sm font-medium">
-                    Invite your match to chat on WhatsApp
-                  </span>
-                </div>
-                <p className="text-[11px] text-gray-500 font-light leading-4">
-                  Swipe to dismiss or click to switch to WhatsApp. <br />
-                  Prefer another messaging platform? Let them know!
-                </p>
-              </div>
-            )}
-
-            {/* WHATSAPP PLATFORM MODAL */}
-            <Dialog
-              open={
-                showPlatformDialog ||
-                (remainingMessages <= 0 && !isLimitDialogDismissed)
-              }
-              onOpenChange={(open) => {
-                setShowPlatformDialog(open);
-                if (!open) {
-                  setIsLimitDialogDismissed(true);
-                }
-              }}
-            >
-              <DialogContent className="sm:max-w-[425px] p-10 bg-white border-none rounded-2xl">
-                <div className="flex justify-center mb-4">
-                  <div className="rounded-2xl">
-                    {/* WHATSAPP ICON */}
-                    <img
-                      src={Whatsapp}
-                      alt="whatsapp icon"
-                      className="h-18 w-18"
-                    />
-                  </div>
-                </div>
-                <DialogHeader>
-                  <DialogTitle className="font-semibold mb-2 text-darkgray text-center">
-                    Continue chatting on WhatsApp
-                  </DialogTitle>
-                  <DialogDescription className="text-lightgray text-sm text-center">
-                    You&apos;ve reached the message limit. Continue your
-                    conversation on WhatsApp or another platform of your choice.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4 mt-2">
-                  <Button
-                    className="w-full bg-[#25D366] hover:bg-[#25D366]/90 text-white shadow-lg"
-                    onClick={() => {
-                      window.open(
-                        `https://wa.me/${selectedConversation.phone}`,
-                        "_blank"
-                      );
-                      setShowPlatformDialog(false);
-                    }}
-                  >
-                    <MessageCircle className="h-5 w-5 mr-2" />
-                    Open WhatsApp
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-
             {/* MESSAGE INPUT */}
             <div className="max-w-sm mx-auto p-4 bg-white border-t border-gray-200 fixed bottom-[5.2rem] left-0 right-0 z-20">
               <div className="flex gap-2 max-w-2xl mx-auto">
-                {/* Overlay for detecting click or touch events (if input and button are disabled) */}
-                {remainingMessages <= 0 && (
-                  <div
-                    className="absolute inset-0 z-10 cursor-pointer"
-                    onClick={() => setShowPlatformDialog(true)}
-                  />
-                )}
-
                 {/* INPUT */}
                 <Input
-                  placeholder={
-                    remainingMessages <= 0
-                      ? "Message limit reached"
-                      : "Type a message..."
-                  }
+                  placeholder="Type a message..."
                   className="flex-1 border border-gray-300 focus:ring-darkgray rounded-full cursor-pointer text-sm"
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
@@ -537,25 +358,12 @@ export default function Messages() {
                       handleSendMessage();
                     }
                   }}
-                  onClick={() => {
-                    if (remainingMessages <= 0) {
-                      setShowPlatformDialog(true);
-                    }
-                  }}
-                  disabled={remainingMessages <= 0}
                 />
 
                 {/* BUTTON */}
                 <Button
                   size="icon"
-                  onClick={() => {
-                    if (remainingMessages <= 0) {
-                      setShowPlatformDialog(true);
-                    } else {
-                      handleSendMessage();
-                    }
-                  }}
-                  disabled={remainingMessages <= 0}
+                  onClick={handleSendMessage}
                 >
                   <Send className="h-4 w-4 text-white" />
                 </Button>

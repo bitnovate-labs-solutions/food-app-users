@@ -50,6 +50,32 @@ export default function PackageDetailsModal({ isOpen, onClose, purchaseItem }) {
           <p className="text-lightgray">{menuPackage?.description}</p>
         </div>
 
+        {/* PRE-BOOKING ALERT */}
+        <div className="px-1 text-sm mt-4 bg-blue-50 p-3 rounded-lg">
+          <div className="flex items-start gap-2">
+            <div className="text-blue-500 mt-0.5">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+            </div>
+            <p className="text-blue-700">
+              For the best experience, we recommend booking at least 24 hours in advance to secure your spot
+            </p>
+          </div>
+        </div>
+
         {/* RESTAURANT INFO */}
         <div className="space-y-4 p-0 pt-4 border-t-1 border-gray-300">
           <div className="text-sm">

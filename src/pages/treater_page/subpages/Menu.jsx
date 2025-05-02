@@ -20,6 +20,11 @@ export default function Menu() {
 
   // Filter the food items based on the current filters
   const filteredItems = restaurants?.filter((item) => {
+    // Filter out restaurants without menu packages
+    if (!item.menu_packages || item.menu_packages.length === 0) {
+      return false;
+    }
+
     // Filter by cuisine type
     if (filters.cuisine && item.cuisine_type !== filters.cuisine) {
       return false;

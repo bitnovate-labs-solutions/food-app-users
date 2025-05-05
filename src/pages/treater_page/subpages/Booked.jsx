@@ -15,21 +15,6 @@ export default function Booked() {
     queryFn: mockApi.getBookedItems,
   });
 
-  //  CODES FOR FUTURE USE --------------------
-  //   const { data: bookedItems } = useQuery({
-  //     queryKey: ["foodItems", "booked"],
-  //     queryFn: async () => {
-  //       const { data, error } = await supabase
-  //         .from("food_items")
-  //         .select("*")
-  //         .eq("status", "booked")
-  //         .order("booked_at", { ascending: false });
-
-  //       if (error) throw error;
-  //       return data || [];
-  //     },
-  //   });
-
   return (
     <div className="space-y-4">
       {bookedItems?.map((item) => (

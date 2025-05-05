@@ -8,35 +8,29 @@ import TreateeCard from "../components/TreateeCard";
 // import { Button } from "@/components/ui/button";
 import { Search } from "lucide-react";
 import { useFilters } from "@/context/FilterContext";
-import { usePurchasedItems } from "@/hooks/usePurchases";
+import { useTreaterPurchases } from "@/hooks/useTreaterPurchases";
 import LoadingComponent from "@/components/LoadingComponent";
 import ErrorComponent from "@/components/ErrorComponent";
 
 export default function Menu() {
   const { filters } = useFilters();
-
-  const { data: purchaseItems, isLoading, error } = usePurchasedItems();
+  const { data: menuPackages, isLoading, error } = useTreaterPurchases();
 
   // LOADING AND ERROR HANDLERS
   if (isLoading) return <LoadingComponent type="screen" text="Loading..." />;
   if (error) return <ErrorComponent message={error.message} />;
 
-  // Filter the food items based on the current filters
-  const filteredItems = purchaseItems?.filter((item) => {
+  // Filter the menu packages based on the current filters
+  const filteredItems = menuPackages?.filter((item) => {
     // Filter by cuisine type
-    if (
-      filters.cuisine &&
-      item?.purchase_items?.[0]?.menu_packages?.restaurant?.cuisine_type !==
-        filters.cuisine
-    ) {
+    if (filters.cuisine && item.restaurant?.cuisine_type !== filters.cuisine) {
       return false;
     }
 
     // Filter by category
     if (
       filters.category &&
-      item?.purchase_items?.[0]?.menu_packages?.restaurant?.food_category !==
-        filters.category
+      item.restaurant?.food_category !== filters.category
     ) {
       return false;
     }
@@ -62,13 +56,9 @@ export default function Menu() {
       case "price_low":
         return a.price - b.price;
       case "name_asc":
-        return (
-          a?.purchase_items?.[0]?.menu_packages?.name || ""
-        ).localeCompare(b?.purchase_items?.[0]?.menu_packages?.name || "");
+        return a.name.localeCompare(b.name);
       case "name_desc":
-        return (
-          b?.purchase_items?.[0]?.menu_packages?.name || ""
-        ).localeCompare(a?.purchase_items?.[0]?.menu_packages?.name || "");
+        return b.name.localeCompare(a.name);
       default:
         return 0;
     }
@@ -83,13 +73,13 @@ export default function Menu() {
           </div>
           <h3 className="text-lg text-center font-semibold text-gray-900 mb-2">
             {filters.category
-              ? `No ${filters.category} purchased treats by Treaters found`
-              : "No purchased treats by Treaters yet!"}
+              ? `No ${filters.category} menu packages found`
+              : "No menu packages found"}
           </h3>
           <p className="text-sm text-gray-500 text-center max-w-sm">
             {filters.category
-              ? "Try adjusting your filters or check back later for new purchased treats in this category."
-              : "Try adjusting your filters or check back later for new purchased treats."}
+              ? "Try adjusting your filters or check back later for new menu packages in this category."
+              : "Try adjusting your filters or check back later for new menu packages."}
           </p>
         </div>
       ) : (

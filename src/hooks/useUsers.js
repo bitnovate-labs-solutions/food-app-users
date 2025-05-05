@@ -1,3 +1,6 @@
+// USAGE:
+// FETCHES A LIST OF ALL OTHER USERS (EXCLUDING THE CURRENT USER)
+// ===============================================================================================
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 
@@ -43,4 +46,4 @@ export const useUsers = (currentUserId) => {
   }, [currentUserId]);
 
   return { users, isLoading, error };
-}; 
+};

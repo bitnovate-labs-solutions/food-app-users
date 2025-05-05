@@ -11,13 +11,16 @@ import InterestedTreateesModal from "./InterestedTreateesModal";
 
 function PurchaseCard({ item, onShowQR, onShowDetails }) {
   const [showInterestedUsers, setShowInterestedUsers] = useState(false);
-  const { data: interestedUsers = [], isLoading } = useInterestedUsers(item.id);
+  const purchaseItem = item?.purchase_items?.[0];
+  const { data: interestedUsers = [], isLoading } = useInterestedUsers(
+    item.id,
+    purchaseItem?.package_id
+  );
 
   // Early return if item is not defined
   if (!item) return null;
 
   // Get the first purchase item and its related data safely
-  const purchaseItem = item?.purchase_items?.[0];
   const menuPackage = purchaseItem?.menu_packages;
   const restaurant = menuPackage?.restaurant;
 

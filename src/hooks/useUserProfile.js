@@ -11,7 +11,6 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 
 export function useUserProfile(authUser) {
-  // user prop -> the user id from the user_profiles table passed from components using this hook
   const fetchProfile = async () => {
     if (!authUser?.id) return null;
 

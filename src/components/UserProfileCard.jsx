@@ -41,29 +41,31 @@ export default function UserProfileCard({
 
   const location = useLocation();
 
-  // Reset mainImageIndex when user changes
+  // Reset mainImageIndex when user changes -----------------------------------------------------------------
   useEffect(() => {
     setMainImageIndex(0);
   }, [user]);
 
-  // Combine avatar with additional images
+  // Combine avatar with additional images -----------------------------------------------------------------
   const images = user.user_profile_images?.map((img) => img.image_url) || [];
 
-  // Filter purchased items by user_id
+  // Filter purchased items by treater's id (user_id) -----------------------------------------------------------------
   const filteredPurchasedItems =
     purchasedItems?.filter((item) => item.user_id === user.user_id) || [];
 
-  // TOGGLE DETAILS
+  // TOGGLE DETAILS -----------------------------------------------------------------
   const toggleDetails = () => {
     const newState = !isDetailsShown;
     setIsDetailsShown(newState);
     onShowDetails?.(newState);
   };
 
+  // HANDLE DRAG START -----------------------------------------------------------------
   const handleDragStart = (event, info) => {
     setDragStart(info.point.x);
   };
 
+  // HANDLE DRAG END -----------------------------------------------------------------
   const handleDragEnd = (event, info) => {
     const dragDistance = info.point.x - dragStart;
     const threshold = 100; // minimum distance to trigger swipe
@@ -75,21 +77,25 @@ export default function UserProfileCard({
     }
   };
 
+  // OPEN IMAGE VIEWER -----------------------------------------------------------------
   const openImageViewer = (index) => {
     setSelectedImageIndex(index);
     setIsImageViewerOpen(true);
   };
 
+  // HANDLE PREVIOUS IMAGE -----------------------------------------------------------------
   const handlePreviousImage = () => {
     setSelectedImageIndex((prev) => (prev > 0 ? prev - 1 : prev));
   };
 
+  // HANDLE NEXT IMAGE -----------------------------------------------------------------
   const handleNextImage = () => {
     setSelectedImageIndex((prev) =>
       prev < images.length - 1 ? prev + 1 : prev
     );
   };
 
+  // HANDLE CLOSE -----------------------------------------------------------------
   const handleClose = (e) => {
     e.stopPropagation();
     onClose?.();
@@ -113,7 +119,7 @@ export default function UserProfileCard({
           </button>
         )}
 
-        {/* PROFILE IMAGE */}
+        {/* PROFILE IMAGE ----------------------------------------------------------------- */}
         <motion.div
           className="relative"
           drag="x"
@@ -352,11 +358,12 @@ export default function UserProfileCard({
                                     className="block w-[145px] snap-start"
                                   >
                                     <div className="bg-white border border-gray-200 rounded-lg overflow-hidden transition-shadow duration-200">
-                                      <div className="relative aspect-square">
+                                      <div className="relative aspect-square p-4">
                                         <ImageWithFallback
                                           src={
                                             purchaseItem.menu_packages
-                                              ?.image_url || item.image_url
+                                              ?.menu_images?.[0]?.image_url ||
+                                            item.image_url
                                           }
                                           alt={
                                             purchaseItem.menu_packages?.name ||

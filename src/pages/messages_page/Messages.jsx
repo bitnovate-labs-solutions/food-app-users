@@ -81,11 +81,11 @@ export default function Messages() {
         );
         if (conversation) {
           setSelectedConversation(conversation);
+          // Store the selected conversation ID in sessionStorage
+          sessionStorage.setItem("selectedConversationId", conversation.id);
         }
       } else if (!selectedConversation) {
-        const savedConversationId = sessionStorage.getItem(
-          "selectedConversationId"
-        );
+        const savedConversationId = sessionStorage.getItem("selectedConversationId");
         if (savedConversationId) {
           const conversation = conversations.find(
             (c) => String(c.id) === String(savedConversationId)
@@ -128,6 +128,9 @@ export default function Messages() {
     // Then update the selected conversation
     setSelectedConversation(conversation);
     setIsDrawerOpen(false);
+
+    // Store the selected conversation ID in sessionStorage
+    sessionStorage.setItem("selectedConversationId", conversation.id);
 
     try {
       // Mark messages as read in the database

@@ -1,7 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { backOfficeSupabase } from "@/lib/supabase-bo";
 import { useQuery } from "@tanstack/react-query";
-import { useAuth } from "@/context/AuthContext";
 
 const getPurchases = async () => {
   // Get the current user
@@ -24,8 +23,10 @@ const getPurchases = async () => {
         )
     `
     )
-    .eq("user_id", user.id)
     .order("created_at", { ascending: false });
+
+  console.log("USER ID:", user.id);
+  console.log("PURCHASES:", purchases);
 
   if (purchasesError) throw new Error(purchasesError.message);
 
@@ -136,11 +137,12 @@ const getPurchases = async () => {
 
         if (existingItem) {
           // Update the quantity by adding the new quantity
-          existingItem.quantity = (existingItem.quantity || 0) + (item.quantity || 0);
+          existingItem.quantity =
+            (existingItem.quantity || 0) + (item.quantity || 0);
           // Merge voucher instances
           existingItem.voucher_instances = [
             ...(existingItem.voucher_instances || []),
-            ...(item.voucher_instances || [])
+            ...(item.voucher_instances || []),
           ];
         } else {
           // Add new purchase item if it doesn't exist
@@ -148,7 +150,7 @@ const getPurchases = async () => {
             ...item,
             menu_packages: menuPackage,
             quantity: item.quantity || 0,
-            voucher_instances: item.voucher_instances || []
+            voucher_instances: item.voucher_instances || [],
           });
         }
 
@@ -180,7 +182,7 @@ const getPurchases = async () => {
               ...item,
               menu_packages: menuPackage,
               quantity: item.quantity || 0,
-              voucher_instances: item.voucher_instances || []
+              voucher_instances: item.voucher_instances || [],
             },
           ],
           likes: purchase.likes || 0,

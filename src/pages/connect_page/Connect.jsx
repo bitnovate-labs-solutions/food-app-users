@@ -13,18 +13,21 @@ import { usePurchasedItems } from "@/hooks/usePurchases";
 
 const Connect = () => {
   const { user } = useAuth();
+
   const [currentIndex, setCurrentIndex] = useState(0);
   const { users: potentialMatches, isLoading, error } = useUsers(user?.id);
   const { data: purchasedItems } = usePurchasedItems(user?.id);
+
   const { setSubtitle } = useOutletContext();
 
-  // Navigation handlers
+  // HANDLE NEXT ------------------------------------------------------------
   const handleNext = () => {
     if (currentIndex < potentialMatches.length - 1) {
       setCurrentIndex((prev) => prev + 1);
     }
   };
 
+  // HANDLE PREVIOUS ------------------------------------------------------------
   const handlePrevious = () => {
     if (currentIndex > 0) {
       setCurrentIndex((prev) => prev - 1);
@@ -68,7 +71,7 @@ const Connect = () => {
     return () => setSubtitle(null);
   }, [currentIndex, isLoading, potentialMatches, setSubtitle]);
 
-  // LOADING & ERROR HANDLERS
+  // LOADING & ERROR HANDLERS ------------------------------------------------------------
   if (isLoading) {
     return <LoadingComponent type="screen" text="Loading..." />;
   }

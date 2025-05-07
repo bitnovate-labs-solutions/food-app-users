@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
-import { useRestaurants } from "@/hooks/useRestaurants";
+import { useRestaurantsBO } from "@/hooks/useRestaurantsBO";
 import { voucherUpdates } from "@/data/mock_data";
+import { useFoodCategoryEnum } from "@/hooks/useEnumValues";
 
 // COMPONENTS
 import ExploreCard from "./components/ExploreCard";
@@ -8,7 +9,6 @@ import VoucherCard from "./components/VoucherCard";
 import CategoryCard from "@/pages/explore_page/components/CategoryCard";
 import LoadingComponent from "@/components/LoadingComponent";
 import ErrorComponent from "@/components/ErrorComponent";
-import { useFoodCategoryEnum } from "@/hooks/useEnumValues";
 
 const Explore = () => {
   const [activeCategory, setActiveCategory] = useState("All");
@@ -16,19 +16,19 @@ const Explore = () => {
   const scrollRef = useRef(null);
   const slideRefs = useRef([]);
 
-  // HOOKS
+  // HOOKS ---------------------------------------------------------------
   const {
     data: restaurants,
     isLoading: isLoadingRestaurants,
     error: errorRestaurants,
-  } = useRestaurants();
+  } = useRestaurantsBO();
   const {
     data: foodCategories,
     isLoading: isLoadingFoodCategories,
     error: errorFoodCategories,
   } = useFoodCategoryEnum();
 
-  // Set up Intersection Observer
+  // Set up Intersection Observer ---------------------------------------------------------------
   useEffect(() => {
     const options = {
       root: scrollRef.current,
@@ -63,7 +63,7 @@ const Explore = () => {
     };
   }, [voucherUpdates]);
 
-  // LOADING AND ERROR HANDLING
+  // LOADING AND ERROR HANDLING ---------------------------------------------------------------
   if (isLoadingRestaurants || isLoadingFoodCategories)
     return <LoadingComponent type="screen" text="Loading..." />;
 

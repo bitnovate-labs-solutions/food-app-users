@@ -10,8 +10,11 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Share, Download } from "lucide-react";
 
+// Set this to true to force show the prompt during development
+const FORCE_SHOW_PROMPT = false;
+
 export function PWAPrompt() {
-  const [showPrompt, setShowPrompt] = useState(false);
+  const [showPrompt, setShowPrompt] = useState(FORCE_SHOW_PROMPT);
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [isIOS, setIsIOS] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
@@ -24,7 +27,7 @@ export function PWAPrompt() {
         "(display-mode: standalone)"
       ).matches;
       setIsStandalone(standalone);
-      if (standalone) {
+      if (standalone && !FORCE_SHOW_PROMPT) {
         setShowPrompt(false);
         return true;
       }
@@ -41,7 +44,7 @@ export function PWAPrompt() {
 
     // Don't show if previously dismissed
     const dismissed = localStorage.getItem("pwa_install_dismissed");
-    if (dismissed === "true") return;
+    if (dismissed === "true" && !FORCE_SHOW_PROMPT) return;
 
     // Check PWA criteria
     const checkPWACriteria = () => {
@@ -64,7 +67,7 @@ export function PWAPrompt() {
 
     // Function to show prompt after user interaction
     const showAfterInteraction = () => {
-      if (checkPWACriteria() && !checkIfInstalled()) {
+      if ((checkPWACriteria() && !checkIfInstalled()) || FORCE_SHOW_PROMPT) {
         setShowPrompt(true);
       }
     };
@@ -78,7 +81,7 @@ export function PWAPrompt() {
       window.addEventListener("beforeinstallprompt", handler);
     } else {
       // For iOS, show immediately if not installed
-      if (!checkIfInstalled()) {
+      if (!checkIfInstalled() || FORCE_SHOW_PROMPT) {
         setShowPrompt(true);
       }
     }
@@ -116,55 +119,61 @@ export function PWAPrompt() {
 
   // Handle dismiss
   const handleDismiss = () => {
-    localStorage.setItem("pwa_install_dismissed", "true");
+    if (!FORCE_SHOW_PROMPT) {
+      localStorage.setItem("pwa_install_dismissed", "true");
+    }
     setShowPrompt(false);
   };
 
-  if (!showPrompt || isStandalone) return null;
+  if (!showPrompt || (isStandalone && !FORCE_SHOW_PROMPT)) return null;
 
   return (
-    <div className="fixed bottom-20 left-4 right-4 bg-white p-4 rounded-lg shadow-lg border border-gray-200 z-50">
+    <div className="fixed max-w-sm mx-auto bottom-20 left-4 right-4 bg-white p-4 rounded-lg shadow-lg border border-gray-200 z-50">
       <div className="flex flex-col gap-4">
         <div className="flex justify-between items-start">
           <div className="flex-1">
             <h3 className="font-semibold">Install TreatYourDate</h3>
-            {isIOS ? (
-              <div className="text-sm text-gray-600">
-                <p>To install this app:</p>
-                <ol className="ml-4 list-decimal space-y-1">
-                  <li>
-                    Tap the share button <Share className="w-4 h-4 inline" />
-                  </li>
-                  <li>Scroll down and tap &quot;Add to Home Screen&quot;</li>
-                </ol>
-              </div>
-            ) : (
-              <div className="text-sm text-gray-600">
-                <p>Install this app on your device for quick and easy access.</p>
-                <Button
-                  className="mt-2 w-full"
-                  size="sm"
-                  onClick={handleInstallClick}
-                  disabled={!deferredPrompt}
-                >
-                  <Download className="w-4 h-4 mr-2 text-white" />
-                  <span className="text-white">
-                    {deferredPrompt
-                      ? "Install App"
-                      : "Installation not available"}
-                  </span>
-                </Button>
-                {!deferredPrompt && installable && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    Try interacting with the page first
+            <div className="flex flex-col justify-center space-y-2">
+              {isIOS ? (
+                <div className="text-sm text-gray-600">
+                  <p>To install this app:</p>
+                  <ol className="ml-4 list-decimal space-y-1">
+                    <li>
+                      Tap the share button <Share className="w-4 h-4 inline" />
+                    </li>
+                    <li>Scroll down and tap &quot;Add to Home Screen&quot;</li>
+                  </ol>
+                </div>
+              ) : (
+                <div className="text-xs text-gray-600 mt-2">
+                  <p>
+                    Install this app on your device for quick and easy access.
                   </p>
-                )}
-              </div>
-            )}
+                  <Button
+                    className="mt-4 w-full"
+                    size="sm"
+                    onClick={handleInstallClick}
+                    disabled={!deferredPrompt}
+                  >
+                    <Download className="w-4 h-4 mr-2 text-white" />
+                    <span className="text-white">
+                      {deferredPrompt
+                        ? "Install App"
+                        : "Installation not available"}
+                    </span>
+                  </Button>
+                  {!deferredPrompt && installable && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      Try interacting with the page first
+                    </p>
+                  )}
+                </div>
+              )}
+              <Button variant="ghost" size="sm" onClick={handleDismiss}>
+                Not now
+              </Button>
+            </div>
           </div>
-          <Button variant="ghost" size="sm" onClick={handleDismiss}>
-            Not now
-          </Button>
         </div>
       </div>
     </div>

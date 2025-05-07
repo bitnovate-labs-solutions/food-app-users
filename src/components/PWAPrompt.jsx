@@ -128,20 +128,28 @@ export function PWAPrompt() {
   if (!showPrompt || (isStandalone && !FORCE_SHOW_PROMPT)) return null;
 
   return (
-    <div className="fixed max-w-sm mx-auto bottom-20 left-4 right-4 bg-white p-4 rounded-lg shadow-lg border border-gray-200 z-50">
+    <div className="fixed max-w-sm mx-auto bottom-10 left-4 right-4 bg-white p-4 rounded-lg shadow-lg border border-gray-200 z-50">
       <div className="flex flex-col gap-4">
         <div className="flex justify-between items-start">
           <div className="flex-1">
-            <h3 className="font-semibold">Install TreatYourDate</h3>
+            <h3 className="font-semibold text-primary">
+              Install TreatYourDate
+            </h3>
             <div className="flex flex-col justify-center space-y-2">
               {isIOS ? (
                 <div className="text-sm text-gray-600">
-                  <p>To install this app:</p>
+                  <p className="mb-3">To install this app:</p>
                   <ol className="ml-4 list-decimal space-y-1">
                     <li>
-                      Tap the share button <Share className="w-4 h-4 inline" />
+                      Tap the share button{" "}
+                      <Share className="w-4 h-4 inline text-primary" />
                     </li>
-                    <li>Scroll down and tap &quot;Add to Home Screen&quot;</li>
+                    <li>
+                      Scroll down and tap{" "}
+                      <span className="text-primary">
+                        &quot;Add to Home Screen&quot;
+                      </span>
+                    </li>
                   </ol>
                 </div>
               ) : (

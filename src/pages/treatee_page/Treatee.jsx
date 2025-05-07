@@ -11,7 +11,6 @@ import { CardSkeleton } from "@/components/LoadingSkeleton";
 // import { toast } from "sonner";
 import { useLocation } from "react-router-dom";
 import Menu from "./subpages/Menu";
-import Booked from "./subpages/Booked";
 
 // function FoodItems() {
 //   const queryClient = useQueryClient();
@@ -161,8 +160,8 @@ export default function Treatee() {
     switch (activeTab) {
       case "menu":
         return <Menu />;
-      case "booked":
-        return <Booked />;
+      // case "booked":
+      //   return <Booked />;
       default:
         return <Menu />;
     }

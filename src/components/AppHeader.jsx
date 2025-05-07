@@ -7,9 +7,17 @@ import { version } from "../../package.json";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { InstallAppPrompt } from "./InstallAppPrompt";
 
 // COMPONENTS
-import { ChevronDown, LogOut, Settings2, RefreshCw } from "lucide-react";
+import {
+  ChevronDown,
+  LogOut,
+  Settings2,
+  RefreshCw,
+  MessageSquare,
+  Download,
+} from "lucide-react";
 import { Button } from "./ui/button";
 import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
 import {
@@ -22,8 +30,14 @@ import {
 import { toast } from "sonner";
 import LoadingComponent from "./LoadingComponent";
 import ErrorComponent from "./ErrorComponent";
+import FeedbackDialog from "./feedback/FeedbackDialog";
 
-export default function AppHeader({ title, subtitle, isHomePage, isProfilePage }) {
+export default function AppHeader({
+  title,
+  subtitle,
+  isHomePage,
+  isProfilePage,
+}) {
   const { signOut, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -33,6 +47,9 @@ export default function AppHeader({ title, subtitle, isHomePage, isProfilePage }
   const { data: userProfile } = useUserProfile(user);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const queryClient = useQueryClient();
+  const isHistoryTab = activeTab === "history";
+  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
+  const [installEvent, setInstallEvent] = useState(null);
 
   // HOOKS
   const {
@@ -123,7 +140,11 @@ export default function AppHeader({ title, subtitle, isHomePage, isProfilePage }
     return <ErrorComponent message={errorFoodCategories.message} />;
 
   return (
-    <div className="fixed top-0 left-0 right-0 max-w-sm mx-auto bg-white border-b border-gray-200 shadow-md z-10">
+    <div
+      className={`fixed top-0 left-0 right-0 max-w-sm mx-auto bg-white border-b border-gray-200 shadow-md z-10 ${
+        isHistoryTab ? "pb-11" : ""
+      }`}
+    >
       <div className="pt-3">
         <div className="grid grid-cols-5">
           {/* LEFT SIDE BUTTONS -------------------- */}
@@ -136,11 +157,7 @@ export default function AppHeader({ title, subtitle, isHomePage, isProfilePage }
             <h1 className="text-base font-semibold mb-4 text-center text-gray-800">
               {title}
             </h1>
-            {subtitle && (
-              <div className="flex justify-center">
-                {subtitle}
-              </div>
-            )}
+            {subtitle && <div className="flex justify-center">{subtitle}</div>}
           </div>
 
           {/* RIGHT SIDE BUTTONS -------------------- */}
@@ -160,7 +177,7 @@ export default function AppHeader({ title, subtitle, isHomePage, isProfilePage }
               </Button>
             )}
 
-            {/* SETTINGS BUTTON -------------------- */}
+            {/* SETTINGS BUTTON ------------------------------------------------- */}
             {isProfilePage && !isHomePage && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -172,7 +189,7 @@ export default function AppHeader({ title, subtitle, isHomePage, isProfilePage }
                   align="end"
                   className="bg-white border-gray-100 shadow-2xl mr-2 space-y-2 py-4 rounded-xl"
                 >
-                  {/* REFRESH BUTTON */}
+                  {/* REFRESH BUTTON ------------------------------------------------- */}
                   <DropdownMenuItem
                     onClick={handleRefresh}
                     className="text-primary"
@@ -184,6 +201,36 @@ export default function AppHeader({ title, subtitle, isHomePage, isProfilePage }
                       }`}
                     />
                     {isRefreshing ? "Refreshing..." : "Refresh"}
+                  </DropdownMenuItem>
+
+                  {/* INSTALL PWA BUTTON -------------------------------------------------*/}
+                  <DropdownMenuItem
+                    onClick={async () => {
+                      if (installEvent) {
+                        installEvent.prompt();
+                        const result = await installEvent.userChoice;
+                        if (result.outcome === "accepted") {
+                          console.log("PWA installed manually");
+                        }
+                      } else {
+                        toast("No install prompt available");
+                      }
+                    }}
+                    className="text-primary"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Install App
+                  </DropdownMenuItem>
+
+                  {/* FEEDBACK BUTTON ----------------------------------- */}
+                  <DropdownMenuItem
+                    onClick={() =>
+                      setTimeout(() => setIsFeedbackOpen(true), 100)
+                    }
+                    className="text-primary"
+                  >
+                    <MessageSquare className="w-4 h-4 mr-2" />
+                    Feedback
                   </DropdownMenuItem>
 
                   {/* SIGN OUT BUTTON */}
@@ -238,195 +285,207 @@ export default function AppHeader({ title, subtitle, isHomePage, isProfilePage }
                       Purchased
                     </TabsTrigger>
                   )}
-                  {/* BOOKED TAB */}
+                  {/* HISTORY TAB */}
                   <TabsTrigger
-                    value="booked"
+                    value="history"
                     className={`text-sm text-primary data-[state=active]:bg-primary data-[state=active]:text-white border-primary ${
                       userProfile?.role === "treatee"
                         ? "rounded-l-none"
                         : "rounded-l-none"
                     } border-1 border-l-0`}
                   >
-                    Booked
+                    History
                   </TabsTrigger>
                 </TabsList>
               </Tabs>
 
               {/* FILTERS -------------------- */}
-              <div className="flex gap-2 overflow-x-auto pb-2 pl-4">
-                {/* SORT BY */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild className="h-7">
-                    <Button
-                      variant="outline"
-                      className="rounded-full whitespace-nowrap text-[12px] font-light py-1 border-none bg-secondary hover:bg-secondary/80"
-                    >
-                      {sortOptions.find(
-                        (option) => option.value === filters.sort
-                      )?.label || "Sort by"}
-                      <ChevronDown className="w-4 h-4 ml-1" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    align="start"
-                    className="w-40 bg-white border-gray-100 shadow-2xl rounded-xl text-darkgray py-4"
-                  >
-                    <DropdownMenuItem
-                      className="text-primary font-medium flex justify-center"
-                      onClick={() => handleSortChange(null)}
-                    >
-                      Reset
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator className="bg-gray-200" />
-                    {sortOptions.map((option) => (
-                      <DropdownMenuItem
-                        key={option.value}
-                        className={
-                          filters.sort === option.value ? "bg-accent" : ""
-                        }
-                        onClick={() => handleSortChange(option.value)}
+              {!isHistoryTab && (
+                <div className="flex gap-2 overflow-x-auto pb-2 pl-4">
+                  {/* SORT BY */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild className="h-7">
+                      <Button
+                        variant="outline"
+                        className="rounded-full whitespace-nowrap text-[12px] font-light py-1 border-none bg-secondary hover:bg-secondary/80"
                       >
-                        {option.label}
+                        {sortOptions.find(
+                          (option) => option.value === filters.sort
+                        )?.label || "Sort by"}
+                        <ChevronDown className="w-4 h-4 ml-1" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent
+                      align="start"
+                      className="w-40 bg-white border-gray-100 shadow-2xl rounded-xl text-darkgray py-4"
+                    >
+                      <DropdownMenuItem
+                        className="text-primary font-medium flex justify-center"
+                        onClick={() => handleSortChange(null)}
+                      >
+                        Reset
                       </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-
-                {/* CUISINE */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild className="h-7">
-                    <Button
-                      variant="outline"
-                      className="rounded-full whitespace-nowrap text-[12px] font-light py-1 border-none bg-secondary hover:bg-secondary/80"
-                    >
-                      {filters.cuisine
-                        ? (cuisineTypes || []).find(
-                            (c) => c.value === filters.cuisine
-                          )?.label
-                        : "Cuisine"}
-                      <ChevronDown className="w-4 h-4 ml-1" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    align="start"
-                    className="w-40 bg-white border-gray-100 shadow-2xl rounded-xl text-darkgray py-4"
-                  >
-                    <DropdownMenuItem
-                      className="text-primary font-medium flex justify-center"
-                      onClick={() => handleCuisineChange(null)}
-                    >
-                      Reset
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator className="bg-gray-200" />
-                    {[...(cuisineTypes || [])]
-                      .sort((a, b) => a.label.localeCompare(b.label))
-                      .map((option) => (
+                      <DropdownMenuSeparator className="bg-gray-200" />
+                      {sortOptions.map((option) => (
                         <DropdownMenuItem
                           key={option.value}
                           className={
-                            filters.cuisine === option.value ? "bg-accent" : ""
+                            filters.sort === option.value ? "bg-accent" : ""
                           }
-                          onClick={() => handleCuisineChange(option.value)}
+                          onClick={() => handleSortChange(option.value)}
                         >
                           {option.label}
                         </DropdownMenuItem>
                       ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
 
-                {/* FOOD CATEGORIES */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild className="h-7">
-                    <Button
-                      variant="outline"
-                      className="rounded-full whitespace-nowrap text-[12px] font-light py-1 border-none bg-secondary hover:bg-secondary/80"
+                  {/* CUISINE */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild className="h-7">
+                      <Button
+                        variant="outline"
+                        className="rounded-full whitespace-nowrap text-[12px] font-light py-1 border-none bg-secondary hover:bg-secondary/80"
+                      >
+                        {filters.cuisine
+                          ? (cuisineTypes || []).find(
+                              (c) => c.value === filters.cuisine
+                            )?.label
+                          : "Cuisine"}
+                        <ChevronDown className="w-4 h-4 ml-1" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent
+                      align="start"
+                      className="w-40 bg-white border-gray-100 shadow-2xl rounded-xl text-darkgray py-4"
                     >
-                      {filters.category
-                        ? foodCategories.find(
-                            (c) => c.value === filters.category
-                          )?.label
-                        : "Category"}
-                      <ChevronDown className="w-4 h-4 ml-1" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    align="start"
-                    className="w-35 bg-white border-gray-100 shadow-2xl rounded-xl text-darkgray py-4"
+                      <DropdownMenuItem
+                        className="text-primary font-medium flex justify-center"
+                        onClick={() => handleCuisineChange(null)}
+                      >
+                        Reset
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator className="bg-gray-200" />
+                      {[...(cuisineTypes || [])]
+                        .sort((a, b) => a.label.localeCompare(b.label))
+                        .map((option) => (
+                          <DropdownMenuItem
+                            key={option.value}
+                            className={
+                              filters.cuisine === option.value
+                                ? "bg-accent"
+                                : ""
+                            }
+                            onClick={() => handleCuisineChange(option.value)}
+                          >
+                            {option.label}
+                          </DropdownMenuItem>
+                        ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  {/* FOOD CATEGORIES */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild className="h-7">
+                      <Button
+                        variant="outline"
+                        className="rounded-full whitespace-nowrap text-[12px] font-light py-1 border-none bg-secondary hover:bg-secondary/80"
+                      >
+                        {filters.category
+                          ? foodCategories.find(
+                              (c) => c.value === filters.category
+                            )?.label
+                          : "Category"}
+                        <ChevronDown className="w-4 h-4 ml-1" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent
+                      align="start"
+                      className="w-35 bg-white border-gray-100 shadow-2xl rounded-xl text-darkgray py-4"
+                    >
+                      <DropdownMenuItem
+                        className="text-primary font-medium flex justify-center"
+                        onClick={() => handleCategoryChange(null)}
+                      >
+                        Reset
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator className="bg-gray-200" />
+                      {[...foodCategories]
+                        .sort((a, b) => a.label.localeCompare(b.label))
+                        .map((option) => (
+                          <DropdownMenuItem
+                            key={option.value}
+                            className={
+                              filters.category === option.value
+                                ? "bg-accent"
+                                : ""
+                            }
+                            onClick={() => handleCategoryChange(option.value)}
+                          >
+                            {option.label}
+                          </DropdownMenuItem>
+                        ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  {/* FAVOURITE */}
+                  <Button
+                    variant="outline"
+                    className="rounded-full whitespace-nowrap text-[12px] font-light py-1 h-7 border-none bg-secondary hover:bg-secondary/80"
                   >
-                    <DropdownMenuItem
-                      className="text-primary font-medium flex justify-center"
-                      onClick={() => handleCategoryChange(null)}
+                    Favorite
+                  </Button>
+
+                  {/* LOCATION */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="rounded-full whitespace-nowrap text-[12px] font-light py-1 h-7 border-none bg-secondary hover:bg-secondary/80 mr-2"
+                      >
+                        {filters.location
+                          ? states.find((s) => s.value === filters.location)
+                              ?.label
+                          : "Location"}
+                        <ChevronDown className="w-4 h-4 ml-1" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent
+                      align="start"
+                      className="w-35 bg-white border-gray-100 shadow-2xl rounded-xl text-darkgray py-4 mr-2"
                     >
-                      Reset
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator className="bg-gray-200" />
-                    {[...foodCategories]
-                      .sort((a, b) => a.label.localeCompare(b.label))
-                      .map((option) => (
+                      <DropdownMenuItem
+                        className="text-primary font-medium flex justify-center"
+                        onClick={() => handleLocationChange(null)}
+                      >
+                        Reset
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator className="bg-gray-200" />
+                      {states.map((state) => (
                         <DropdownMenuItem
-                          key={option.value}
+                          key={state.value}
                           className={
-                            filters.category === option.value ? "bg-accent" : ""
+                            filters.location === state.value ? "bg-accent" : ""
                           }
-                          onClick={() => handleCategoryChange(option.value)}
+                          onClick={() => handleLocationChange(state.value)}
                         >
-                          {option.label}
+                          {state.label}
                         </DropdownMenuItem>
                       ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-
-                {/* FAVOURITE */}
-                <Button
-                  variant="outline"
-                  className="rounded-full whitespace-nowrap text-[12px] font-light py-1 h-7 border-none bg-secondary hover:bg-secondary/80"
-                >
-                  Favorite
-                </Button>
-
-                {/* LOCATION */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="rounded-full whitespace-nowrap text-[12px] font-light py-1 h-7 border-none bg-secondary hover:bg-secondary/80 mr-2"
-                    >
-                      {filters.location
-                        ? states.find((s) => s.value === filters.location)
-                            ?.label
-                        : "Location"}
-                      <ChevronDown className="w-4 h-4 ml-1" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    align="start"
-                    className="w-35 bg-white border-gray-100 shadow-2xl rounded-xl text-darkgray py-4 mr-2"
-                  >
-                    <DropdownMenuItem
-                      className="text-primary font-medium flex justify-center"
-                      onClick={() => handleLocationChange(null)}
-                    >
-                      Reset
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator className="bg-gray-200" />
-                    {states.map((state) => (
-                      <DropdownMenuItem
-                        key={state.value}
-                        className={
-                          filters.location === state.value ? "bg-accent" : ""
-                        }
-                        onClick={() => handleLocationChange(state.value)}
-                      >
-                        {state.label}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              )}
             </div>
           )}
         </div>
       </div>
+
+      {/* Feedback Dialog Mount */}
+      <FeedbackDialog open={isFeedbackOpen} onOpenChange={setIsFeedbackOpen} />
+
+      {/* InstallAppPrompt is mounted once, and captures installEvent */}
+      <InstallAppPrompt onBeforeInstallPrompt={setInstallEvent} />
     </div>
   );
 }

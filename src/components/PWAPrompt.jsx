@@ -1,18 +1,52 @@
+// Android supports the "beforeinstallprompt" event - which must be listened to - it's not triggered via user agent checks
+// iOS does NOT support "beforeinstallprompt" - so checking "navigator.userAgent" and "display-mode" works!
+// Android does not show install prompts unless:
+// - The site is served over HTTPS
+// - Has a valid manifest.json and serviceWorker
+// - The user has interacted with the page
+// - You listen for the beforeinstallprompt event and trigger it manually
+
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Share } from "lucide-react";
 
 export function PWAPrompt() {
   const [showPrompt, setShowPrompt] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [isIOS, setIsIOS] = useState(false);
 
+  // ANDROID EVENT LISTENER -----------------------------------------
   useEffect(() => {
-    // Check if device is iOS
+    const handler = (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setShowPrompt(true); // manually show your Android install UI
+    };
+
+    window.addEventListener("beforeinstallprompt", handler);
+
+    return () => window.removeEventListener("beforeinstallprompt", handler);
+  }, []);
+
+  // Trigger install when user clicks -----------------------------------------
+  const handleInstallClick = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === "accepted") {
+        setShowPrompt(false);
+      }
+      setDeferredPrompt(null);
+    }
+  };
+
+  // AUTO-TRIGGER POPUP PROMPT (on iOS device)
+  useEffect(() => {
+    // AUTO-RUN ON FIRST LOAD (Check if device is iOS)
     const isIOSDevice =
       /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
     setIsIOS(isIOSDevice);
 
-    // Only show for iOS devices
     if (isIOSDevice) {
       const isStandalone = window.matchMedia(
         "(display-mode: standalone)"

@@ -49,7 +49,7 @@ export function PWAPrompt() {
       const hasManifest =
         document.querySelector('link[rel="manifest"]') !== null;
       const hasServiceWorker = "serviceWorker" in navigator;
-      
+
       setInstallable(isSecure && hasManifest && hasServiceWorker);
       return isSecure && hasManifest && hasServiceWorker;
     };
@@ -73,7 +73,7 @@ export function PWAPrompt() {
       // For Android/other devices, we need to wait for user interaction
       window.addEventListener("click", showAfterInteraction, { once: true });
       window.addEventListener("scroll", showAfterInteraction, { once: true });
-      
+
       // Listen for install prompt
       window.addEventListener("beforeinstallprompt", handler);
     } else {
@@ -102,7 +102,7 @@ export function PWAPrompt() {
       deferredPrompt.prompt();
       const { outcome } = await deferredPrompt.userChoice;
       console.log("Installation outcome:", outcome);
-      
+
       if (outcome === "accepted") {
         console.log("PWA installed successfully");
         setShowPrompt(false);
@@ -140,15 +140,17 @@ export function PWAPrompt() {
           ) : (
             <div className="text-sm text-gray-600">
               <p>Install this app on your device for quick and easy access.</p>
-              <Button 
-                className="mt-2" 
-                size="sm" 
+              <Button
+                className="mt-2 w-full"
+                size="sm"
                 onClick={handleInstallClick}
                 disabled={!deferredPrompt}
               >
-                <Download className="w-4 h-4 mr-2" />
+                <Download className="w-4 h-4 mr-2 text-white" />
                 <span className="text-white">
-                  {deferredPrompt ? "Install App" : "Installation not available"}
+                  {deferredPrompt
+                    ? "Install App"
+                    : "Installation not available"}
                 </span>
               </Button>
               {!deferredPrompt && installable && (

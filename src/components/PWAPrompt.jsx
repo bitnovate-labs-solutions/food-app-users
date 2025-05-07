@@ -20,7 +20,9 @@ export function PWAPrompt() {
   useEffect(() => {
     // Check if already installed
     const checkIfInstalled = () => {
-      const standalone = window.matchMedia("(display-mode: standalone)").matches;
+      const standalone = window.matchMedia(
+        "(display-mode: standalone)"
+      ).matches;
       setIsStandalone(standalone);
       if (standalone) {
         setShowPrompt(false);
@@ -43,9 +45,10 @@ export function PWAPrompt() {
 
     // Check PWA criteria
     const checkPWACriteria = () => {
-      const isSecure = window.location.protocol === 'https:';
-      const hasManifest = document.querySelector('link[rel="manifest"]') !== null;
-      const hasServiceWorker = 'serviceWorker' in navigator;
+      const isSecure = window.location.protocol === "https:";
+      const hasManifest =
+        document.querySelector('link[rel="manifest"]') !== null;
+      const hasServiceWorker = "serviceWorker" in navigator;
       
       setInstallable(isSecure && hasManifest && hasServiceWorker);
       return isSecure && hasManifest && hasServiceWorker;
@@ -144,7 +147,9 @@ export function PWAPrompt() {
                 disabled={!deferredPrompt}
               >
                 <Download className="w-4 h-4 mr-2" />
-                {deferredPrompt ? "Install App" : "Installation not available"}
+                <span className="text-white">
+                  {deferredPrompt ? "Install App" : "Installation not available"}
+                </span>
               </Button>
               {!deferredPrompt && installable && (
                 <p className="text-xs text-gray-500 mt-1">

@@ -16,7 +16,7 @@ import {
   Settings2,
   RefreshCw,
   MessageSquare,
-  Download,
+  // Download,
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
@@ -49,7 +49,7 @@ export default function AppHeader({
   const queryClient = useQueryClient();
   const isHistoryTab = activeTab === "history";
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
-  const [installEvent, setInstallEvent] = useState(null);
+  // const [installEvent, setInstallEvent] = useState(null);
 
   // HOOKS
   const {

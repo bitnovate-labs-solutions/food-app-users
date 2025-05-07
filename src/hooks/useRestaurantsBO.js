@@ -1,15 +1,8 @@
+// FETCH RESTAURANTS + MENU PACKAGES + MENU IMAGES FROM BO DATABASE
 import { useQuery } from "@tanstack/react-query";
 import { backOfficeSupabase } from "@/lib/supabase-bo";
 
 const fetchRestaurants = async () => {
-  // // First, let's check if we can directly query menu_packages
-  // const { data: menuPackages, error: menuError } = await backOfficeSupabase
-  //   .from("menu_packages")
-  //   .select("*")
-  //   .limit(5);
-
-  // if (menuError) console.error("Menu packages query error:", menuError);
-
   const { data, error } = await backOfficeSupabase
     .from("restaurants")
     .select(

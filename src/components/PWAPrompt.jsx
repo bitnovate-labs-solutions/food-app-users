@@ -8,74 +8,153 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Share } from "lucide-react";
+import { Share, Download } from "lucide-react";
 
 export function PWAPrompt() {
   const [showPrompt, setShowPrompt] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [isIOS, setIsIOS] = useState(false);
+  const [isStandalone, setIsStandalone] = useState(false);
+  const [installable, setInstallable] = useState(false);
 
-  // ANDROID EVENT LISTENER -----------------------------------------
   useEffect(() => {
-    const handler = (e) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-      setShowPrompt(true); // manually show your Android install UI
+    // Check if already installed
+    const checkIfInstalled = () => {
+      const standalone = window.matchMedia("(display-mode: standalone)").matches;
+      setIsStandalone(standalone);
+      if (standalone) {
+        setShowPrompt(false);
+        return true;
+      }
+      return false;
     };
 
-    window.addEventListener("beforeinstallprompt", handler);
+    // Check device type
+    const ua = navigator.userAgent.toLowerCase();
+    const isIOSDevice = /iphone|ipad|ipod/.test(ua) && !window.MSStream;
+    setIsIOS(isIOSDevice);
 
-    return () => window.removeEventListener("beforeinstallprompt", handler);
+    // Don't show if already installed
+    if (checkIfInstalled()) return;
+
+    // Don't show if previously dismissed
+    const dismissed = localStorage.getItem("pwa_install_dismissed");
+    if (dismissed === "true") return;
+
+    // Check PWA criteria
+    const checkPWACriteria = () => {
+      const isSecure = window.location.protocol === 'https:';
+      const hasManifest = document.querySelector('link[rel="manifest"]') !== null;
+      const hasServiceWorker = 'serviceWorker' in navigator;
+      
+      setInstallable(isSecure && hasManifest && hasServiceWorker);
+      return isSecure && hasManifest && hasServiceWorker;
+    };
+
+    // Android: listen for beforeinstallprompt
+    const handler = (e) => {
+      console.log("beforeinstallprompt event fired");
+      e.preventDefault(); // prevent automatic prompt
+      setDeferredPrompt(e);
+      setShowPrompt(true);
+    };
+
+    // Function to show prompt after user interaction
+    const showAfterInteraction = () => {
+      if (checkPWACriteria() && !checkIfInstalled()) {
+        setShowPrompt(true);
+      }
+    };
+
+    if (!isIOSDevice) {
+      // For Android/other devices, we need to wait for user interaction
+      window.addEventListener("click", showAfterInteraction, { once: true });
+      window.addEventListener("scroll", showAfterInteraction, { once: true });
+      
+      // Listen for install prompt
+      window.addEventListener("beforeinstallprompt", handler);
+    } else {
+      // For iOS, show immediately if not installed
+      if (!checkIfInstalled()) {
+        setShowPrompt(true);
+      }
+    }
+
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handler);
+      window.removeEventListener("click", showAfterInteraction);
+      window.removeEventListener("scroll", showAfterInteraction);
+    };
   }, []);
 
-  // Trigger install when user clicks -----------------------------------------
+  // Handle install click
   const handleInstallClick = async () => {
-    if (deferredPrompt) {
+    if (!deferredPrompt) {
+      console.log("No install prompt available");
+      return;
+    }
+
+    try {
+      console.log("Triggering install prompt");
       deferredPrompt.prompt();
       const { outcome } = await deferredPrompt.userChoice;
+      console.log("Installation outcome:", outcome);
+      
       if (outcome === "accepted") {
+        console.log("PWA installed successfully");
         setShowPrompt(false);
       }
+    } catch (error) {
+      console.error("Error during installation:", error);
+    } finally {
       setDeferredPrompt(null);
     }
   };
 
-  // AUTO-TRIGGER POPUP PROMPT (on iOS device)
-  useEffect(() => {
-    // AUTO-RUN ON FIRST LOAD (Check if device is iOS)
-    const isIOSDevice =
-      /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-    setIsIOS(isIOSDevice);
+  // Handle dismiss
+  const handleDismiss = () => {
+    localStorage.setItem("pwa_install_dismissed", "true");
+    setShowPrompt(false);
+  };
 
-    if (isIOSDevice) {
-      const isStandalone = window.matchMedia(
-        "(display-mode: standalone)"
-      ).matches;
-      if (!isStandalone) {
-        setShowPrompt(true);
-      }
-    }
-  }, []);
-
-  // Only show for iOS devices that haven't installed the PWA
-  if (!isIOS || !showPrompt) return null;
+  if (!showPrompt || isStandalone) return null;
 
   return (
     <div className="fixed bottom-20 left-4 right-4 bg-white p-4 rounded-lg shadow-lg border border-gray-200 z-50">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-start gap-4">
         <div className="flex-1">
           <h3 className="font-semibold">Install TreatYourDate</h3>
-          <div className="text-sm text-gray-600">
-            <p>To install this app:</p>
-            <ol className="ml-4 list-decimal">
-              <li>
-                Tap the share button <Share className="w-4 h-4 inline" />
-              </li>
-              <li>Scroll down and tap &quot;Add to Home Screen&quot;</li>
-            </ol>
-          </div>
+          {isIOS ? (
+            <div className="text-sm text-gray-600">
+              <p>To install this app:</p>
+              <ol className="ml-4 list-decimal space-y-1">
+                <li>
+                  Tap the share button <Share className="w-4 h-4 inline" />
+                </li>
+                <li>Scroll down and tap &quot;Add to Home Screen&quot;</li>
+              </ol>
+            </div>
+          ) : (
+            <div className="text-sm text-gray-600">
+              <p>Install this app on your device for quick and easy access.</p>
+              <Button 
+                className="mt-2" 
+                size="sm" 
+                onClick={handleInstallClick}
+                disabled={!deferredPrompt}
+              >
+                <Download className="w-4 h-4 mr-2" />
+                {deferredPrompt ? "Install App" : "Installation not available"}
+              </Button>
+              {!deferredPrompt && installable && (
+                <p className="text-xs text-gray-500 mt-1">
+                  Try interacting with the page first
+                </p>
+              )}
+            </div>
+          )}
         </div>
-        <Button variant="ghost" onClick={() => setShowPrompt(false)}>
+        <Button variant="ghost" size="sm" onClick={handleDismiss}>
           Not now
         </Button>
       </div>

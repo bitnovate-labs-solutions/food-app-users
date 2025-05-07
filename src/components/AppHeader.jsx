@@ -7,7 +7,7 @@ import { version } from "../../package.json";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { InstallAppPrompt } from "./InstallAppPrompt";
+// import { InstallAppPrompt } from "./InstallAppPrompt";
 
 // COMPONENTS
 import {
@@ -204,7 +204,7 @@ export default function AppHeader({
                   </DropdownMenuItem>
 
                   {/* INSTALL PWA BUTTON -------------------------------------------------*/}
-                  <DropdownMenuItem
+                  {/* <DropdownMenuItem
                     onClick={async () => {
                       if (installEvent) {
                         installEvent.prompt();
@@ -220,7 +220,7 @@ export default function AppHeader({
                   >
                     <Download className="w-4 h-4 mr-2" />
                     Install App
-                  </DropdownMenuItem>
+                  </DropdownMenuItem> */}
 
                   {/* FEEDBACK BUTTON ----------------------------------- */}
                   <DropdownMenuItem
@@ -484,8 +484,7 @@ export default function AppHeader({
       {/* Feedback Dialog Mount */}
       <FeedbackDialog open={isFeedbackOpen} onOpenChange={setIsFeedbackOpen} />
 
-      {/* InstallAppPrompt is mounted once, and captures installEvent */}
-      <InstallAppPrompt onBeforeInstallPrompt={setInstallEvent} />
+      {/* <InstallAppPrompt onBeforeInstallPrompt={setInstallEvent} /> */}
     </div>
   );
 }

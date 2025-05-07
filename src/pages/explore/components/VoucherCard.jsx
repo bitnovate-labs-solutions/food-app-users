@@ -13,7 +13,7 @@ export default function VoucherCard({ item }) {
   };
 
   return (
-    <Card className="relative w-full h-[200px] overflow-hidden rounded-3xl border-none">
+    <Card className="relative w-full h-[160px] overflow-hidden rounded-3xl border-none">
       {/* Full-width image */}
       <img
         src={item.image_url}
@@ -29,7 +29,7 @@ export default function VoucherCard({ item }) {
         {/* Top section */}
         <div className="flex justify-between items-start">
           <span className="bg-primary/90 text-white px-3 py-1 rounded-lg text-xs font-medium">
-            {item.cuisine_type}
+            {item.promo_type.toUpperCase()}
           </span>
           {item.promo_code && (
             <Button

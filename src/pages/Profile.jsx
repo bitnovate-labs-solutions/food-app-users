@@ -3,7 +3,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useImageCache } from "@/hooks/useImageCache";
-import { ErrorFallback } from "@/components/ErrorFallback";
+
 import { ErrorBoundary } from "react-error-boundary";
 // import { useQueryClient } from "@tanstack/react-query";
 
@@ -35,6 +35,7 @@ import ImageViewerModal from "@/components/ImageViewerModal";
 
 // ASSETS
 import defaultImage from "@/assets/images/default-avatar.jpg";
+import AppErrorBoundary from "@/components/AppErrorBoundary";
 
 function UserProfile() {
   const { user } = useAuth();
@@ -69,7 +70,7 @@ function UserProfile() {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
   if (isLoading) return <ProfileSkeleton />;
-  if (error) return <ErrorFallback error={error} />;
+  if (error) return <AppErrorBoundary error={error} />;
 
   // Format date to be more readable
   const formatDate = (dateString) => {
@@ -511,7 +512,7 @@ function UserProfile() {
 export default function Profile() {
   return (
     <ScrollArea>
-      <ErrorBoundary FallbackComponent={ErrorFallback}>
+      <ErrorBoundary FallbackComponent={AppErrorBoundary}>
         <Suspense fallback={<ProfileSkeleton />}>
           <UserProfile />
         </Suspense>

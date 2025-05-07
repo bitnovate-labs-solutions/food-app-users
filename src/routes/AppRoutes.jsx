@@ -4,7 +4,7 @@ import ProtectedRoute from "./ProtectedRoute";
 import Layout from "@/components/AppLayout";
 // import { ErrorBoundary } from "react-error-boundary";
 import { Suspense } from "react";
-// import { ErrorFallback } from "@/components/error-fallback";
+// import { AppErrorBoundary } from "@/components/error-fallback";
 import { CardSkeleton } from "@/components/LoadingSkeleton";
 
 // Pages
@@ -12,10 +12,10 @@ import Onboarding from "@/pages/onboarding_page/Onboarding";
 import Auth from "@/pages/auth_page/Auth";
 import Profile from "@/pages/Profile";
 import Treater from "@/pages/treater_page/Treater";
-import Treatee from "@/pages/treatee_page/Treatee";
+import Treatee from "@/pages/treatee/Treatee";
 import ShoppingCart from "@/pages/cart_page/Cart";
 import Messages from "@/pages/messages_page/Messages";
-import Explore from "@/pages/explore_page/Explore";
+import Explore from "@/pages/explore/Explore";
 import CreateProfile from "@/pages/CreateProfile";
 import EditProfile from "@/pages/edit_profile_page/EditProfile";
 import AuthCallback from "@/routes/AuthCallback";

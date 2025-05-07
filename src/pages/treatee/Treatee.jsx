@@ -4,13 +4,14 @@ import { Suspense } from "react";
 
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ErrorBoundary } from "react-error-boundary";
-import { ErrorFallback } from "@/components/ErrorFallback";
+
 import { CardSkeleton } from "@/components/LoadingSkeleton";
 // import TreateeCard from "./components/TreateeCard";
 // import { useAuth } from "@/context/AuthContext";
 // import { toast } from "sonner";
 import { useLocation } from "react-router-dom";
 import Menu from "./subpages/Menu";
+import AppErrorBoundary from "@/components/AppErrorBoundary";
 
 // function FoodItems() {
 //   const queryClient = useQueryClient();
@@ -170,7 +171,7 @@ export default function Treatee() {
   return (
     <ScrollArea>
       <div className="bg-transparent py-4">
-        <ErrorBoundary FallbackComponent={ErrorFallback}>
+        <ErrorBoundary FallbackComponent={AppErrorBoundary}>
           <Suspense fallback={<CardSkeleton />}>
             {/* <FoodItems /> */}
             {renderContent()}

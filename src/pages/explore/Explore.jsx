@@ -1,14 +1,15 @@
 import { useState, useRef, useEffect } from "react";
 import { useRestaurantsBO } from "@/hooks/useRestaurantsBO";
-import { voucherUpdates } from "@/data/mock_data";
 import { useFoodCategoryEnum } from "@/hooks/useEnumValues";
 
 // COMPONENTS
 import ExploreCard from "./components/ExploreCard";
 import VoucherCard from "./components/VoucherCard";
-import CategoryCard from "@/pages/explore_page/components/CategoryCard";
+import CategoryCard from "@/pages/explore/components/CategoryCard";
 import LoadingComponent from "@/components/LoadingComponent";
 import ErrorComponent from "@/components/ErrorComponent";
+import { usePromoVouchers } from "@/hooks/usePromoVouchers";
+import { Search } from "lucide-react";
 
 const Explore = () => {
   const [activeCategory, setActiveCategory] = useState("All");
@@ -27,6 +28,27 @@ const Explore = () => {
     isLoading: isLoadingFoodCategories,
     error: errorFoodCategories,
   } = useFoodCategoryEnum();
+  const {
+    data: voucherUpdates,
+    isLoading: isLoadingPromoVouchers,
+    error: errorPromoVouchers,
+  } = usePromoVouchers();
+
+  // Create an array of restaurant-package pairs
+  const restaurantPackages = restaurants
+    ?.flatMap((restaurant) =>
+      restaurant.menu_packages?.map((menuPackage) => ({
+        ...restaurant,
+        menu_packages: [menuPackage], // Replace with single package
+      }))
+    )
+    .filter(Boolean); // Remove any undefined entries
+
+  // Filter restaurant packages based on active category
+  const filteredRestaurantPackages = restaurantPackages?.filter((item) => {
+    if (activeCategory === "All") return true;
+    return item.food_category === activeCategory;
+  });
 
   // Set up Intersection Observer ---------------------------------------------------------------
   useEffect(() => {
@@ -64,16 +86,18 @@ const Explore = () => {
   }, [voucherUpdates]);
 
   // LOADING AND ERROR HANDLING ---------------------------------------------------------------
-  if (isLoadingRestaurants || isLoadingFoodCategories)
+  if (isLoadingRestaurants || isLoadingFoodCategories || isLoadingPromoVouchers)
     return <LoadingComponent type="screen" text="Loading..." />;
 
   if (errorRestaurants)
     return <ErrorComponent message={errorRestaurants.message} />;
   if (errorFoodCategories)
     return <ErrorComponent message={errorFoodCategories.message} />;
+  if (errorPromoVouchers)
+    return <ErrorComponent message={errorPromoVouchers.message} />;
 
   return (
-    <div className="container mx-auto px-4 pt-5 pb-20">
+    <div className="container mx-auto px-4 pt-3 pb-20">
       <div className="mb-10">
         <h2 className="text-gray-900 font-semibold mb-2">Popular</h2>
         <div className="relative">
@@ -126,8 +150,14 @@ const Explore = () => {
       </div>
 
       {/* CATEGORIES */}
-      <div className="mb-8">
-        <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
+      <div className="mb-4">
+        <div className="flex gap-3 overflow-x-auto no-scrollbar">
+          <CategoryCard
+            label="All"
+            value="All"
+            isActive={activeCategory === "All"}
+            onClick={() => setActiveCategory("All")}
+          />
           {foodCategories.map((category, index) => (
             <CategoryCard
               key={index}
@@ -141,11 +171,32 @@ const Explore = () => {
 
       {/* WHAT'S TRENDING */}
       <div>
-        <h2 className="font-semibold mb-4">What&apos;s Trending</h2>
+        <h2 className="font-semibold mb-2">What&apos;s Trending</h2>
         <div className="gap-2">
-          {restaurants.map((item) => (
-            <ExploreCard key={item.id} item={item} />
-          ))}
+          {filteredRestaurantPackages?.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 px-4">
+              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                <Search className="w-8 h-8 text-primary" />
+              </div>
+              <h3 className="text-lg text-center font-semibold text-gray-900 mb-2">
+                {activeCategory === "All"
+                  ? "No menu packages found"
+                  : `No ${activeCategory} menu packages found`}
+              </h3>
+              <p className="text-sm text-gray-500 text-center max-w-sm">
+                {activeCategory === "All"
+                  ? "Try adjusting your filters or check back later for new menu packages."
+                  : "Try adjusting your filters or check back later for new menu packages in this category."}
+              </p>
+            </div>
+          ) : (
+            filteredRestaurantPackages?.map((item) => (
+              <ExploreCard
+                key={`${item.id}-${item.menu_packages[0].id}`}
+                item={item}
+              />
+            ))
+          )}
         </div>
       </div>
     </div>

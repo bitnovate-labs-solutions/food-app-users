@@ -115,8 +115,9 @@ export default function TreateeCard({ item, onLike, isLiked }) {
             <p>{item.restaurant?.food_category}</p>
           </span>
 
+          {/* CODE FOR FUTURE IMPLEMENTATION */}
           {/* CARD LIKE BUTTON */}
-          <Button
+          {/* <Button
             variant="ghost"
             size="icon"
             className="bg-secondary/80 rounded-md h-6 w-6"
@@ -126,7 +127,7 @@ export default function TreateeCard({ item, onLike, isLiked }) {
               className="h-5 w-5 text-white"
               fill={isLiked ? "white" : "none"}
             />
-          </Button>
+          </Button> */}
         </div>
 
         {/* CARD LABEL - Food, Location and Date */}

@@ -16,6 +16,7 @@ import {
   Settings2,
   RefreshCw,
   MessageSquare,
+  Sparkles,
   // Download,
 } from "lucide-react";
 import { Button } from "./ui/button";
@@ -262,41 +263,44 @@ export default function AppHeader({
                 onValueChange={handleTabChange}
                 className="w-full px-4"
               >
-                <TabsList
-                  className={`grid ${
-                    userProfile?.role === "treatee"
-                      ? "grid-cols-2"
-                      : "grid-cols-3"
-                  } h-10 items-stretch px-1.5`}
-                >
-                  {/* MENU TAB */}
-                  <TabsTrigger
-                    value="menu"
-                    className="text-sm text-primary data-[state=active]:bg-primary data-[state=active]:text-white border-primary rounded-r-none border-1"
-                  >
-                    Menu
-                  </TabsTrigger>
-                  {/* PURCHASED TAB - Only show if user is not a treatee */}
-                  {userProfile?.role !== "treatee" && (
-                    <TabsTrigger
-                      value="purchased"
-                      className="text-sm text-primary data-[state=active]:bg-primary data-[state=active]:text-white border-primary rounded-none border-1 border-l-0"
-                    >
-                      Purchased
-                    </TabsTrigger>
-                  )}
-                  {/* HISTORY TAB */}
-                  <TabsTrigger
-                    value="history"
-                    className={`text-sm text-primary data-[state=active]:bg-primary data-[state=active]:text-white border-primary ${
-                      userProfile?.role === "treatee"
-                        ? "rounded-l-none"
-                        : "rounded-l-none"
-                    } border-1 border-l-0`}
-                  >
-                    History
-                  </TabsTrigger>
-                </TabsList>
+                {userProfile?.role === "treatee" ? (
+                  <div className="text-center py-2 flex items-center justify-center gap-2">
+                    <Sparkles className="w-4 h-4 text-primary" />
+                    <p className="text-sm text-gray-600">
+                      Pick your favourite meals and treaters and hit Join!
+                    </p>
+                  </div>
+                ) : (
+                  <TabsList className="grid grid-cols-3 h-10 items-stretch px-1.5">
+                    {/* MENU TAB - Only show if user is not a treatee */}
+                    {userProfile?.role !== "treatee" && (
+                      <TabsTrigger
+                        value="menu"
+                        className="text-sm text-primary data-[state=active]:bg-primary data-[state=active]:text-white border-primary rounded-r-none border-1"
+                      >
+                        Menu
+                      </TabsTrigger>
+                    )}
+                    {/* PURCHASED TAB - Only show if user is not a treatee */}
+                    {userProfile?.role !== "treatee" && (
+                      <TabsTrigger
+                        value="purchased"
+                        className="text-sm text-primary data-[state=active]:bg-primary data-[state=active]:text-white border-primary rounded-none border-1 border-l-0"
+                      >
+                        Purchased
+                      </TabsTrigger>
+                    )}
+                    {/* HISTORY TAB - Only show if user is not a treatee */}
+                    {userProfile?.role !== "treatee" && (
+                      <TabsTrigger
+                        value="history"
+                        className="text-sm text-primary data-[state=active]:bg-primary data-[state=active]:text-white border-primary rounded-l-none border-1 border-l-0"
+                      >
+                        History
+                      </TabsTrigger>
+                    )}
+                  </TabsList>
+                )}
               </Tabs>
 
               {/* FILTERS -------------------- */}

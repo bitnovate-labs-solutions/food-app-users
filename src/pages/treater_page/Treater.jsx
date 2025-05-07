@@ -9,8 +9,9 @@ import HistoryPage from "./subpages/History";
 
 // Error and Loading Handlers
 import { ErrorBoundary } from "react-error-boundary";
-import { ErrorFallback } from "@/components/ErrorFallback";
+
 import { CardSkeleton } from "@/components/LoadingSkeleton";
+import AppErrorBoundary from "@/components/AppErrorBoundary";
 
 export default function Treater() {
   const location = useLocation();
@@ -33,7 +34,7 @@ export default function Treater() {
   return (
     <ScrollArea>
       <div className="bg-transparent py-4">
-        <ErrorBoundary FallbackComponent={ErrorFallback}>
+        <ErrorBoundary FallbackComponent={AppErrorBoundary}>
           <Suspense fallback={<CardSkeleton />}>{renderContent()}</Suspense>
         </ErrorBoundary>
       </div>

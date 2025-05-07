@@ -30,6 +30,7 @@ const fetchRestaurants = async () => {
         description,
         package_type,
         price,
+        created_at,
         menu_images (
           id, 
           image_url

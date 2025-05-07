@@ -124,46 +124,48 @@ export function PWAPrompt() {
 
   return (
     <div className="fixed bottom-20 left-4 right-4 bg-white p-4 rounded-lg shadow-lg border border-gray-200 z-50">
-      <div className="flex justify-between items-start gap-4">
-        <div className="flex-1">
-          <h3 className="font-semibold">Install TreatYourDate</h3>
-          {isIOS ? (
-            <div className="text-sm text-gray-600">
-              <p>To install this app:</p>
-              <ol className="ml-4 list-decimal space-y-1">
-                <li>
-                  Tap the share button <Share className="w-4 h-4 inline" />
-                </li>
-                <li>Scroll down and tap &quot;Add to Home Screen&quot;</li>
-              </ol>
-            </div>
-          ) : (
-            <div className="text-sm text-gray-600">
-              <p>Install this app on your device for quick and easy access.</p>
-              <Button
-                className="mt-2 w-full"
-                size="sm"
-                onClick={handleInstallClick}
-                disabled={!deferredPrompt}
-              >
-                <Download className="w-4 h-4 mr-2 text-white" />
-                <span className="text-white">
-                  {deferredPrompt
-                    ? "Install App"
-                    : "Installation not available"}
-                </span>
-              </Button>
-              {!deferredPrompt && installable && (
-                <p className="text-xs text-gray-500 mt-1">
-                  Try interacting with the page first
-                </p>
-              )}
-            </div>
-          )}
+      <div className="flex flex-col gap-4">
+        <div className="flex justify-between items-start">
+          <div className="flex-1">
+            <h3 className="font-semibold">Install TreatYourDate</h3>
+            {isIOS ? (
+              <div className="text-sm text-gray-600">
+                <p>To install this app:</p>
+                <ol className="ml-4 list-decimal space-y-1">
+                  <li>
+                    Tap the share button <Share className="w-4 h-4 inline" />
+                  </li>
+                  <li>Scroll down and tap &quot;Add to Home Screen&quot;</li>
+                </ol>
+              </div>
+            ) : (
+              <div className="text-sm text-gray-600">
+                <p>Install this app on your device for quick and easy access.</p>
+                <Button
+                  className="mt-2 w-full"
+                  size="sm"
+                  onClick={handleInstallClick}
+                  disabled={!deferredPrompt}
+                >
+                  <Download className="w-4 h-4 mr-2 text-white" />
+                  <span className="text-white">
+                    {deferredPrompt
+                      ? "Install App"
+                      : "Installation not available"}
+                  </span>
+                </Button>
+                {!deferredPrompt && installable && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Try interacting with the page first
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+          <Button variant="ghost" size="sm" onClick={handleDismiss}>
+            Not now
+          </Button>
         </div>
-        <Button variant="ghost" size="sm" onClick={handleDismiss}>
-          Not now
-        </Button>
       </div>
     </div>
   );

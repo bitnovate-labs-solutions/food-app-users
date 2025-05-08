@@ -6,7 +6,7 @@ import { useRestaurantsBO } from "@/hooks/useRestaurantsBO";
 import TreaterCard from "../components/TreaterCard";
 import LoadingComponent from "@/components/LoadingComponent";
 import ErrorComponent from "@/components/ErrorComponent";
-import { Search } from "lucide-react";
+import EmptyState from "@/components/common/EmptyState";
 
 export default function Menu() {
   const [expandedId, setExpandedId] = useState(null);
@@ -14,11 +14,11 @@ export default function Menu() {
 
   const { data: restaurants, isLoading, error } = useRestaurantsBO();
 
-  // LOADING AND ERROR HANDLERS
+  // LOADING AND ERROR HANDLERS ----------------------------------------------
   if (isLoading) return <LoadingComponent type="screen" text="Loading..." />;
   if (error) return <ErrorComponent message={error.message} />;
 
-  // Filter the food items based on the current filters
+  // Filter the food items based on the current filters ----------------------------------------------
   const filteredItems = restaurants?.filter((item) => {
     // Filter out restaurants without menu packages
     if (!item.menu_packages || item.menu_packages.length === 0) {
@@ -66,23 +66,7 @@ export default function Menu() {
 
   return (
     <div className="space-y-3 pb-22">
-      {sortedItems?.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-12 px-4">
-          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-            <Search className="w-8 h-8 text-primary" />
-          </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            {filters.category
-              ? `No ${filters.category} restaurants found`
-              : "No restaurants found"}
-          </h3>
-          <p className="text-sm text-gray-500 text-center max-w-sm">
-            {filters.category
-              ? "Try adjusting your filters or check back later for new restaurants in this category."
-              : "Try adjusting your filters or check back later for new restaurants."}
-          </p>
-        </div>
-      ) : (
+      {sortedItems?.length > 0 ? (
         sortedItems?.map((item) => (
           <TreaterCard
             key={item.id}
@@ -93,6 +77,20 @@ export default function Menu() {
             }
           />
         ))
+      ) : (
+        <EmptyState
+          icon="search"
+          title={
+            filters.category
+              ? `No ${filters.category} restaurants found`
+              : "No restaurants found"
+          }
+          description={
+            filters.category
+              ? "Try adjusting your filters or check back later for new restaurants in this category."
+              : "Try adjusting your filters or check back later for new restaurants."
+          }
+        />
       )}
     </div>
   );

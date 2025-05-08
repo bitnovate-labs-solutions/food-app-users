@@ -1,17 +1,9 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "lucide-react";
+import { formatDate } from "@/utils/formatDate";
 
 export default function VoucherCard({ item }) {
-  // Format date to display as "Mar 31, 2024"
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  };
-
   return (
     <Card className="relative w-full h-[160px] overflow-hidden rounded-3xl border-none">
       {/* Full-width image */}

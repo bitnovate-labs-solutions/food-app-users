@@ -1,16 +1,9 @@
-// Android supports the "beforeinstallprompt" event - which must be listened to - it's not triggered via user agent checks
-// iOS does NOT support "beforeinstallprompt" - so checking "navigator.userAgent" and "display-mode" works!
-// Android does not show install prompts unless:
-// - The site is served over HTTPS
-// - Has a valid manifest.json and serviceWorker
-// - The user has interacted with the page
-// - You listen for the beforeinstallprompt event and trigger it manually
-
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Share, Download } from "lucide-react";
 
-// Set this to true to force show the prompt during development
+// SET to true / false DURING DEVELOPMENT
+// true -> to force show the prompt during development
 const FORCE_SHOW_PROMPT = false;
 
 export function PWAPrompt() {
@@ -93,7 +86,7 @@ export function PWAPrompt() {
     };
   }, []);
 
-  // Handle install click
+  // HANDLE INSTALL CLICK ---------------------------------
   const handleInstallClick = async () => {
     if (!deferredPrompt) {
       console.log("No install prompt available");
@@ -117,7 +110,7 @@ export function PWAPrompt() {
     }
   };
 
-  // Handle dismiss
+  // HANDLE DISMISS ---------------------------------
   const handleDismiss = () => {
     if (!FORCE_SHOW_PROMPT) {
       localStorage.setItem("pwa_install_dismissed", "true");
@@ -136,6 +129,7 @@ export function PWAPrompt() {
               Install TreatYourDate
             </h3>
             <div className="flex flex-col justify-center space-y-2">
+              {/* PROMPT FOR iOS --------------------------------- */}
               {isIOS ? (
                 <div className="text-sm text-gray-600">
                   <p className="mb-3">To install this app:</p>
@@ -153,6 +147,7 @@ export function PWAPrompt() {
                   </ol>
                 </div>
               ) : (
+                // PROMPT FOR ANDROID / OTHER DEVICES ---------------------------------
                 <div className="text-xs text-gray-600 mt-2">
                   <p>
                     Install this app on your device for quick and easy access.

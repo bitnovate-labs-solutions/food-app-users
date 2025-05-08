@@ -17,8 +17,8 @@ export default function ExploreCard({ item }) {
   const menuImage = menuPackage?.menu_images?.[0]?.image_url;
 
   // Generate random counts for treaters and treatees
-  const treatersCount = Math.floor(Math.random() * 10) + 1; // Random number between 1-10
-  const interestedTreateesCount = Math.floor(Math.random() * 20) + 1; // Random number between 1-20
+  const treatersCount = Math.floor(Math.random() * 100) + 1; // Random number between 1-100
+  const interestedTreateesCount = Math.floor(Math.random() * 100) + 1; // Random number between 1-100
 
   // HANDLE JOIN -------------------------------------
   const handleJoin = () => {

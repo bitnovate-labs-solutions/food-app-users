@@ -5,7 +5,7 @@ export function ResetPasswordConfirmation({ email, onBack }) {
   return (
     <div className="min-h-screen flex flex-col bg-white px-6 py-12">
       <div className="w-full max-w-sm sm:max-w-md mx-auto">
-        {/* LEFT CHEVRON */}
+        {/* LEFT CHEVRON ------------------------- */}
         <ChevronLeft onClick={onBack} className="text-gray-400" />
 
         <div className="text-center space-y-6">
@@ -45,7 +45,7 @@ export function EmailConfirmation({ email, onBack }) {
   return (
     <div className="min-h-screen flex flex-col bg-white px-6 py-12">
       <div className="w-full max-w-sm mx-auto">
-        {/* LEFT CHEVRON */}
+        {/* LEFT CHEVRON ------------------------- */}
         <ChevronLeft onClick={onBack} className="text-gray-400" />
 
         <div className="text-center space-y-6">

@@ -10,10 +10,10 @@ import PurchaseCard from "../components/PurchaseCard";
 import RedeemQRModal from "../components/RedeemQRModal";
 import PackageDetailsModal from "../components/PackageDetailsModal";
 import { toast } from "sonner";
-import ImageWithFallback from "@/components/ImageWithFallback";
 
 // ASSETS
 import EmptyBasket from "@/assets/images/empty_basket.png";
+import EmptyState from "@/components/common/EmptyState";
 
 // Separate component for the purchase list to enable suspense
 function PurchaseList() {
@@ -206,21 +206,33 @@ function PurchaseList() {
       })}
 
       {hasNoPurchases ? (
-        <div className="fixed inset-0 max-w-sm mx-auto flex flex-col items-center justify-center px-6">
-          <ImageWithFallback src={EmptyBasket} className="w-50 h-auto mb-6" />
-          <p className="text-lightgray text-sm">No purchased items yet</p>
-          <p className="text-lightgray text-sm mb-10 text-center px-10">
-            Browse the menu and make your first purchase!
-          </p>
-        </div>
+        <EmptyState
+          imageSrc={EmptyBasket}
+          description={
+            <>
+              <p className="text-lightgray text-sm">No purchased items yet</p>
+              <p className="text-lightgray text-sm mb-10 text-center px-10">
+                Browse the menu and make your first purchase!
+              </p>
+            </>
+          }
+          fixed
+        />
       ) : allVouchersUsed ? (
-        <div className="fixed inset-0 max-w-sm mx-auto flex flex-col items-center justify-center px-6">
-          <ImageWithFallback src={EmptyBasket} className="w-50 h-auto mb-6" />
-          <p className="text-lightgray text-sm">All vouchers have been redeemed</p>
-          <p className="text-lightgray text-sm mb-10 text-center px-10">
-            Time to treat yourself to something new!
-          </p>
-        </div>
+        <EmptyState
+          imageSrc={EmptyBasket}
+          description={
+            <>
+              <p className="text-lightgray text-sm">
+                All vouchers have been redeemed
+              </p>
+              <p className="text-lightgray text-sm mb-10 text-center px-10">
+                Time to treat yourself to something new!
+              </p>
+            </>
+          }
+          fixed
+        />
       ) : null}
 
       <RedeemQRModal

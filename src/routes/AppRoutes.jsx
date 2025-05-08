@@ -9,12 +9,12 @@ import { CardSkeleton } from "@/components/LoadingSkeleton";
 
 // Pages
 import Onboarding from "@/pages/onboarding_page/Onboarding";
-import Auth from "@/pages/auth_page/Auth";
+import Auth from "@/pages/auth/Auth";
 import Profile from "@/pages/Profile";
 import Treater from "@/pages/treater_page/Treater";
 import Treatee from "@/pages/treatee/Treatee";
 import ShoppingCart from "@/pages/cart_page/Cart";
-import Messages from "@/pages/messages_page/Messages";
+import Messages from "@/pages/messages/Messages";
 import Explore from "@/pages/explore/Explore";
 import CreateProfile from "@/pages/CreateProfile";
 import EditProfile from "@/pages/edit_profile_page/EditProfile";

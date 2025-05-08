@@ -1,65 +1,47 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { registerSchema } from "@/lib/zod_schema";
-// import Google from "@/assets/google.svg";
-// import { supabase } from "@/lib/supabase";
-// import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 // COMPONENTS
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
-import { Input } from "@/components/ui/input";
 import { ChevronLeft, KeyRound, Lock, Mail, User } from "lucide-react";
 import {
   ResetPasswordConfirmation,
   EmailConfirmation,
-} from "@/pages/auth_page/components/ConfirmationScreens";
+} from "@/pages/auth/components/ConfirmationScreens";
+import { FormInput } from "./components/FormInput";
 
 // ASSETS
 import Logo from "@/assets/tyd_logo.png";
 
-// const formSchema = z.object({
-//   email: z
-//     .string()
-//     .min(1, "Email is required")
-//     .email("Please enter a valid email address"),
-//   password: z
-//     .string()
-//     .min(8, "Password must be at least 8 characters")
-//     .regex(/[A-Za-z]/, "Password must contain at least one letter")
-//     .regex(/[0-9]/, "Password must contain at least one number"),
-// });
-
 export default function Auth() {
-  // const { signInWithGoogle } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const { signIn, signUp, resetPassword } = useAuth();
-  // const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(false);
+
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [showResetPassword, setShowResetPassword] = useState(false);
   const [confirmedEmail, setConfirmedEmail] = useState("");
+  const [isPasswordFocused, setIsPasswordFocused] = useState(false);
+
   const [activeTab, setActiveTab] = useState(() => {
-    // Preserve the mode even after state is lost due to navigation
     const isConfirmation = location.pathname.includes("/auth/confirmation");
     return isConfirmation ? "signup" : location.state?.mode || "login";
   });
-  const [isPasswordFocused, setIsPasswordFocused] = useState(false);
 
-  const isExistingUser = localStorage.getItem("isExistingUser") === "true";
-
-  // Show confirmation screen if we're on the confirmation path
+  // Show confirmation screen if we're on the confirmation path -------------------------
   useEffect(() => {
     if (location.pathname.includes("/auth/confirmation")) {
       setShowConfirmation(true);
     }
   }, [location.pathname]);
 
-  // FORM INITIALIZATION
+  // FORM INITIALIZATION & VALIDATION -------------------------
   const form = useForm({
     resolver: zodResolver(registerSchema),
     defaultValues: {
@@ -70,43 +52,46 @@ export default function Auth() {
     },
   });
 
-  // HANDLE SUBMIT
-  const handleSubmit = async (data) => {
-    if (form.formState.errors.password) {
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      if (activeTab === "login") {
-        await signIn(data);
-        toast.success("Welcome back!", {
-          description: "Successfully logged in",
-        });
-      } else {
-        await signUp(data);
-        setShowConfirmation(true);
-        setConfirmedEmail(data.email);
-        // Update URL without triggering a navigation
-        window.history.replaceState(null, "", "/auth/confirmation");
-        toast.success("Check your email", {
-          description: "Verification email sent. Please check your inbox.",
-        });
+  // HANDLE SUBMIT -------------------------
+  const handleSubmit = useCallback(
+    async (data) => {
+      if (form.formState.errors.password) {
+        return;
       }
-    } catch (error) {
-      toast.error("Error", {
-        description: error.message,
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
-  // HANDLE RESET PASSWORD
+      setIsLoading(true);
+
+      try {
+        if (activeTab === "login") {
+          await signIn(data);
+          toast.success("Welcome back!", {
+            description: "Successfully logged in",
+          });
+        } else {
+          await signUp(data);
+          setShowConfirmation(true);
+          setConfirmedEmail(data.email);
+          // Update URL without triggering a navigation
+          window.history.replaceState(null, "", "/auth/confirmation");
+          toast.success("Check your email", {
+            description: "Verification email sent. Please check your inbox.",
+          });
+        }
+      } catch (error) {
+        toast.error("Error", {
+          description: error.message,
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [activeTab, form, signIn, signUp]
+  );
+
+  // HANDLE RESET PASSWORD -------------------------
   const handleResetPassword = async (e) => {
     e.preventDefault();
     const email = form.getValues("email");
-
     if (!email) {
       toast.error("Email Required", {
         description: "Please enter your email address",
@@ -115,6 +100,7 @@ export default function Auth() {
     }
 
     setIsLoading(true);
+
     try {
       await resetPassword(email);
       setShowResetPassword(true);
@@ -129,7 +115,7 @@ export default function Auth() {
     }
   };
 
-  // SHOW RESET PASSWORD PAGE
+  // SHOW RESET PASSWORD PAGE -------------------------
   if (showResetPassword) {
     return (
       <ResetPasswordConfirmation
@@ -139,7 +125,7 @@ export default function Auth() {
     );
   }
 
-  // SHOW EMAIL CONFIRMATION PAGE
+  // SHOW EMAIL CONFIRMATION PAGE -------------------------
   if (showConfirmation) {
     return (
       <EmailConfirmation
@@ -151,7 +137,7 @@ export default function Auth() {
 
   return (
     <div className="h-screen max-w-sm mx-auto flex flex-col px-6">
-      {/* LEFT CHEVRON */}
+      {/* LEFT CHEVRON ------------------------- */}
       <div className="absolute top-4 left-4">
         <ChevronLeft
           onClick={() => navigate(-1)}
@@ -160,14 +146,15 @@ export default function Auth() {
         />
       </div>
 
-      {/* MAIN CONTENT */}
+      {/* MAIN CONTENT ------------------------- */}
       <div className="flex-1 flex flex-col justify-center">
         <div className="space-y-8">
-          {/* LOGO */}
+          {/* LOGO ------------------------- */}
           <div className="flex justify-center">
             <img src={Logo} alt="TreatYourDate logo" className="w-1/3 h-auto" />
           </div>
 
+          {/* WELCOME MESSAGE ------------------------- */}
           <div className="text-center space-y-2">
             <h1 className="text-[28px] font-semibold text-gray-800">
               {activeTab === "login" ? "Welcome back!" : "Join our community!"}
@@ -179,84 +166,58 @@ export default function Auth() {
             </p>
           </div>
 
-          {/* SIGN IN FORM */}
+          {/* SIGN IN FORM ------------------------- */}
           <form
             onSubmit={form.handleSubmit(handleSubmit)}
             className="space-y-5"
           >
-            {/* NAME FIELD */}
+            {/* NAME INPUT ------------------------- */}
             {activeTab === "signup" && (
-              <div className="space-y-2">
-                <div className="relative">
-                  <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  <Input
-                    className="text-sm rounded-xl border-gray-200 pl-12"
-                    placeholder="Name"
-                    {...form.register("display_name")}
-                  />
-                </div>
-                {form.formState.errors.display_name && (
-                  <p className="text-sm text-primary px-1">
-                    {form.formState.errors.display_name.message}
-                  </p>
-                )}
-              </div>
+              <FormInput
+                icon={User}
+                name="display_name"
+                placeholder="Name"
+                form={form}
+              />
             )}
-            {/* EMAIL FIELD */}
-            <div className="space-y-2">
-              <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <Input
-                  className="text-sm rounded-xl border-gray-200 pl-12"
-                  placeholder="Email"
-                  {...form.register("email")}
-                />
-              </div>
-              {form.formState.errors.email && (
-                <p className="text-sm text-primary px-1">
-                  {form.formState.errors.email.message}
-                </p>
-              )}
-            </div>
 
-            {/* PASSWORD FIELD */}
-            <div className="space-y-2">
-              <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <Input
-                  className="text-sm rounded-xl border-gray-200 pl-12"
-                  type="password"
-                  placeholder="Password"
-                  {...form.register("password")}
-                  onFocus={() => setIsPasswordFocused(true)}
-                  onBlur={() => setIsPasswordFocused(false)}
-                />
-              </div>
-              {!isPasswordFocused && form.formState.errors.password && (
-                <p className="text-sm text-primary px-1">
-                  {form.formState.errors.password.message}
-                </p>
-              )}
-            </div>
+            {/* EMAIL INPUT ------------------------- */}
+            <FormInput
+              icon={Mail}
+              name="email"
+              placeholder="Email"
+              form={form}
+            />
 
-            {/* CONFIRM PASSWORD FIELD */}
+            {/* PASSWORD INPUT -------------------------*/}
+            <FormInput
+              icon={Lock}
+              name="password"
+              placeholder="Password"
+              type="password"
+              form={form}
+              onFocus={() => setIsPasswordFocused(true)}
+              onBlur={() => setIsPasswordFocused(false)}
+            />
+
+            {!isPasswordFocused && form.formState.errors.password && (
+              <p className="text-sm text-primary px-1">
+                {form.formState.errors.password.message}
+              </p>
+            )}
+
             {activeTab === "signup" && (
-              <div className="space-y-2">
-                <div className="relative">
-                  <KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  <Input
-                    className="text-sm rounded-xl border-gray-200 pl-12"
-                    type="password"
-                    placeholder="Confirm Password"
-                    {...form.register("confirmPassword")}
-                  />
-                </div>
-                {form.formState.errors.confirmPassword && (
-                  <p className="text-sm text-primary px-1">
-                    {form.formState.errors.confirmPassword.message}
-                  </p>
-                )}
-                {/* TERMS & CONDITIONS */}
+              <>
+                {/* CONFIRM PASSWORD INPUT ------------------------- */}
+                <FormInput
+                  icon={KeyRound}
+                  name="confirmPassword"
+                  placeholder="Confirm Password"
+                  type="password"
+                  form={form}
+                />
+
+                {/* TERMS & CONDITIONS ------------------------- */}
                 <div className="text-center px-2">
                   <p className="text-xs font-light text-gray-400 mt-6">
                     By continuing, you agree to our{" "}
@@ -274,9 +235,10 @@ export default function Auth() {
                     .
                   </p>
                 </div>
-              </div>
+              </>
             )}
 
+            {/* 1 BUTTON, MULTIPLE LABELS (LOADING, LOGIN, or SIGN UP) ------------------------- */}
             <Button
               type="submit"
               disabled={isLoading}
@@ -289,7 +251,7 @@ export default function Auth() {
                 : "Sign Up"}
             </Button>
 
-            {/* FORGOT PASSWORD */}
+            {/* FORGOT PASSWORD ------------------------- */}
             {activeTab === "login" && (
               <div className="text-center">
                 <button
@@ -303,7 +265,7 @@ export default function Auth() {
             )}
           </form>
 
-          {/* SWITCH BETWEEN SIGN UP & LOG IN */}
+          {/* SWITCH BETWEEN SIGN UP & LOG IN ------------------------- */}
           <div className="text-center">
             <button
               onClick={() =>

@@ -6,6 +6,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { QRCodeSVG } from "qrcode.react";
+import { Calendar } from "lucide-react";
+import dayjs from "dayjs";
 
 export default function RedeemQRModal({ isOpen, onClose, purchaseItem }) {
   if (
@@ -19,17 +21,18 @@ export default function RedeemQRModal({ isOpen, onClose, purchaseItem }) {
   const { qrCodes, qrIndex } = purchaseItem;
   const currentQR = qrCodes[qrIndex];
   const menuPackage = purchaseItem.purchase_items[0]?.menu_packages;
+  const expiryDate = purchaseItem.purchase_items[0]?.expiry_date;
 
   if (!currentQR) return null;
 
-  // 🔥 Generate proper JSON-encoded QR payload
+  // Generate proper JSON-encoded QR payload
   const qrPayload = JSON.stringify({
     voucher_instance_id: currentQR.id,
   });
 
   return (
-    <Dialog 
-      open={isOpen} 
+    <Dialog
+      open={isOpen}
       onOpenChange={(open) => {
         if (!open) {
           onClose();
@@ -44,7 +47,7 @@ export default function RedeemQRModal({ isOpen, onClose, purchaseItem }) {
         </DialogHeader>
 
         <div className="flex flex-col items-center space-y-4">
-          {/* QR Code Display */}
+          {/* QR CODE ======================================================================== */}
           <div className="flex justify-center">
             <QRCodeSVG
               value={qrPayload}
@@ -55,7 +58,7 @@ export default function RedeemQRModal({ isOpen, onClose, purchaseItem }) {
             />
           </div>
 
-          {/* Package Info */}
+          {/* PACKAGE NAME & RESTAURANT NAME ======================================================================== */}
           <div className="text-center space-y-1">
             <h3 className="text-lg font-bold text-primary">
               {menuPackage?.name}
@@ -65,7 +68,15 @@ export default function RedeemQRModal({ isOpen, onClose, purchaseItem }) {
             </p>
           </div>
 
-          {/* QR Code Progress */}
+          {/* EXPIRY DATE ======================================================================== */}
+          {expiryDate && (
+            <div className="flex items-center gap-2 text-sm text-primary">
+              <Calendar className="w-4 h-4" />
+              <span>Expires on {dayjs(expiryDate).format("DD MMM YYYY")}</span>
+            </div>
+          )}
+
+          {/* QR Code Progress ======================================================================== */}
           <div className="text-center text-sm text-muted-foreground">
             <p>
               QR Code {qrIndex + 1} of {qrCodes.length}
@@ -73,7 +84,7 @@ export default function RedeemQRModal({ isOpen, onClose, purchaseItem }) {
             <p>{qrCodes.length} remaining</p>
           </div>
 
-          {/* Instructions */}
+          {/* INSTRUCTIONS ======================================================================== */}
           <div className="text-center text-sm text-muted-foreground text-lightgray">
             <p>
               Show this QR code to the restaurant staff to redeem your purchase.

@@ -1,24 +1,46 @@
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { formatDate } from "@/utils/formatDate";
+import { formatCount } from "@/utils/formatCount";
+import { useExploreMenuPackageStats } from "@/hooks/useExploreMenuPackageStats";
 
 // COMPONENTS
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { MapPin, Clock, Users, Info } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Package, Users, Info, MapPin } from "lucide-react";
+import ImageWithFallback from "@/components/ImageWithFallback";
 import RestaurantDetailsModal from "./RestaurantDetailsModal";
+import ExploreCardSkeleton from "./ExploreCardSkeleton";
+
+// ASSETS
+import defaultImage from "@/assets/images/default-avatar.jpg";
 
 export default function ExploreCard({ item }) {
   const navigate = useNavigate();
   const [showDetails, setShowDetails] = useState(false);
 
-  // Get the first menu package and its image
+  // Get the first menu package
   const menuPackage = item.menu_packages?.[0];
-  const menuImage = menuPackage?.menu_images?.[0]?.image_url;
+  const menuPackageId = menuPackage?.id;
 
-  // Generate random counts for treaters and treatees
-  const treatersCount = Math.floor(Math.random() * 100) + 1; // Random number between 1-100
-  const interestedTreateesCount = Math.floor(Math.random() * 100) + 1; // Random number between 1-100
+  // Use the correct menu package ID for stats
+  const { data: stats, isLoading } = useExploreMenuPackageStats(menuPackageId);
+
+  // Early return if item is not defined
+  if (!item) return null;
+
+  // LOADING HANDLER -------------------------------------
+  if (isLoading) {
+    return <ExploreCardSkeleton />;
+  }
+
+  // Get stats data with fallbacks
+  const totalPurchases = stats?.total_purchases || 0;
+  const totalInterests = stats?.total_interests || 0;
+  const treaterAvatars = stats?.treater_avatars?.slice(0, 4) || [];
+  const treateeAvatars = stats?.treatee_avatars?.slice(0, 4) || [];
+
+  // Get menu image
+  const menuImage = menuPackage?.menu_images?.[0]?.image_url;
 
   // HANDLE JOIN -------------------------------------
   const handleJoin = () => {
@@ -32,8 +54,8 @@ export default function ExploreCard({ item }) {
 
   return (
     <Card className="overflow-hidden mb-6 bg-white rounded-xl hover:shadow-lg transition-all duration-300 border border-gray-100">
-      {/* Card Header with Image */}
-      <div className="relative w-full h-[160px] group">
+      {/* CARD HEADER + IMAGE ====================================== */}
+      <div className="relative w-full h-[180px] group">
         <img
           src={menuImage}
           alt={menuPackage?.name || item.name}
@@ -41,9 +63,9 @@ export default function ExploreCard({ item }) {
         />
 
         {/* Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/70 to-black/90" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
 
-        {/* TOP LABELS ---------------------------------------------- */}
+        {/* TOP LABELS */}
         <div className="absolute top-4 left-4 right-4 flex justify-between items-center">
           <div className="flex gap-2">
             <span className="bg-primary/90 backdrop-blur-sm text-white px-3 py-1 rounded-full text-sm font-medium">
@@ -54,7 +76,7 @@ export default function ExploreCard({ item }) {
             </span>
           </div>
 
-          {/* RESTAURANT DETAILS BUTTON ---------------------------------------------- */}
+          {/* RESTAURANT DETAILS BUTTON */}
           <Button
             variant="ghost"
             size="icon"
@@ -65,78 +87,139 @@ export default function ExploreCard({ item }) {
           </Button>
         </div>
 
-        {/* MENU PACKAGE INFO ---------------------------------------------- */}
-        <div className="absolute bottom-4 left-4 right-4">
-          <h3 className="text-sm font-bold text-white mb-2">
-            {menuPackage.name}
-          </h3>
-          <p className="text-xs text-white font-light line-clamp-3">
-            {menuPackage.description}
-          </p>
+        {/* MENU PACKAGE INFO */}
+        <div className="absolute bottom-4 left-4 right-4 space-y-2">
+          <div>
+            <h3 className="text-sm font-bold text-white mb-1">
+              {menuPackage?.name}
+            </h3>
+            <p className="text-xs text-white font-light line-clamp-3">
+              {menuPackage?.description}
+            </p>
+          </div>
+
+          {/* LOCATION */}
+          <div className="flex items-center gap-1.5 bg-secondary backdrop-blur-sm px-2 py-1 rounded-lg w-fit">
+            <MapPin className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+            <span className="text-primary text-xs font-medium truncate max-w-[200px]">
+              {item.location}
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* CARD FOOTER ---------------------------------------------- */}
-      <div className="p-4 bg-white">
-        <div className="flex gap-2 text-gray-500 text-sm mb-2">
-          <div className="grid grid-cols-3">
-            {/* RESTAURANT LOCATION */}
-            <div className="col-span-2 flex items-center gap-1 overflow-hidden whitespace-nowrap text-ellipsis">
-              <MapPin className="h-4 w-4 flex-shrink-0" />
-              <span className="truncate">{item.location}</span>
-            </div>
-
-            {/* PACKAGE CREATION DATE */}
-            <div className="flex justify-center items-center gap-1">
-              <Clock className="h-4 w-4" />
-              <span>{formatDate(menuPackage.created_at)}</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex justify-between items-center gap-4">
-          {/* TREATERS SECTION ---------------------------------------------- */}
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-2">
-              <Users className="h-4 w-4 text-primary" />
-              <h4 className="text-sm font-medium text-gray-700">Treaters</h4>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="bg-primary/10 px-3 py-1.5 rounded-xl w-[72px] h-[65px] text-center">
+      {/* CARD FOOTER ====================================== */}
+      <div className="px-3 py-4 bg-white">
+        {/* STATS GRID */}
+        <div className="grid grid-cols-2 gap-2">
+          {/* TREATERS SECTION */}
+          <div className="bg-gray-50 rounded-xl p-2">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-1.5">
+                <Package className="h-3.5 w-3.5 text-primary" />
+                <h4 className="text-sm font-medium text-gray-700">Treaters</h4>
+              </div>
+              <div className="bg-primary/10 px-2 py-0.5 rounded-lg">
                 <span className="text-primary text-sm font-medium">
-                  {treatersCount} joined
+                  {formatCount(totalPurchases)}
                 </span>
               </div>
-              <Button
-                size="sm"
-                className="border-primary text-white hover:bg-primary/10 rounded-full flex-1"
-                onClick={handlePay}
-              >
-                Buy
-              </Button>
+            </div>
+
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex -space-x-1.5 min-w-0">
+                {treaterAvatars.length > 0 ? (
+                  <>
+                    {treaterAvatars.map((treater) => (
+                      <div
+                        key={treater.id}
+                        className="w-7 h-7 rounded-lg border-2 border-white overflow-hidden ring-1 ring-gray-100 flex-shrink-0"
+                      >
+                        <ImageWithFallback
+                          src={treater.image_url}
+                          alt="Treater"
+                          className="w-full h-full object-cover"
+                          fallbackSrc={defaultImage}
+                        />
+                      </div>
+                    ))}
+                  </>
+                ) : (
+                  <div className="w-7 h-7 rounded-lg border-2 border-white bg-gray-100 flex items-center justify-center ring-1 ring-gray-100 flex-shrink-0">
+                    <Package className="h-3.5 w-3.5 text-gray-400" />
+                  </div>
+                )}
+              </div>
+              <div className="flex w-2/5 gap-3 items-center">
+                {/* <div className="bg-primary/10 w-12 py-1 rounded-xl text-center">
+                  <span className="text-primary text-sm font-medium">
+                    {formatCount(totalPurchases)}
+                  </span>
+                </div> */}
+                <Button
+                  size="sm"
+                  className="border-primary text-white hover:bg-primary/10 rounded-lg w-26"
+                  onClick={handlePay}
+                >
+                  Buy
+                </Button>
+              </div>
             </div>
           </div>
 
-          {/* TREATEE SECTION ---------------------------------------------- */}
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-2">
-              <Users className="h-4 w-4 text-red-500" />
-              <h4 className="text-sm font-medium text-gray-700">Treatees</h4>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="bg-red-50 px-3 py-1.5 rounded-xl w-[72px] h-[65px] text-center">
+          {/* TREATEES SECTION */}
+          <div className="bg-gray-50 rounded-xl p-2">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-1.5">
+                <Users className="h-3.5 w-3.5 text-red-500" />
+                <h4 className="text-sm font-medium text-gray-700">Treatees</h4>
+              </div>
+              <div className="bg-red-50 px-2 py-0.5 rounded-lg">
                 <span className="text-red-500 text-sm font-medium">
-                  {interestedTreateesCount} spots
+                  {formatCount(totalInterests)}
                 </span>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                className="border-primary text-primary hover:bg-primary/10 rounded-full flex-1"
-                onClick={handleJoin}
-              >
-                Join
-              </Button>
+            </div>
+
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex -space-x-1.5 min-w-0">
+                {treateeAvatars.length > 0 ? (
+                  <>
+                    {treateeAvatars.map((treatee) => (
+                      <div
+                        key={treatee.id}
+                        className="w-7 h-7 rounded-lg border-2 border-white overflow-hidden ring-1 ring-gray-100 flex-shrink-0"
+                      >
+                        <ImageWithFallback
+                          src={treatee.image_url}
+                          alt="Treatee"
+                          className="w-full h-full object-cover"
+                          fallbackSrc={defaultImage}
+                        />
+                      </div>
+                    ))}
+                  </>
+                ) : (
+                  <div className="w-7 h-7 rounded-lg border-2 border-white bg-gray-100 flex items-center justify-center ring-1 ring-gray-100 flex-shrink-0">
+                    <Users className="h-3.5 w-3.5 text-gray-400" />
+                  </div>
+                )}
+              </div>
+              <div className="flex w-2/5 gap-3 items-center">
+                {/* <div className="bg-red-50 w-12 py-1 rounded-xl text-center">
+                  <span className="text-red-500 text-sm font-medium">
+                    {formatCount(totalInterests)}
+                  </span>
+                </div> */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-primary text-primary hover:bg-primary/10 rounded-lg w-26"
+                  onClick={handleJoin}
+                >
+                  Join
+                </Button>
+              </div>
             </div>
           </div>
         </div>

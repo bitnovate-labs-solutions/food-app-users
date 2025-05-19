@@ -41,7 +41,7 @@ export default function Layout({ title }) {
       // Store current location before redirecting
       navigate("/auth", {
         state: {
-          mode: "login",
+          mode: location.pathname === "/explore" ? "signup" : "login",
           from: location.pathname,
         },
       });

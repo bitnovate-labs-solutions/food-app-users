@@ -175,7 +175,7 @@ const AppNav = ({ profile, handleHomeClick, handleProtectedNavigation }) => {
             >
               <MessagesSquare
                 className={`w-6 h-6 ${
-                  location.pathname === `/messages`
+                  location.pathname.startsWith('/messages')
                     ? "text-primary"
                     : !user
                     ? "text-gray-400"
@@ -184,7 +184,7 @@ const AppNav = ({ profile, handleHomeClick, handleProtectedNavigation }) => {
               />
               <span
                 className={`text-xs ${
-                  location.pathname === `/messages`
+                  location.pathname.startsWith('/messages')
                     ? "text-primary"
                     : !user
                     ? "text-gray-400"

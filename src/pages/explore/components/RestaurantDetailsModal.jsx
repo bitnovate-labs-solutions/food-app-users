@@ -14,19 +14,22 @@ export default function RestaurantDetailsModal({
 }) {
   if (!restaurant) return null;
 
+  // Get the first menu package
+  const menuPackage = restaurant.menu_packages?.[0];
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px] bg-white border-none shadow-xl rounded-2xl p-0">
         {/* RESTAURANT IMAGE */}
-        <div className="relative w-full h-46 rounded-t-2xl overflow-hidden">
+        <div className="relative w-full h-40 rounded-t-2xl overflow-hidden">
           <ImageWithFallback
             src={restaurant.image_url}
             alt={restaurant.name}
             className="w-full h-full object-cover"
           />
 
-          {/* Overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-black/50 to-black/80" />
+          {/* CODE FOR FUTURE USE (NOT SURE TO REMOVE YET) Overlay ----------- */}
+          {/* <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-black/20 to-black/30" /> */}
         </div>
 
         {/* RESTAURANT NAME */}
@@ -40,7 +43,7 @@ export default function RestaurantDetailsModal({
         <div className="space-y-4 px-6 pb-10">
           <div className="text-sm">
             {/* RESTAURANT DESCRIPTION */}
-            <div className="px-4 py-3 bg-gray-50 rounded-lg mb-4">
+            <div className="px-4 bg-gray-50 rounded-lg mb-4">
               <p className="text-gray-600 leading-relaxed">
                 {restaurant.description}
               </p>
@@ -67,6 +70,39 @@ export default function RestaurantDetailsModal({
                 <span className="text-gray-600">{restaurant.cuisine_type}</span>
               </div>
             </div>
+
+            {/* MENU PACKAGE DETAILS */}
+            {menuPackage && (
+              <div className="mt-6 space-y-4">
+                <div className="p-4 bg-primary/5 border border-primary rounded-lg">
+                  <h3 className="font-medium text-primary mb-2">
+                    {menuPackage.name}
+                  </h3>
+                  <p className="text-gray-600 leading-relaxed mb-4">
+                    {menuPackage.description}
+                  </p>
+
+                  {/* MENU PACKAGE IMAGES */}
+                  {menuPackage.menu_images &&
+                    menuPackage.menu_images.length > 0 && (
+                      <div className="space-y-2">
+                        {menuPackage.menu_images.map((image, index) => (
+                          <div
+                            key={index}
+                            className="rounded-lg overflow-hidden"
+                          >
+                            <ImageWithFallback
+                              src={image.image_url}
+                              alt={`${menuPackage.name} - Image ${index + 1}`}
+                              className="w-full h-48 object-cover"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </DialogContent>

@@ -1,4 +1,9 @@
-import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { X } from "lucide-react";
 import ImageWithFallback from "@/components/ImageWithFallback";
 import { motion } from "framer-motion";
@@ -11,7 +16,7 @@ export default function ImageViewerModal({
   currentImageIndex,
   onPrevious,
   onNext,
-  imageTransforms
+  imageTransforms,
 }) {
   const [dragStart, setDragStart] = useState(0);
 
@@ -25,19 +30,22 @@ export default function ImageViewerModal({
 
     if (dragDistance > threshold && currentImageIndex > 0) {
       onPrevious();
-    } else if (dragDistance < -threshold && currentImageIndex < images.length - 1) {
+    } else if (
+      dragDistance < -threshold &&
+      currentImageIndex < images.length - 1
+    ) {
       onNext();
     }
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[90vw] h-[95vh] bg-black/95 border-none p-0 rounded-2xl overflow-hidden">
+      <DialogContent className="max-w-sm mx-auto h-[80vh] bg-black/85 border-none p-0 rounded-2xl overflow-hidden">
         <DialogTitle className="sr-only">Image Viewer</DialogTitle>
         <DialogDescription className="sr-only">
           View and navigate through images using swipe gestures
         </DialogDescription>
-        
+
         {/* FIXED HEADER */}
         <div className="absolute top-0 left-0 right-0 h-16 z-50">
           <button
@@ -49,7 +57,7 @@ export default function ImageViewerModal({
         </div>
 
         {/* SWIPEABLE IMAGE CONTAINER */}
-        <motion.div 
+        <motion.div
           className="w-full h-full flex items-center justify-center px-2"
           drag="x"
           dragConstraints={{ left: 0, right: 0 }}
@@ -63,12 +71,24 @@ export default function ImageViewerModal({
             src={images[currentImageIndex]}
             alt={`Image ${currentImageIndex + 1}`}
             className="max-w-full max-h-full object-contain pointer-events-none"
-            style={imageTransforms?.[currentImageIndex] ? {
-              objectPosition: `${imageTransforms[currentImageIndex].position?.x || 50}% ${imageTransforms[currentImageIndex].position?.y || 50}%`,
-              transform: `scale(${imageTransforms[currentImageIndex].scale || 1}) rotate(${imageTransforms[currentImageIndex].rotation || 0}deg)`,
-              transformOrigin: 'center',
-              transition: 'transform 0.2s ease-out'
-            } : undefined}
+            style={
+              imageTransforms?.[currentImageIndex]
+                ? {
+                    objectPosition: `${
+                      imageTransforms[currentImageIndex].position?.x || 50
+                    }% ${
+                      imageTransforms[currentImageIndex].position?.y || 50
+                    }%`,
+                    transform: `scale(${
+                      imageTransforms[currentImageIndex].scale || 1
+                    }) rotate(${
+                      imageTransforms[currentImageIndex].rotation || 0
+                    }deg)`,
+                    transformOrigin: "center",
+                    transition: "transform 0.2s ease-out",
+                  }
+                : undefined
+            }
           />
         </motion.div>
 

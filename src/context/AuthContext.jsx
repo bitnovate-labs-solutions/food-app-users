@@ -49,6 +49,9 @@ export function AuthProvider({ children }) {
         setUser(session?.user);
         // Only check profile if email is confirmed
         if (session.user.email_confirmed_at && location.pathname === "/") {
+          // Redirect to "/create-profile" logic (When the user clicks the link in the email, it logs them in (SIGNED_IN event),the onAuthStateChange listener detects this state change.)
+          // session.user.email_confirmed_at -> ✅ ensures the email was verified.
+          // location.pathname === "/" -> ensures the user was on the homepage (or whatever is set after redirect)
           navigate("/create-profile", { replace: true });
         }
       } else if (event === "USER_UPDATED") {
@@ -153,10 +156,41 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  // RESET PASSWORD --------------------------------------------------
+  const resetPassword = async (email) => {
+    try {
+      const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/reset-password`,
+      });
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error("Reset password error:", error);
+      throw error;
+    }
+  };
+
+  // UPDATE PASSWORD --------------------------------------------------
+  const updatePassword = async (newPassword) => {
+    try {
+      const { data, error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error("Update password error:", error);
+      throw error;
+    }
+  };
+
   const value = {
     signUp,
     signIn,
     signOut,
+    resetPassword,
+    updatePassword,
     user,
     checkUserProfile,
   };

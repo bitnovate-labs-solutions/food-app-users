@@ -2,6 +2,7 @@ import { getCurrentUserProfile } from "@/lib/getUserProfile";
 import { supabase } from "@/lib/supabase";
 import { backOfficeSupabase } from "@/lib/supabase-bo";
 import { useQuery } from "@tanstack/react-query";
+import dayjs from "dayjs";
 
 // Combined fetch function
 export const getRedeemedVouchersWithMenu = async () => {
@@ -37,12 +38,13 @@ export const getRedeemedVouchersWithMenu = async () => {
         *,
         purchase_item_id:purchase_items!inner (
           *,
-          package_id
+          package_id,
+          expiry_date
         )
       `
       )
       .eq("user_id", user.id)
-      .eq("used", true)
+      .or(`used.eq.true,expiry_date.lt.${dayjs().toISOString()}`)
       .order("redeemed_at", { ascending: false }),
   ]);
 
@@ -59,6 +61,7 @@ export const getRedeemedVouchersWithMenu = async () => {
     return {
       ...voucher,
       menu_package: matchedPackage || null,
+      expiry_date: voucher.purchase_item_id?.expiry_date,
     };
   });
 

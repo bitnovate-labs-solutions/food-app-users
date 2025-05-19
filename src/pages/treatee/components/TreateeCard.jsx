@@ -258,6 +258,7 @@ export default function TreateeCard({ item, onLike, isLiked }) {
         isOpen={showTreaters}
         onClose={() => setShowTreaters(false)}
         users={allUsers}
+        purchaseId={item.purchase_items?.[0]?.purchase_id}
       />
     </Card>
   );

@@ -40,6 +40,8 @@ import { toast } from "sonner";
 import { createProfileSchema } from "@/lib/zod_schema";
 import { calculateProfileCompletion } from "@/utils/profileUtils";
 import { useQueryClient } from "@tanstack/react-query";
+import { FormFieldError } from "@/components/common/FormFieldError";
+import { uploadImageToSupabase } from "@/lib/uploadImageToSupabase";
 
 export default function CreateProfile() {
   // const navigate = useNavigate();
@@ -51,25 +53,25 @@ export default function CreateProfile() {
   const [isLoading, setIsLoading] = useState(false);
   const [profileImage, setProfileImage] = useState(null);
   const [completion, setCompletion] = useState(0);
+
   const [selectedInterests, setSelectedInterests] = useState([]);
   const [selectedLanguages, setSelectedLanguages] = useState([]);
   const [selectedLanguage, setSelectedLanguage] = useState(""); // state to track the currently selected language
   const [selectedRole, setSelectedRole] = useState("");
 
-  // FORM INITIALIZATION
+  // FORM INITIALIZATION -----------------------------------------------------------------
   const form = useForm({
     resolver: zodResolver(createProfileSchema),
     defaultValues: {
+      role: "",
       age: "",
       about_me: "",
       occupation: "",
       education: "",
       location: "",
       gender: "",
-      height: {
-        value: "",
-        unit: "cm",
-      },
+      height: "",
+      phone_number: "",
       smoking: "",
       drinking: "",
       pets: "",
@@ -86,6 +88,14 @@ export default function CreateProfile() {
     },
   });
 
+  // useEffect to sync selectedRole with React Hook Form
+  // must include { shouldValidate: true } — this triggers validation, so it clears any previous error.
+  useEffect(() => {
+    if (selectedRole) {
+      form.setValue("role", selectedRole, { shouldValidate: true });
+    }
+  }, [selectedRole]);
+
   // Update completion whenever form values change
   useEffect(() => {
     const formData = form.getValues();
@@ -98,38 +108,29 @@ export default function CreateProfile() {
     setCompletion(newCompletion);
   }, [form.watch(), profileImage, selectedInterests, selectedLanguages]);
 
-  // HANDLE IMAGE UPLOAD
+  // HANDLE IMAGE UPLOAD -----------------------------------------------------------------
   const handleImageUpload = async (e) => {
     const file = e.target.files?.[0];
-    if (file) {
-      // Handle image upload to Supabase storage
-      const fileExt = file.name.split(".").pop();
-      const fileName = `${user.id}-${Math.random()}.${fileExt}`;
+    if (!file || !user?.id) return;
 
-      try {
-        const { error: uploadError } = await supabase.storage
-          .from("user-avatars")
-          .upload(fileName, file);
+    setIsLoading(true);
 
-        if (uploadError) throw uploadError;
-
-        const {
-          data: { publicUrl },
-        } = supabase.storage.from("user-avatars").getPublicUrl(fileName);
-
-        setProfileImage(publicUrl);
-      } catch (error) {
-        toast.error("Error uploading image: ", error);
-      }
+    try {
+      const { publicUrl } = await uploadImageToSupabase(file, user.id);
+      setProfileImage(publicUrl);
+    } catch (error) {
+      toast.error("Error uploading image", {
+        description: error.message,
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // HANDLE SUBMIT
+  // HANDLE SUBMIT -----------------------------------------------------------------
   const onSubmit = async (data) => {
     setIsLoading(true);
     try {
-      console.log("Selected role:", selectedRole); // Debug log
-
       if (!selectedRole) {
         toast.error("Role Required", {
           description: "Please select a role to continue",
@@ -147,30 +148,34 @@ export default function CreateProfile() {
       // Then create/update profile
       const { data: profile, error } = await supabase
         .from("user_profiles")
-        .upsert({
-          user_id: user.id,
-          email: user.email,
-          role: selectedRole,
-          age: parseInt(data.age),
-          about_me: data.about_me,
-          occupation: data.occupation,
-          education: data.education,
-          location: data.location,
-          gender: data.gender,
-          height: data.height,
-          smoking: data.smoking,
-          drinking: data.drinking,
-          pets: data.pets,
-          children: data.children,
-          zodiac: data.zodiac,
-          religion: data.religion,
-          interests: selectedInterests,
-          languages: selectedLanguages,
-          social_links: data.social_links,
-          updated_at: new Date().toISOString(),
-        }, {
-          onConflict: 'user_id'
-        })
+        .upsert(
+          {
+            user_id: user.id,
+            email: user.email,
+            role: selectedRole,
+            age: parseInt(data.age),
+            phone_number: data.phone_number,
+            about_me: data.about_me,
+            occupation: data.occupation,
+            education: data.education,
+            location: data.location,
+            gender: data.gender,
+            height: data.height,
+            smoking: data.smoking,
+            drinking: data.drinking,
+            pets: data.pets,
+            children: data.children,
+            zodiac: data.zodiac,
+            religion: data.religion,
+            interests: selectedInterests,
+            languages: selectedLanguages,
+            social_links: data.social_links,
+            updated_at: new Date().toISOString(),
+          },
+          {
+            onConflict: "user_id",
+          }
+        )
         .select()
         .single();
 
@@ -221,12 +226,9 @@ export default function CreateProfile() {
 
   return (
     <div className="min-h-screen bg-white w-full max-w-sm sm:max-w-md mx-auto">
-      {/* EDIT PROFILE TITLE */}
+      {/* TITLE ----------------------------------------------- */}
       <div className="px-4 py-4 border-b border-b-gray-300">
         <div className="flex items-center">
-          {/* <button onClick={() => navigate(-1)} className="text-darkgray">
-            ←
-          </button> */}
           <h1 className="flex-1 text-center font-semibold text-lg">
             Create profile
           </h1>
@@ -245,9 +247,8 @@ export default function CreateProfile() {
 
         {/* FORMS */}
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-          {/* AVATAR PHOTO SECTION */}
+          {/* AVATAR PHOTO SECTION ----------------------------------------------- */}
           <div>
-            {/* TITLE */}
             <h2 className="text-xl font-semibold mb-2">Photo</h2>
             <p className="text-sm text-lightgray mb-4">
               Add a photo that clearly shows your face. This is how you appear
@@ -299,7 +300,7 @@ export default function CreateProfile() {
             )}
           </div>
 
-          {/* USER NAME AND EMAIL */}
+          {/* USER NAME AND EMAIL SECTION ----------------------------------------------- */}
           <div className="text-center border-b border-lightgray/50 py-6">
             <div className="space-y-2">
               <h2 className="text-lg font-semibold text-darkgray">
@@ -309,7 +310,7 @@ export default function CreateProfile() {
             </div>
           </div>
 
-          {/* ROLE SELECTION SECTION */}
+          {/* ROLE SELECTION SECTION ----------------------------------------------- */}
           <div>
             <h2 className="text-xl font-semibold mb-4">Choose Your Role</h2>
             <p className="text-sm text-gray-500 mb-4">
@@ -374,6 +375,8 @@ export default function CreateProfile() {
                 </div>
               </button>
             </div>
+            {/* REQUIRED FIELD ALERT -------------------- */}
+            <FormFieldError form={form} name="role" className="text-center" />
           </div>
 
           {/* ABOUT ME SECTION ------------------------------ */}
@@ -395,7 +398,7 @@ export default function CreateProfile() {
           <div>
             <h2 className="text-xl font-semibold mb-4">My details</h2>
             <div className="space-y-3">
-              {/* AGE FIELD */}
+              {/* AGE ------------------------------ */}
               <div className="flex items-center justify-between rounded-lg">
                 <div className="flex items-center gap-4">
                   <Cake className="w-4 h-4 text-lightgray" />
@@ -410,6 +413,23 @@ export default function CreateProfile() {
                   max="120"
                   className="w-2/5 h-auto text-right text-sm text-lightgray border-none shadow-none bg-white"
                   {...form.register("age")}
+                />
+              </div>
+              {/* REQUIRED FIELD ALERT -------------------- */}
+              <FormFieldError form={form} name="age" />
+
+              {/* PHONE NUMBER ------------------------------ */}
+              <div className="flex items-center justify-between rounded-lg">
+                <div className="flex items-center gap-4">
+                  <User className="w-4 h-4 text-lightgray" />
+                  <span className="text-sm font-semibold text-darkgray">
+                    Phone Number
+                  </span>
+                </div>
+                <Input
+                  placeholder="Add"
+                  className="w-2/5 h-auto text-right text-sm text-lightgray border-none shadow-none bg-white"
+                  {...form.register("phone_number")}
                 />
               </div>
 
@@ -438,7 +458,9 @@ export default function CreateProfile() {
                 </div>
                 <Select
                   value={form.watch("gender")}
-                  onValueChange={(value) => form.setValue("gender", value)}
+                  onValueChange={(value) =>
+                    form.setValue("gender", value, { shouldValidate: true })
+                  }
                 >
                   <SelectTrigger className="h-auto bg-white border-none shadow-none text-darkgray">
                     <SelectValue placeholder="Add" />
@@ -450,6 +472,8 @@ export default function CreateProfile() {
                   </SelectContent>
                 </Select>
               </div>
+              {/* REQUIRED FIELD ALERT -------------------- */}
+              <FormFieldError form={form} name="gender" />
 
               {/* EDUCATION FIELD */}
               <div className="flex items-center justify-between rounded-lg">
@@ -480,6 +504,8 @@ export default function CreateProfile() {
                   {...form.register("location")}
                 />
               </div>
+              {/* REQUIRED FIELD ALERT -------------------- */}
+              <FormFieldError form={form} name="location" />
             </div>
           </div>
 

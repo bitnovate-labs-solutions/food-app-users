@@ -16,9 +16,9 @@ export const FormInput = ({
         className="text-sm rounded-xl border-gray-200 pl-12"
         placeholder={placeholder}
         type={type}
-        {...form.register(name)}
         onFocus={onFocus}
         onBlur={onBlur}
+        {...form.register(name)}
       />
     </div>
     {form.formState.errors[name] && (

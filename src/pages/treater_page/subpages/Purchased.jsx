@@ -3,6 +3,7 @@ import { usePurchasedItems } from "@/hooks/usePurchases";
 import { useQueryClient } from "@tanstack/react-query";
 import { useVoucherRealtimeUpdates } from "@/hooks/useVoucherRealtimeUpdates";
 import { useAuth } from "@/context/AuthContext";
+import dayjs from "dayjs";
 
 // COMPONENTS
 import ErrorComponent from "@/components/ErrorComponent";
@@ -112,12 +113,16 @@ function PurchaseList() {
   const processedItems =
     purchasedItems?.map((item) => {
       const purchaseItem = item.purchase_items?.[0];
+      const expiryDate = purchaseItem?.expiry_date;
+
+      // Check if the purchase has expired
+      const isExpired = expiryDate && dayjs(expiryDate).isBefore(dayjs());
 
       // ✅ Now each QR code represents one actual voucher_instance.
       const qrCodes =
         purchaseItem?.voucher_instances?.map((instance) => ({
           id: instance.id,
-          code: instance.id, // now QR code will carry voucher_instance id
+          code: instance.id,
           used: instance.used,
           redeemed_at: instance.redeemed_at,
         })) || [];
@@ -128,6 +133,8 @@ function PurchaseList() {
         purchaseIds: [item.id],
         menuPackageId: purchaseItem?.menu_packages?.id,
         qrCodes: qrCodes,
+        isExpired,
+        expiryDate,
       };
     }) || [];
 
@@ -182,17 +189,21 @@ function PurchaseList() {
   };
 
   const hasNoPurchases = processedItems.length === 0;
-  const allVouchersUsed = processedItems.every((item) =>
-    item.qrCodes.every((qr) => qr.used)
-  );
+
+  // HANDLES BOTH EXPIRED & REDEEMED PURCHASES ===========================================
+  const allPurchasesHidden = processedItems.every((item) => {
+    const unusedVouchers = item.qrCodes.filter((qr) => !qr.used);
+    return unusedVouchers.length === 0 || item.isExpired;
+  });
 
   return (
     <>
       {processedItems.map((item) => {
         const unusedVouchers = item.qrCodes.filter((qr) => !qr.used);
 
-        if (unusedVouchers.length === 0) {
-          return null; // Don't show this purchase anymore
+        // Don't show if all vouchers are used OR if the purchase has expired
+        if (unusedVouchers.length === 0 || item.isExpired) {
+          return null;
         }
 
         return (
@@ -218,13 +229,13 @@ function PurchaseList() {
           }
           fixed
         />
-      ) : allVouchersUsed ? (
+      ) : allPurchasesHidden ? (
         <EmptyState
           imageSrc={EmptyBasket}
           description={
             <>
               <p className="text-lightgray text-sm">
-                All vouchers have been redeemed
+                Your purchases have been redeemed or <br /> have expired.
               </p>
               <p className="text-lightgray text-sm mb-10 text-center px-10">
                 Time to treat yourself to something new!

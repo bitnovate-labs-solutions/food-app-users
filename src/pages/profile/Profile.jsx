@@ -1,11 +1,12 @@
 import { Suspense, useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
-import { useNavigate, useLocation } from "react-router-dom";
 import { useImageCache } from "@/hooks/useImageCache";
-
+import { formatDate } from "@/utils/formatDate";
 import { ErrorBoundary } from "react-error-boundary";
-// import { useQueryClient } from "@tanstack/react-query";
+import { ProfileSkeleton } from "@/components/LoadingSkeleton";
+import AppErrorBoundary from "@/components/AppErrorBoundary";
 
 // COMPONENTS
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
@@ -29,68 +30,52 @@ import {
   Twitter,
   Edit,
   UserCircle2,
+  Phone,
 } from "lucide-react";
-import { ProfileSkeleton } from "@/components/LoadingSkeleton";
 import ImageViewerModal from "@/components/ImageViewerModal";
 
 // ASSETS
-import defaultImage from "@/assets/images/default-avatar.jpg";
-import AppErrorBoundary from "@/components/AppErrorBoundary";
+// import defaultImage from "@/assets/images/default-avatar.jpg";
+import defaultImage from "@/assets/images/fallback_image.png";
 
-function UserProfile() {
+const UserProfile = () => {
+  const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+
   const { user } = useAuth();
   const { data: profile, isLoading, error } = useUserProfile(user);
   const navigate = useNavigate();
   const location = useLocation();
-  // const queryClient = useQueryClient();
 
-  // Prefetch profile data
-  // useEffect(() => {
-  //   if (user?.id) {
-  //     queryClient.prefetchQuery({
-  //       queryKey: ["profile", user.id],
-  //       queryFn: () => fetchProfile(user.id),
-  //     });
-  //   }
-  // }, [user?.id, queryClient]);
-
-  // Scroll to top when navigating from edit profile
+  // Scroll to top when navigating from edit profile =======================================================
   useEffect(() => {
     if (location.state?.scrollToTop) {
       window.scrollTo(0, 0);
     }
   }, [location]);
 
-  // Use optimized image caching
+  // USE IMAGE CACHE =======================================================
   const { cachedUrl, isImageLoaded } = useImageCache(
     profile?.user_profile_images?.[0].image_url
   );
 
-  const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
-  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-
+  // LOADING AND ERROR HANDLERS =======================================================
   if (isLoading) return <ProfileSkeleton />;
   if (error) return <AppErrorBoundary error={error} />;
 
-  // Format date to be more readable
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  };
-
+  // HANDLE PREVIOUS IMAGE =======================================================
   const handlePreviousImage = () => {
     setSelectedImageIndex((prev) => (prev > 0 ? prev - 1 : prev));
   };
 
+  // HANDLE NEXT IMAGE =======================================================
   const handleNextImage = () => {
     setSelectedImageIndex((prev) =>
       prev < (profile?.user_profile_images?.length || 0) - 1 ? prev + 1 : prev
     );
   };
 
+  // IMAGE VIEWER =======================================================
   const openImageViewer = (index) => {
     setSelectedImageIndex(index);
     setIsImageViewerOpen(true);
@@ -250,6 +235,19 @@ function UserProfile() {
                     </div>
                     <p className="text-sm text-lightgray text-right">
                       {user?.email || "Not provided"}
+                    </p>
+                  </div>
+
+                  {/* Phone Number */}
+                  <div className="flex justify-between items-center py-1">
+                    <div className="flex items-center">
+                      <Phone className="w-4 h-4 mr-3 my-auto text-darkgray" />
+                      <span className="text-sm font-medium text-darkgray">
+                        Phone
+                      </span>
+                    </div>
+                    <p className="text-sm text-lightgray text-right">
+                      {profile?.phone_number || "Not provided"}
                     </p>
                   </div>
 
@@ -507,7 +505,7 @@ function UserProfile() {
       />
     </div>
   );
-}
+};
 
 export default function Profile() {
   return (

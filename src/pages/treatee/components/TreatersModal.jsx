@@ -1,4 +1,8 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
+import { useChatRequest } from "@/hooks/useChatRequest";
+import { toast } from "sonner";
 
 import {
   Dialog,
@@ -8,14 +12,23 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Card } from "@/components/ui/card";
-import { Users, MessageCircle } from "lucide-react";
+import { Users, MessageCircle, SendIcon } from "lucide-react";
 import ImageWithFallback from "@/components/ImageWithFallback";
 import UserProfileCard from "@/components/UserProfileCard";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
-export default function TreatersModal({ isOpen, onClose, users }) {
+export default function TreatersModal({ isOpen, onClose, users, purchaseId }) {
   const [selectedUser, setSelectedUser] = useState(null);
   const [isDetailsShown, setIsDetailsShown] = useState(false);
+  const [showMessageDialog, setShowMessageDialog] = useState(false);
+  const [selectedTreater, setSelectedTreater] = useState(null);
+  const [initialMessage, setInitialMessage] = useState(
+    "Hi! 👋\nI saw you're treating at this restaurant too!\nWould love to join you for a meal. Shall we chat more about it? 😊"
+  );
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const chatRequest = useChatRequest();
 
   // HANDLE SWIPE LEFT
   const handleSwipeLeft = () => {
@@ -34,6 +47,53 @@ export default function TreatersModal({ isOpen, onClose, users }) {
     );
     if (currentIndex > 0) {
       setSelectedUser(users[currentIndex - 1]);
+    }
+  };
+
+  const handleChatClick = async (e, treater) => {
+    e.stopPropagation();
+    setSelectedTreater(treater);
+    setShowMessageDialog(true);
+  };
+
+  const handleSendMessage = async () => {
+    try {
+      // Make sure we have all required data
+      if (!user?.id || !selectedTreater?.user_id || !purchaseId) {
+        console.error("Missing required data for chat request:", {
+          userId: user?.id,
+          treaterId: selectedTreater?.user_id,
+          purchaseId,
+        });
+        return;
+      }
+
+      // Create the conversation with initial message
+      const { conversation, message } = await chatRequest.mutateAsync({
+        treaterId: selectedTreater.user_id,
+        treateeId: user.id,
+        purchaseId,
+        initialMessage: initialMessage.trim(),
+      });
+
+      // Reset state
+      setShowMessageDialog(false);
+      setSelectedTreater(null);
+
+      // Only navigate if we have a valid conversation
+      if (conversation?.id) {
+        // Wait a moment for the message to be properly synced
+        await new Promise(resolve => setTimeout(resolve, 500));
+        navigate(`/messages/${conversation.id}`);
+      } else {
+        console.error("No conversation ID returned from chat request");
+        toast.error("Failed to start conversation");
+      }
+    } catch (error) {
+      console.error("Error starting chat:", error);
+      toast.error("Failed to start conversation", {
+        description: error.message,
+      });
     }
   };
 
@@ -85,25 +145,60 @@ export default function TreatersModal({ isOpen, onClose, users }) {
                             {user.occupation || "Occupation not specified"}
                           </p>
                         </div>
-                        {/* CODE FOR FUTURE USE (TBC) =============================== */}
-                        {/* <Button
+                        <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-primary hover:text-primary/80 hover:bg-primary/10"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            // Handle chat functionality
-                            console.log("Chat with:", user.display_name);
-                          }}
+                          className="h-8 w-8 rounded-full bg-primary/10 text-primary transition-colors duration-200"
+                          onClick={(e) => handleChatClick(e, user)}
                         >
-                          <MessageCircle className="h-5 w-5" />
-                        </Button> */}
+                          <MessageCircle className="h-4 w-4" />
+                        </Button>
                       </div>
                     </div>
                   </div>
                 </Card>
               ))
             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* MESSAGE DIALOG */}
+      <Dialog open={showMessageDialog} onOpenChange={setShowMessageDialog}>
+        <DialogContent className="sm:max-w-[425px] p-6 bg-white border border-white/20 shadow-md rounded-2xl">
+          <DialogHeader className="space-y-6">
+            {/* Treater Profile Header */}
+            <div className="flex flex-col items-center text-center">
+              <div className="h-24 w-24 rounded-full overflow-hidden border-2 border-white shadow-md mb-3">
+                <ImageWithFallback
+                  src={selectedTreater?.user_profile_images?.[0]?.image_url}
+                  alt={selectedTreater?.display_name}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div>
+                <DialogTitle className="text-xl font-semibold">
+                  {selectedTreater?.display_name}
+                </DialogTitle>
+              </div>
+            </div>
+          </DialogHeader>
+          <div className="space-y-4 mt-2">
+            <textarea
+              value={initialMessage}
+              onChange={(e) => setInitialMessage(e.target.value)}
+              className="w-full h-32 p-3 text-sm border border-gray-200 rounded-lg focus:ring-primary focus:border-primary resize-none focus:outline-none"
+              placeholder="Type your message..."
+            />
+            <div className="flex items-center">
+              <Button
+                onClick={handleSendMessage}
+                className="bg-primary text-white w-full shadow-md"
+              >
+                Message
+                <SendIcon className="ml-2 h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

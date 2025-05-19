@@ -1,133 +1,102 @@
 import { useQuery } from "@tanstack/react-query";
 import { backOfficeSupabase } from "@/lib/supabase-bo";
-import { supabase } from "@/lib/supabase";
+import { useMenuPackages } from "./useMenuPackages";
 
-const getTreaterPurchases = async () => {
-  // FETCH ALL PURCHASES FROM PWA DATABASE ----------------------------------------
-  const { data: purchases, error: purchasesError } = await supabase
-    .from("purchases")
-    .select(
-      `*, 
-        purchase_items!inner (
-          *,
-          package_id
-        )
-      `
-    )
-    .order("created_at", { ascending: false });
+// Fetch purchase data for menu packages
+const fetchPurchaseData = async (menuPackageIds) => {
+  if (!menuPackageIds.length) return [];
 
-  if (purchasesError) throw new Error(purchasesError.message);
-
-  // FETCH MENU PACKAGES FROM BACK OFFICE DATABASE ----------------------------------------
-  const { data: menuPackages, error: menuError } = await backOfficeSupabase
-    .from("menu_packages")
-    .select(
-      `
+  const { data, error } = await backOfficeSupabase
+    .from("purchase_items")
+    .select(`
       *,
-      menu_images (*),
-      restaurant:restaurants!inner (
+      purchase:purchases (
         id,
-        name,
-        location,
-        address,
-        phone_number,
-        image_url,
-        cuisine_type,
-        food_category
+        created_at,
+        status,
+        treater:treater_profiles!inner (
+          id,
+          user_id,
+          full_name,
+          image_url
+        )
       )
-    `
-    )
-    .order("created_at", { ascending: false });
+    `)
+    .in("menu_package_id", menuPackageIds);
 
-  if (menuError) throw new Error(menuError.message);
+  if (error) throw new Error(error.message);
+  return data;
+};
 
-  // FETCH ALL PURCHASE INTERESTS ----------------------------------------
-  const { data: purchaseInterests, error: interestsError } = await supabase
-    .from("purchase_interests")
-    .select("*");
+// Fetch interest data for menu packages
+const fetchInterestData = async (menuPackageIds) => {
+  if (!menuPackageIds.length) return [];
 
-  if (interestsError) throw new Error(interestsError.message);
-
-  // FETCH ALL USER PROFILES OF THE TREATERS FOR THESE PURCHASES ----------------------------------------
-  const userIds = purchases.map((purchase) => purchase.user_id);
-
-  const { data: userProfiles, error: profilesError } = await supabase
-    .from("user_profiles")
-    .select(
-      `
+  const { data, error } = await backOfficeSupabase
+    .from("interests")
+    .select(`
       *,
-      user_profile_images!inner(
-        id, 
-        image_url,
-        is_primary,
-        position,
-        scale,
-        rotation,
-        order
+      treatee:treatee_profiles!inner (
+        id,
+        user_id,
+        full_name,
+        image_url
       )
-    `
-    )
-    .in("user_id", userIds);
+    `)
+    .in("menu_package_id", menuPackageIds);
 
-  if (profilesError) throw new Error(profilesError.message);
+  if (error) throw new Error(error.message);
+  return data;
+};
 
-  // GROUP PURCHASES BY MENU PACKAGES ----------------------------------------
-  const menuPackagesWithTreaters = menuPackages.map((menuPackage) => {
-    // Find all purchases for this menu package
-    const packagePurchases = purchases.filter((purchase) =>
-      purchase.purchase_items.some((item) => item.package_id === menuPackage.id)
-    );
-
-    // Collect all relevant purchase_items for this package
-    const purchaseItems = packagePurchases.flatMap((purchase) =>
-      purchase.purchase_items.filter(
-        (item) => item.package_id === menuPackage.id
-      )
-    );
-
-    // Get all treaters (user_profiles) for this package (deduplicated by user_id)
-    const uniqueTreaterIds = new Set();
-    const treaters = packagePurchases
-      .map((purchase) => {
-        const treaterProfile = userProfiles.find(
-          (profile) => profile.user_id === purchase.user_id
-        );
-        return treaterProfile;
-      })
-      .filter(Boolean)
-      .filter((treater) => {
-        if (uniqueTreaterIds.has(treater.user_id)) {
-          return false;
-        }
-        uniqueTreaterIds.add(treater.user_id);
-        return true;
-      });
-
-    // FILTER ALL INTERESTS FOR THIS PACKAGE'S PURCHASES & INCLUDE ONLY THAT INTEREST IF ITS PURCHASE HAS A PURCHASE_ITEM FOR THE CURRENT menuPackage.id
-    const relevantPurchaseIds = packagePurchases.map((p) => p.id); // This ensures you're only counting interests tied to that package and its specific purchases, avoiding shared-count bugs.
-
-    const interests = purchaseInterests.filter(
-      (interest) =>
-        interest.package_id === menuPackage.id &&
-        relevantPurchaseIds.includes(interest.purchase_id)
-    );
-
-    return {
-      ...menuPackage,
-      user_profiles: treaters,
-      purchase_interests: interests,
-      purchase_items: purchaseItems,
-    };
-  });
-
-  return menuPackagesWithTreaters;
+// Combine menu packages with purchase and interest data
+const combineData = (menuPackages, purchases, interests) => {
+  return menuPackages.map((menuPackage) => ({
+    ...menuPackage,
+    purchases: purchases.filter((p) => p.menu_package_id === menuPackage.id),
+    interests: interests.filter((i) => i.menu_package_id === menuPackage.id),
+  }));
 };
 
 export const useTreaterPurchases = () => {
-  return useQuery({
-    queryKey: ["menuPackagesWithTreaters"],
-    queryFn: getTreaterPurchases,
-    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
-    cacheTime: 1000 * 60 * 30, // Keep in cache for 30 minutes
+  const {
+    data: menuPackages,
+    error: menuError,
+    isLoading: menuLoading,
+    ...rest
+  } = useMenuPackages();
+
+  // Fetch purchase and interest data when menu packages are loaded
+  const { data: purchaseData, error: purchaseError } = useQuery({
+    queryKey: ["purchases", menuPackages?.map(mp => mp.id)],
+    queryFn: () => fetchPurchaseData(menuPackages?.map(mp => mp.id) || []),
+    enabled: !!menuPackages?.length,
+    staleTime: 1000 * 30, // 30 seconds - purchase data changes frequently
+    cacheTime: 1000 * 60 * 5, // 5 minutes - shorter cache time since it's more dynamic
+    refetchOnWindowFocus: true, // Refetch on focus to get latest purchase status
+    refetchOnMount: true, // Refetch when component mounts
+    refetchOnReconnect: true, // Refetch when reconnecting
   });
+
+  const { data: interestData, error: interestError } = useQuery({
+    queryKey: ["interests", menuPackages?.map(mp => mp.id)],
+    queryFn: () => fetchInterestData(menuPackages?.map(mp => mp.id) || []),
+    enabled: !!menuPackages?.length,
+    staleTime: 1000 * 30, // 30 seconds - interest data changes frequently
+    cacheTime: 1000 * 60 * 5, // 5 minutes - shorter cache time since it's more dynamic
+    refetchOnWindowFocus: true, // Refetch on focus to get latest interests
+    refetchOnMount: true, // Refetch when component mounts
+    refetchOnReconnect: true, // Refetch when reconnecting
+  });
+
+  const combinedData = menuPackages && purchaseData && interestData
+    ? combineData(menuPackages, purchaseData, interestData)
+    : [];
+
+  return {
+    data: combinedData,
+    error: menuError || purchaseError || interestError,
+    isLoading: menuLoading,
+    ...rest
+  };
 };

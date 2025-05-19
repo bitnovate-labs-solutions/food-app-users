@@ -1,6 +1,7 @@
 // FETCH RESTAURANTS + MENU PACKAGES + MENU IMAGES FROM BO DATABASE
 import { useQuery } from "@tanstack/react-query";
 import { backOfficeSupabase } from "@/lib/supabase-bo";
+import { useMenuPackages } from "./useMenuPackages";
 
 const fetchRestaurants = async () => {
   const { data, error } = await backOfficeSupabase
@@ -59,12 +60,48 @@ const fetchRestaurants = async () => {
   return data;
 };
 
-export const useRestaurantsBO = () => {
-  return useQuery({
-    queryKey: ["restaurantsBO"],
-    queryFn: fetchRestaurants,
-    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
-    cacheTime: 1000 * 60 * 30, // Keep in cache for 30 minutes
-    refetchOnWindowFocus: false,
+// Transform menu packages data to restaurant-centric view
+const transformToRestaurants = (menuPackages) => {
+  const restaurantsMap = new Map();
+
+  menuPackages.forEach((menuPackage) => {
+    const restaurant = menuPackage.restaurant;
+    if (!restaurantsMap.has(restaurant.id)) {
+      restaurantsMap.set(restaurant.id, {
+        ...restaurant,
+        menu_packages: []
+      });
+    }
+    restaurantsMap.get(restaurant.id).menu_packages.push({
+      id: menuPackage.id,
+      name: menuPackage.name,
+      description: menuPackage.description,
+      package_type: menuPackage.package_type,
+      price: menuPackage.price,
+      created_at: menuPackage.created_at,
+      menu_images: menuPackage.menu_images
+    });
   });
+
+  return Array.from(restaurantsMap.values());
+};
+
+export const useRestaurantsBO = () => {
+  const {
+    data: menuPackages,
+    error: menuError,
+    isLoading: menuLoading,
+    ...rest
+  } = useMenuPackages();
+
+  const restaurants = menuPackages 
+    ? transformToRestaurants(menuPackages)
+    : [];
+
+  return {
+    data: restaurants,
+    error: menuError,
+    isLoading: menuLoading,
+    ...rest
+  };
 };

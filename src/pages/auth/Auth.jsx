@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { registerSchema } from "@/lib/zod_schema";
+import { loginSchema, registerSchema } from "@/lib/zod_schema";
 import { toast } from "sonner";
 
 // COMPONENTS
@@ -17,22 +17,38 @@ import { FormInput } from "./components/FormInput";
 
 // ASSETS
 import Logo from "@/assets/tyd_logo.png";
+import { FormFieldError } from "@/components/common/FormFieldError";
 
-export default function Auth() {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const { signIn, signUp, resetPassword } = useAuth();
-  const [isLoading, setIsLoading] = useState(false);
-
+const Auth = ({ initialMode = "login" }) => {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [showResetPassword, setShowResetPassword] = useState(false);
   const [confirmedEmail, setConfirmedEmail] = useState("");
   const [isPasswordFocused, setIsPasswordFocused] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { signIn, signUp, resetPassword } = useAuth();
 
   const [activeTab, setActiveTab] = useState(() => {
-    const isConfirmation = location.pathname.includes("/auth/confirmation");
-    return isConfirmation ? "signup" : location.state?.mode || "login";
+    // First check location state for mode
+    if (location.state?.mode) {
+      return location.state.mode;
+    }
+    // Then check if we're on confirmation path
+    if (location.pathname.includes("/auth/confirmation")) {
+      return "signup";
+    }
+    // Finally fall back to initialMode prop
+    return initialMode;
   });
+
+  // Update activeTab when location state changes
+  useEffect(() => {
+    if (location.state?.mode) {
+      setActiveTab(location.state.mode);
+    }
+  }, [location.state]);
 
   // Show confirmation screen if we're on the confirmation path -------------------------
   useEffect(() => {
@@ -43,7 +59,9 @@ export default function Auth() {
 
   // FORM INITIALIZATION & VALIDATION -------------------------
   const form = useForm({
-    resolver: zodResolver(registerSchema),
+    resolver: zodResolver(
+      activeTab === "signup" ? registerSchema : loginSchema
+    ),
     defaultValues: {
       display_name: "",
       email: "",
@@ -52,7 +70,7 @@ export default function Auth() {
     },
   });
 
-  // HANDLE SUBMIT -------------------------
+  // HANDLE SUBMIT ============================================
   const handleSubmit = useCallback(
     async (data) => {
       if (form.formState.errors.password) {
@@ -78,6 +96,13 @@ export default function Auth() {
           });
         }
       } catch (error) {
+        if (activeTab === "login") {
+          form.setError("root", {
+            type: "manual",
+            message: "Incorrect email or password",
+          });
+        }
+
         toast.error("Error", {
           description: error.message,
         });
@@ -91,7 +116,7 @@ export default function Auth() {
   // HANDLE RESET PASSWORD -------------------------
   const handleResetPassword = async (e) => {
     e.preventDefault();
-    const email = form.getValues("email");
+    const email = form.getValues("email")?.trim();
     if (!email) {
       toast.error("Email Required", {
         description: "Please enter your email address",
@@ -109,7 +134,10 @@ export default function Auth() {
         description: "Check your email for password reset instructions",
       });
     } catch (error) {
-      toast.error("Error: User not found", error);
+      console.error("Reset password error:", error);
+      toast.error("Error", {
+        description: error?.message || "An unexpected error occurred",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -200,12 +228,6 @@ export default function Auth() {
               onBlur={() => setIsPasswordFocused(false)}
             />
 
-            {!isPasswordFocused && form.formState.errors.password && (
-              <p className="text-sm text-primary px-1">
-                {form.formState.errors.password.message}
-              </p>
-            )}
-
             {activeTab === "signup" && (
               <>
                 {/* CONFIRM PASSWORD INPUT ------------------------- */}
@@ -238,6 +260,9 @@ export default function Auth() {
               </>
             )}
 
+            {/* INCORRECT EMAIL OR PASSWORD ERROR TEXT ------------------------- */}
+            <FormFieldError form={form} name="root" className="text-center" />
+
             {/* 1 BUTTON, MULTIPLE LABELS (LOADING, LOGIN, or SIGN UP) ------------------------- */}
             <Button
               type="submit"
@@ -268,9 +293,11 @@ export default function Auth() {
           {/* SWITCH BETWEEN SIGN UP & LOG IN ------------------------- */}
           <div className="text-center">
             <button
-              onClick={() =>
-                setActiveTab(activeTab === "login" ? "signup" : "login")
-              }
+              onClick={() => {
+                const newTab = activeTab === "login" ? "signup" : "login";
+                setActiveTab(newTab);
+                navigate(`/auth/${newTab}`, { replace: true });
+              }}
               className="text-sm text-lightgray hover:underline"
             >
               {activeTab === "login"
@@ -282,4 +309,6 @@ export default function Auth() {
       </div>
     </div>
   );
-}
+};
+
+export default Auth;

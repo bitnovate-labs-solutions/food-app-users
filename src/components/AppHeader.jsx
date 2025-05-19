@@ -305,7 +305,7 @@ export default function AppHeader({
 
               {/* FILTERS -------------------- */}
               {!isHistoryTab && (
-                <div className="flex gap-2 overflow-x-auto pb-2 pl-4">
+                <div className="flex gap-2 overflow-x-auto pb-2 pl-4 no-scrollbar">
                   {/* SORT BY */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild className="h-7">

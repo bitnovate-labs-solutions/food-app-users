@@ -1,3 +1,10 @@
+// Checks if a user is authenticated
+// Checks if the user has a profile
+// Redirects to appropriate pages based on auth state:
+// - unauthenticated users -> /auth
+// - authenticated users without profile -> /create-profile
+// - authenticated users with profile -> their role-specific page (/treater or /treatee)
+
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";

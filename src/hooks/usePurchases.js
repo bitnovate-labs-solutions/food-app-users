@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { backOfficeSupabase } from "@/lib/supabase-bo";
 import { useQuery } from "@tanstack/react-query";
+import dayjs from "dayjs";
 
 const getPurchases = async () => {
   // Get the current user
@@ -19,16 +20,27 @@ const getPurchases = async () => {
         purchase_items!inner (
             *,
             package_id,
-            voucher_instances (*) 
+            voucher_instances (*),
+            expiry_date
         )
     `
     )
     .order("created_at", { ascending: false });
 
-  console.log("USER ID:", user.id);
-  console.log("PURCHASES:", purchases);
-
   if (purchasesError) throw new Error(purchasesError.message);
+
+  // Filter out expired purchases at the data level
+  const validPurchases = purchases.filter(purchase => {
+    const purchaseItem = purchase.purchase_items?.[0];
+    if (!purchaseItem) return false;
+    
+    const expiryDate = purchaseItem.expiry_date;
+    const isExpired = expiryDate && dayjs(expiryDate).isBefore(dayjs());
+    const hasUnusedVouchers = purchaseItem.voucher_instances?.some(v => !v.used);
+    
+    // Keep only purchases that are not expired and have unused vouchers
+    return !isExpired && hasUnusedVouchers;
+  });
 
   // Get all purchase interests
   const { data: purchaseInterests, error: interestsError } = await supabase
@@ -38,7 +50,7 @@ const getPurchases = async () => {
   if (interestsError) throw new Error(interestsError.message);
 
   // Then get all user profiles of the Treaters for these purchases
-  const userIds = purchases.map((purchase) => purchase.user_id);
+  const userIds = validPurchases.map((purchase) => purchase.user_id);
   const { data: userProfiles, error: profilesError } = await supabase
     .from("user_profiles")
     .select(
@@ -60,7 +72,7 @@ const getPurchases = async () => {
   if (profilesError) throw new Error(profilesError.message);
 
   // Get all menu packages from back office database
-  const packageIds = purchases.flatMap((purchase) =>
+  const packageIds = validPurchases.flatMap((purchase) =>
     purchase.purchase_items.map((item) => item.package_id)
   );
 
@@ -100,7 +112,7 @@ const getPurchases = async () => {
   }, {});
 
   // Group purchases by menu package
-  const groupedPurchases = purchases.reduce((acc, purchase) => {
+  const groupedPurchases = validPurchases.reduce((acc, purchase) => {
     purchase.purchase_items.forEach((item) => {
       const menuPackage = menuPackageMap[item.package_id];
       if (!menuPackage) return; // Skip if menu package not found

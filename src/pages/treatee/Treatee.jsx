@@ -1,38 +1,109 @@
 import { Suspense } from "react";
-// import { useLocation } from "react-router-dom";
 import { ErrorBoundary } from "react-error-boundary";
-
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { CardSkeleton } from "@/components/LoadingSkeleton";
 import AppErrorBoundary from "@/components/AppErrorBoundary";
-
-import Menu from "./subpages/Menu";
+import TreateeCard from "./components/TreateeCard";
+import { Search } from "lucide-react";
+import { useFilters } from "@/context/FilterContext";
+import { useTreaterPurchases } from "@/hooks/useTreaterPurchases";
+import LoadingComponent from "@/components/LoadingComponent";
+import ErrorComponent from "@/components/ErrorComponent";
 
 export default function Treatee() {
-  // const location = useLocation();
-  // const searchParams = new URLSearchParams(location.search);
-  // const activeTab = searchParams.get("tab") || "menu";
+  const { filters } = useFilters();
+  const { data: menuPackages, isLoading, error } = useTreaterPurchases();
 
-  // CODES FOR POTENTIAL FUTURE IMPLEMENTATION
-  // const renderContent = () => {
-  //   switch (activeTab) {
-  //     case "menu":
-  //       return <Menu />;
-  //     // case "booked":
-  //     //   return <Booked />;
-  //     default:
-  //       return <Menu />;
-  //   }
-  // };
+  console.log(menuPackages);
+
+  // LOADING AND ERROR HANDLERS
+  if (isLoading) return <LoadingComponent type="screen" text="Loading..." />;
+  if (error) return <ErrorComponent message={error.message} />;
+
+  // Filter the menu packages based on the current filters
+  const filteredItems = menuPackages?.filter((item) => {
+    // Filter by cuisine type
+    if (filters.cuisine && item.restaurant?.cuisine_type !== filters.cuisine) {
+      return false;
+    }
+
+    // Filter by category
+    if (
+      filters.category &&
+      item.restaurant?.food_category !== filters.category
+    ) {
+      return false;
+    }
+
+    return true;
+  });
+
+  // Sort the filtered items based on the sort filter
+  const sortedItems = filteredItems?.sort((a, b) => {
+    switch (filters.sort) {
+      case "newest":
+        return new Date(b.created_at) - new Date(a.created_at);
+      case "oldest":
+        return new Date(a.created_at) - new Date(b.created_at);
+      case "trending":
+        return b.likes - a.likes;
+      case "rating_high":
+        return b.rating - a.rating;
+      case "rating_low":
+        return a.rating - b.rating;
+      case "price_high":
+        return b.price - a.price;
+      case "price_low":
+        return a.price - b.price;
+      case "name_asc":
+        return a.name.localeCompare(b.name);
+      case "name_desc":
+        return b.name.localeCompare(a.name);
+      default:
+        return 0;
+    }
+  });
+
+  const renderContent = () => (
+    <div className="space-y-3 pb-22">
+      {sortedItems?.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-12 px-4">
+          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+            <Search className="w-8 h-8 text-primary" />
+          </div>
+          <h3 className="text-lg text-center font-semibold text-gray-900 mb-2">
+            {filters.category
+              ? `No ${filters.category} menu packages found`
+              : "No menu packages found"}
+          </h3>
+          <p className="text-sm text-gray-500 text-center max-w-sm">
+            {filters.category
+              ? "Try adjusting your filters or check back later for new menu packages in this category."
+              : "Try adjusting your filters or check back later for new menu packages."}
+          </p>
+        </div>
+      ) : (
+        // TREATEE CARD COMPONENT ====================================================
+        sortedItems?.map((item) => (
+          <TreateeCard
+            key={item.id}
+            item={item}
+            isLiked={false}
+            onLike={() => {}}
+            imageWidth={360}
+            imageHeight={240}
+            imageQuality={80}
+          />
+        ))
+      )}
+    </div>
+  );
 
   return (
     <ScrollArea>
       <div className="bg-transparent py-4">
         <ErrorBoundary FallbackComponent={AppErrorBoundary}>
-          <Suspense fallback={<CardSkeleton />}>
-            {/* {renderContent()} */}
-            <Menu />
-          </Suspense>
+          <Suspense fallback={<CardSkeleton />}>{renderContent()}</Suspense>
         </ErrorBoundary>
       </div>
     </ScrollArea>

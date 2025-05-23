@@ -43,19 +43,14 @@ export function useExploreMenuPackageStats(menuPackageId) {
             `)
             .eq("package_id", menuPackageId),
           
-          // 2. Get interests directly for this menu package
+          // 2. Get interests directly for this menu package without joining with purchases
           supabase
             .from("purchase_interests")
             .select(`
               id,
-              treatee_id,
-              purchase:purchases!inner (
-                purchase_items!inner (
-                  package_id
-                )
-              )
+              treatee_id
             `)
-            .eq("purchase.purchase_items.package_id", menuPackageId)
+            .eq("package_id", menuPackageId)
         ]);
 
         // Handle errors

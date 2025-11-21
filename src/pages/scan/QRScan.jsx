@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Html5Qrcode, Html5QrcodeScannerState } from "html5-qrcode";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { AlertCircle, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
@@ -14,6 +14,7 @@ const QRScan = () => {
   const isStarting = useRef(false);
   const isStopping = useRef(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const [error, setError] = useState(null);
   const [scanResult, setScanResult] = useState(null);
@@ -147,6 +148,44 @@ const QRScan = () => {
   const handleScanSuccessRef = useRef(null);
   const handleScanFailureRef = useRef(null);
 
+  // Stop all media tracks (iOS-specific fix)
+  // This function must be defined before useEffects that use it
+  const stopAllMediaTracks = useCallback(() => {
+    try {
+      // Get all video elements in the qr-reader container
+      const qrReaderElement = document.getElementById("qr-reader");
+      if (qrReaderElement) {
+        const videoElements = qrReaderElement.querySelectorAll("video");
+        videoElements.forEach((video) => {
+          if (video.srcObject) {
+            const stream = video.srcObject;
+            if (stream instanceof MediaStream) {
+              // Stop all tracks in the stream
+              stream.getTracks().forEach((track) => {
+                track.stop();
+                track.enabled = false;
+              });
+            }
+            // Clear the srcObject
+            video.srcObject = null;
+          }
+        });
+      }
+
+      // Also try to get all media tracks from navigator (fallback)
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        // This is a fallback - we've already stopped tracks above
+        // But we can also enumerate devices and stop any active tracks
+        navigator.mediaDevices.enumerateDevices().catch(() => {
+          // Ignore errors
+        });
+      }
+    } catch (error) {
+      // Ignore errors - tracks might already be stopped
+      console.warn("Error stopping media tracks:", error);
+    }
+  }, []);
+
   useEffect(() => {
     if (!user) {
       navigate("/auth");
@@ -165,6 +204,46 @@ const QRScan = () => {
     };
     // Only depend on user - startScanner is stable via useCallback
   }, [user, startScanner]);
+
+  // iOS-specific fix: Stop camera when navigating away
+  // This ensures the screen recording indicator disappears on iOS
+  useEffect(() => {
+    // Cleanup function
+    const cleanup = () => {
+      stopAllMediaTracks();
+      if (scannerRef.current) {
+        try {
+          scannerRef.current.stop().catch(() => {});
+          scannerRef.current.clear().catch(() => {});
+        } catch (error) {
+          // Ignore errors
+        }
+      }
+    };
+
+    // Handle visibility change (iOS Safari sometimes doesn't trigger unmount)
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        cleanup();
+      }
+    };
+
+    // Handle page unload
+    const handleBeforeUnload = () => {
+      cleanup();
+    };
+
+    // Add event listeners
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      // Cleanup on unmount or route change
+      cleanup();
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [location.pathname, stopAllMediaTracks]); // Re-run when route changes
 
   // STOP SCANNER
   const stopScanner = async () => {
@@ -196,6 +275,10 @@ const QRScan = () => {
       } catch (clearError) {
         // Ignore clear errors - scanner might already be cleared
       }
+
+      // CRITICAL: Stop all media tracks explicitly (iOS fix)
+      // This ensures the camera is fully released and screen recording indicator disappears
+      stopAllMediaTracks();
     } catch (error) {
       // Ignore stop errors if scanner is already stopped or in transition
     } finally {

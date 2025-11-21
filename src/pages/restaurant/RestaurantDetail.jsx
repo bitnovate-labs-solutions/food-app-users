@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import {
@@ -865,7 +865,7 @@ export default function RestaurantDetail() {
         {selectedVoucher && (
           <div className="flex flex-col h-full">
             {/* Image Section */}
-            {(() => {
+            {useMemo(() => {
               const getVoucherImageUrl = (imageUrl) => {
                 if (!imageUrl) return null;
                 if (
@@ -892,6 +892,8 @@ export default function RestaurantDetail() {
                       src={voucherImageUrl}
                       alt={selectedVoucher.title || "Voucher"}
                       className="w-full h-full object-cover"
+                      loading="eager"
+                      decoding="async"
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-gray-100">
@@ -900,7 +902,7 @@ export default function RestaurantDetail() {
                   )}
                 </div>
               );
-            })()}
+            }, [selectedVoucher.image_url, selectedVoucher.title])}
 
             {/* Voucher Details Section */}
             <div className="flex-1 bg-white px-6 py-6 space-y-4 overflow-y-auto">

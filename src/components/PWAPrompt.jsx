@@ -125,7 +125,7 @@ export function PWAPrompt() {
       <div className="flex flex-col gap-4">
         <div className="flex justify-between items-start">
           <div className="flex-1">
-            <h3 className="font-semibold text-primary">Install Food Hunter</h3>
+            <h1 className="font-semibold text-primary">Install Food Hunter</h1>
             <div className="flex flex-col justify-center space-y-2">
               {/* PROMPT FOR iOS --------------------------------- */}
               {isIOS ? (
@@ -147,7 +147,7 @@ export function PWAPrompt() {
               ) : (
                 // PROMPT FOR ANDROID / OTHER DEVICES ---------------------------------
                 <div className="text-xs text-gray-600 mt-2">
-                  <p>For best experience we recommend installing the app</p>
+                  <h3>For best experience we recommend installing the app</h3>
                   <Button
                     className="mt-4 w-full"
                     size="sm"

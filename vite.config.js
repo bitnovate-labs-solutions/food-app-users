@@ -22,8 +22,8 @@ export default defineConfig({
       },
       includeAssets: ["favicon.ico", "apple-touch-icon.png", "mask-icon.svg"],
       manifest: {
-        name: "TreatYourDate",
-        short_name: "TYD",
+        name: "Food Hunts",
+        short_name: "Food Hunts",
         description: "A platform to treat your date with the best deals.",
         theme_color: "#ffffff",
         background_color: "#ffffff",

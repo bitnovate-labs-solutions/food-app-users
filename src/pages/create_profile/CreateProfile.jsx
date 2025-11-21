@@ -273,7 +273,6 @@ export default function CreateProfile() {
             preferred_mode: data.preferred_mode,
             referral_code: referralCode,
             points_balance: 0,
-            total_points_earned: 0,
             status: 'active',
             ...appUsersUpdateData,
           })

@@ -147,9 +147,7 @@ export function PWAPrompt() {
               ) : (
                 // PROMPT FOR ANDROID / OTHER DEVICES ---------------------------------
                 <div className="text-xs text-gray-600 mt-2">
-                  <p>
-                    Install this app on your device for quick and easy access.
-                  </p>
+                  <p>For best experience we recommend installing the app</p>
                   <Button
                     className="mt-4 w-full"
                     size="sm"
@@ -158,16 +156,16 @@ export function PWAPrompt() {
                   >
                     <Download className="w-4 h-4 mr-2 text-white" />
                     <span className="text-white">
-                      {deferredPrompt
-                        ? "Install App"
-                        : "Installation not available"}
+                      {deferredPrompt ? "Install App" : "App already installed"}
                     </span>
                   </Button>
-                  {!deferredPrompt && installable && (
+
+                  {/* CODE FOR FUTURE USE ================ */}
+                  {/* {!deferredPrompt && installable && (
                     <p className="text-xs text-gray-500 mt-1">
-                      Try interacting with the page first
+                      Install this on your device for quick and easy access.
                     </p>
-                  )}
+                  )} */}
                 </div>
               )}
               <Button variant="ghost" size="sm" onClick={handleDismiss}>

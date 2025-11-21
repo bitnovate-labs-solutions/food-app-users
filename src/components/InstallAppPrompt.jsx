@@ -77,7 +77,7 @@ export function InstallAppPrompt({ onBeforeInstallPrompt }) {
     <div className="fixed bottom-20 left-4 right-4 bg-white p-4 rounded-lg shadow-lg border border-gray-200 z-50">
       <div className="flex justify-between items-start gap-4">
         <div className="flex-1">
-          <h3 className="font-semibold">Install TreatYourDate</h3>
+          <h3 className="font-semibold">Install Food Hunter</h3>
           {isIOS ? (
             <div className="text-sm text-gray-600">
               <p>To install this app:</p>

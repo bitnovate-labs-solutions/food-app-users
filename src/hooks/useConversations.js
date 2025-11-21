@@ -137,19 +137,13 @@ export const useConversations = (userId) => {
             *,
             treater:treater_id (
               id,
-              user_id,
-              display_name,
-              user_profile_images!inner (
-                image_url
-              )
+              profile_id,
+              display_name
             ),
             treatee:treatee_id (
               id,
-              user_id,
-              display_name,
-              user_profile_images!inner (
-                image_url
-              )
+              profile_id,
+              display_name
             ),
             messages (
               id,
@@ -193,13 +187,10 @@ export const useConversations = (userId) => {
           return {
             id: conv.id,
             name:
-              conv.treater.user_id === userId
+              conv.treater.profile_id === userId
                 ? conv.treatee.display_name
                 : conv.treater.display_name,
-            avatar:
-              conv.treater.user_id === userId
-                ? conv.treatee.user_profile_images[0]?.image_url
-                : conv.treater.user_profile_images[0]?.image_url,
+            avatar: null, // Profile images not available in current schema
             lastMessage: messages[messages.length - 1]?.content || "",
             unread: unreadCount,
             messages: messages,

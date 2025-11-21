@@ -1,507 +1,216 @@
 import { Suspense, useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
-import { useImageCache } from "@/hooks/useImageCache";
-import { formatDate } from "@/utils/formatDate";
 import { ErrorBoundary } from "react-error-boundary";
 import { ProfileSkeleton } from "@/components/LoadingSkeleton";
 import AppErrorBoundary from "@/components/AppErrorBoundary";
 
 // COMPONENTS
-import { Card, CardContent, CardTitle } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Card, CardContent } from "@/components/ui/card";
 import {
-  Mail,
-  Calendar,
-  Folder,
+  Settings,
   User,
-  GraduationCap,
-  MapPin,
-  Ruler,
-  Cigarette,
-  Wine,
-  PawPrint,
-  Baby,
-  Telescope,
-  Church,
-  Instagram,
-  Facebook,
-  Twitter,
-  Edit,
-  UserCircle2,
-  Phone,
+  ChevronRight,
+  MessageSquare,
+  LogOut,
 } from "lucide-react";
-import ImageViewerModal from "@/components/ImageViewerModal";
-
-// ASSETS
-// import defaultImage from "@/assets/images/default-avatar.jpg";
-import defaultImage from "@/assets/images/fallback_image.png";
+import FeedbackDrawer from "./components/FeedbackDrawer";
+import EditProfileDrawer from "./components/EditProfileDrawer";
+import SettingsDrawer from "./components/SettingsDrawer";
+import ViewProfileDrawer from "./components/ViewProfileDrawer";
 
 const UserProfile = () => {
-  const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
-  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const { data: profile, isLoading, error } = useUserProfile(user);
-  const navigate = useNavigate();
-  const location = useLocation();
+  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
+  const [isProfileDrawerOpen, setIsProfileDrawerOpen] = useState(false);
+  const [isEditProfileDrawerOpen, setIsEditProfileDrawerOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [imageLoadError, setImageLoadError] = useState(false);
 
-  // Scroll to top when navigating from edit profile =======================================================
+  // Reset image error when profile changes
   useEffect(() => {
-    if (location.state?.scrollToTop) {
-      window.scrollTo(0, 0);
+    const profileImageUrl =
+      profile?.profile?.profile_image_url || profile?.profile_image_url;
+    if (profileImageUrl) {
+      setImageLoadError(false);
     }
-  }, [location]);
-
-  // USE IMAGE CACHE =======================================================
-  const { cachedUrl, isImageLoaded } = useImageCache(
-    profile?.user_profile_images?.[0].image_url
-  );
+  }, [profile?.profile?.profile_image_url, profile?.profile_image_url]);
 
   // LOADING AND ERROR HANDLERS =======================================================
   if (isLoading) return <ProfileSkeleton />;
   if (error) return <AppErrorBoundary error={error} />;
 
-  // HANDLE PREVIOUS IMAGE =======================================================
-  const handlePreviousImage = () => {
-    setSelectedImageIndex((prev) => (prev > 0 ? prev - 1 : prev));
-  };
-
-  // HANDLE NEXT IMAGE =======================================================
-  const handleNextImage = () => {
-    setSelectedImageIndex((prev) =>
-      prev < (profile?.user_profile_images?.length || 0) - 1 ? prev + 1 : prev
-    );
-  };
-
-  // IMAGE VIEWER =======================================================
-  const openImageViewer = (index) => {
-    setSelectedImageIndex(index);
-    setIsImageViewerOpen(true);
+  // Handle sign out
+  const handleSignOut = async () => {
+    try {
+      // Remove all cached images
+      Object.keys(localStorage).forEach((key) => {
+        if (key.startsWith("img_cache_")) {
+          localStorage.removeItem(key);
+        }
+      });
+      await signOut();
+    } catch (error) {
+      console.error("Sign-out error:", error);
+    }
   };
 
   return (
-    <div>
-      <Card className="bg-white border-none rounded-none pb-20">
-        <CardContent className="space-y-4 p-3">
-          {/* HEADER TITLE */}
-          <CardTitle className="flex items-center gap-2 text-base font-medium text-gray-600 px-2 pt-2">
-            <UserCircle2 className="h-5 w-5 text-primary" />
-            Hi, {profile?.display_name || "User"}!
-          </CardTitle>
+    <div className="min-h-screen bg-white pb-20 no-scrollbar">
+      <div className="max-w-md mx-auto px-6 pt-5 space-y-4">
+        {/* USER PROFILE CARD */}
+        <Card
+          className="bg-white border-gray-100 shadow-lg rounded-3xl overflow-hidden cursor-pointer hover:shadow-xl transition-shadow"
+          onClick={() => setIsProfileDrawerOpen(true)}
+        >
+          <CardContent className="p-8 flex flex-col items-center">
+            {/* AVATAR */}
+            {(() => {
+              const profileImageUrl =
+                profile?.profile?.profile_image_url ||
+                profile?.profile_image_url;
+              return profileImageUrl && !imageLoadError ? (
+                <div className="w-24 h-24 rounded-full overflow-hidden mb-3">
+                  <img
+                    src={profileImageUrl}
+                    alt="Profile"
+                    className="w-full h-full object-cover"
+                    onError={() => {
+                      setImageLoadError(true);
+                    }}
+                  />
+                </div>
+              ) : (
+                <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center mb-3">
+                  <User className="w-12 h-12 text-gray-500" />
+                </div>
+              );
+            })()}
+            {/* NAME */}
+            <h2 className="text-2xl font-bold text-black font-heading">
+              {profile?.profile?.display_name ||
+                profile?.display_name ||
+                "User"}
+            </h2>
+          </CardContent>
+        </Card>
 
-          {/* CODE FOR FUTURE POTENTIAL USE ------------------------------------- */}
-          {/* 
-            <div className="flex justify-center">
-              <h6 className="text-center text-sm font-bold text-darkgray">
-                User ID:
-              </h6>
-              <span className="text-sm text-gray-400 ml-2">
-                {profile?.user_id.slice(0, 8)}
-              </span>
-            </div> */}
-          {/* ------------------------------------------------------------------- */}
-
-          {/* PROFILE IMAGE */}
-          <div className="h-[580px] w-full relative">
-            {/* IMAGE CONTAINER */}
-            <div className="w-full h-full overflow-hidden rounded-2xl">
-              <img
-                src={isImageLoaded ? cachedUrl || defaultImage : defaultImage}
-                alt="Profile"
-                className={`w-full h-full object-cover transition-opacity duration-300 ${
-                  isImageLoaded ? "opacity-100" : "opacity-50"
-                }`}
-                loading="eager"
-                decoding="async"
-                style={{
-                  objectPosition: `${
-                    profile?.user_profile_images?.[0]?.position?.x || 50
-                  }% ${profile?.user_profile_images?.[0]?.position?.y || 50}%`,
-                  transform: `scale(${
-                    profile?.user_profile_images?.[0]?.scale || 1
-                  }) rotate(${
-                    profile?.user_profile_images?.[0]?.rotation || 0
-                  }deg)`,
-                  transformOrigin: "center",
-                  transition: "transform 0.2s ease-out",
-                }}
-              />
+        {/* FEATURE CARDS ROW */}
+        {/* <div className="grid grid-cols-2 gap-4"> */}
+        {/* PAST TRIPS CARD */}
+        {/* <Card className="bg-white border-gray-200 shadow-sm rounded-2xl overflow-hidden cursor-pointer hover:shadow-md transition-shadow">
+            <CardContent className="p-0">
+              <div className="relative h-32 bg-gradient-to-br from-amber-50 to-amber-100 flex items-center justify-center">
+                <Luggage className="w-16 h-16 text-amber-700" />
+                <div className="absolute top-2 right-2 bg-blue-500 text-white text-xs font-semibold px-2 py-0.5 rounded-full">
+                  NEW
+                </div>
             </div>
+              <div className="p-4">
+                <p className="text-sm font-medium text-black">Past trips</p>
+              </div>
+            </CardContent>
+          </Card> */}
 
-            {/* IMAGE OVERLAY */}
-            <div className="absolute inset-0 rounded-2xl bg-gradient-to-t from-black/80 via-black/5 to-black/10" />
-
-            {/* USER NAME */}
-            <div className="flex absolute bottom-20 left-6 text-white text-2xl font-bold">
-              <p>{profile?.display_name || "Anonymous"}</p>
-              <span>,</span>
-              <p className="ml-2">{profile?.age || "?"}</p>
+        {/* CONNECTIONS CARD */}
+        {/* <Card className="bg-white border-gray-200 shadow-sm rounded-2xl overflow-hidden cursor-pointer hover:shadow-md transition-shadow">
+            <CardContent className="p-0">
+              <div className="relative h-32 bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center">
+                <Users className="w-16 h-16 text-blue-700" />
+                <div className="absolute top-2 right-2 bg-blue-500 text-white text-xs font-semibold px-2 py-0.5 rounded-full">
+                  NEW
+                </div>
+              </div>
+              <div className="p-4">
+                <p className="text-sm font-medium text-black">Connections</p>
             </div>
+            </CardContent>
+          </Card> */}
+        {/* </div> */}
 
-            <div className="flex absolute bottom-12 left-6">
-              {/* USER ROLE */}
-              <div
-                className={`px-3 py-0.5 rounded-full mr-2 ${
-                  profile?.role === "treater"
-                    ? "bg-blue-200 text-blue-800"
-                    : "bg-secondary text-primary"
-                }`}
-              >
-                <p className="text-sm capitalize">
-                  {profile?.role || "Not specified"}
-                </p>
+        {/* BECOME A HOST CARD */}
+        {/* <Card className="bg-white border-gray-200 shadow-sm rounded-2xl overflow-hidden cursor-pointer hover:shadow-md transition-shadow">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 bg-gradient-to-br from-red-50 to-red-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                <User className="w-10 h-10 text-red-700" />
               </div>
-
-              {/* USER LOCATION */}
-              <div className="flex gap-1 px-3 py-0.5 bg-emerald-100 rounded-full">
-                <MapPin className="text-emerald-900 w-4 h-4 mr-1 my-auto" />
-                <p className="text-emerald-900 text-sm capitalize">
-                  {profile?.location || "Not specified"}
-                </p>
-              </div>
-            </div>
-
-            {/* USER OCCUPATION */}
-            <div className="flex absolute bottom-5 left-6">
-              <div className="flex items-center">
-                <Folder className="w-4 h-4 mr-2 my-auto text-white" />
-              </div>
-              <p className="text-white text-sm capitalize">
-                {profile?.occupation || "Not specified"}
+              <div className="flex-1">
+                <h3 className="text-base font-bold text-black mb-1">
+                  Become a host
+                </h3>
+                <p className="text-sm text-gray-400">
+                  It&apos;s easy to start hosting and earn extra income.
               </p>
             </div>
-
-            {/* EDIT PROFILE BUTTON -------------------- */}
-            <div className="bg-white rounded-full absolute bottom-5 right-5 p-3 border-gray-100">
-              <Edit
-                className="h-4 w-4 text-primary"
-                onClick={() => navigate("/edit-profile")}
-              />
             </div>
+          </CardContent>
+        </Card> */}
+
+        {/* SETTINGS LINK ========================================================== */}
+        <div
+          className="flex items-center justify-between py-3 cursor-pointer hover:bg-gray-50 transition-colors rounded-lg"
+          onClick={() => setIsSettingsOpen(true)}
+        >
+          <div className="flex items-center gap-3">
+            <Settings className="w-5 h-5 text-gray-800" />
+            <span className="text-xs font-light text-gray-800 font-body">
+              Settings
+            </span>
           </div>
+          <ChevronRight className="w-5 h-5 text-gray-400" />
+        </div>
 
-          {/* PHOTOS SECTION */}
-          {profile?.user_profile_images?.length > 1 && (
-            <Card className="bg-white border-gray-200 shadow-sm mt-4">
-              <CardContent className="p-3">
-                <h3 className="text-base font-semibold mb-4 px-2">Photos</h3>
-                <div className="grid grid-cols-3 gap-3">
-                  {profile.user_profile_images
-                    .filter((img) => !img.is_primary)
-                    .sort((a, b) => a.order - b.order)
-                    .map((image, index) => (
-                      <div
-                        key={index}
-                        className="relative w-full pb-[100%] cursor-pointer overflow-hidden"
-                        onClick={() => openImageViewer(index + 1)}
-                      >
-                        <img
-                          src={image.image_url}
-                          alt={`Additional photo ${index + 1}`}
-                          className="absolute inset-0 w-full h-full rounded-lg object-cover border border-gray-200 shadow-sm transition-all hover:shadow-md hover:scale-[0.98]"
-                        />
-                      </div>
-                    ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+        {/* DIVIDER */}
+        <div className="border-t border-gray-200"></div>
 
-          <div className="space-y-4">
-            {/* ABOUT ME SECTION -------------------- */}
-            <Card className="bg-white border-gray-200 shadow-sm">
-              <CardContent className="p-6">
-                <h3 className="text-base font-semibold mb-4">About Me</h3>
-                <p className="text-sm text-darkgray">
-                  {profile?.about_me || "No description added yet"}
-                </p>
-              </CardContent>
-            </Card>
-
-            {/* MY DETAILS SECTION -------------------- */}
-            <Card className="bg-white border-gray-200 shadow-sm">
-              <CardContent className="p-6">
-                <h3 className="text-base font-semibold mb-4">My Details</h3>
-                <div className="space-y-4">
-                  {/* Email */}
-                  <div className="flex justify-between items-center py-1">
-                    <div className="flex items-center">
-                      <Mail className="w-4 h-4 mr-3 my-auto text-darkgray" />
-                      <span className="text-sm font-medium text-darkgray">
-                        Email
-                      </span>
-                    </div>
-                    <p className="text-sm text-lightgray text-right">
-                      {user?.email || "Not provided"}
-                    </p>
-                  </div>
-
-                  {/* Phone Number */}
-                  <div className="flex justify-between items-center py-1">
-                    <div className="flex items-center">
-                      <Phone className="w-4 h-4 mr-3 my-auto text-darkgray" />
-                      <span className="text-sm font-medium text-darkgray">
-                        Phone
-                      </span>
-                    </div>
-                    <p className="text-sm text-lightgray text-right">
-                      {profile?.phone_number || "Not provided"}
-                    </p>
-                  </div>
-
-                  {/* Gender & Pronouns */}
-                  <div className="flex justify-between items-center py-1">
-                    <div className="flex items-center">
-                      <User className="w-4 h-4 mr-3 my-auto text-darkgray" />
-                      <span className="text-sm font-medium text-darkgray">
-                        Gender
-                      </span>
-                    </div>
-                    <p className="text-sm text-lightgray text-right capitalize">
-                      {profile?.gender || "Not specified"}
-                    </p>
-                  </div>
-
-                  {/* Education */}
-                  <div className="flex justify-between items-center py-1">
-                    <div className="flex items-center">
-                      <GraduationCap className="w-4 h-4 mr-3 text-darkgray" />
-                      <span className="text-sm font-medium text-darkgray">
-                        Education
-                      </span>
-                    </div>
-                    <p className="text-sm text-lightgray text-right capitalize">
-                      {profile?.education || "Not specified"}
-                    </p>
-                  </div>
-
-                  {/* Height */}
-                  <div className="flex justify-between items-center py-1">
-                    <div className="flex items-center">
-                      <Ruler className="w-4 h-4 mr-3 my-auto text-darkgray" />
-                      <span className="text-sm font-medium text-darkgray">
-                        Height
-                      </span>
-                    </div>
-                    <p className="text-sm text-lightgray text-right">
-                      {profile?.height
-                        ? `${profile.height} cm`
-                        : "Not specified"}
-                    </p>
-                  </div>
-
-                  {/* Smoking */}
-                  <div className="flex justify-between items-center py-1">
-                    <div className="flex items-center">
-                      <Cigarette className="w-4 h-4 mr-3 my-auto text-darkgray" />
-                      <span className="text-sm font-medium text-darkgray">
-                        Smoking
-                      </span>
-                    </div>
-                    <p className="text-sm text-lightgray text-right capitalize">
-                      {profile?.smoking || "Not specified"}
-                    </p>
-                  </div>
-
-                  {/* Drinking */}
-                  <div className="flex justify-between items-center py-1">
-                    <div className="flex items-center">
-                      <Wine className="w-4 h-4 mr-3 my-auto text-darkgray" />
-                      <span className="text-sm font-medium text-darkgray">
-                        Drinking
-                      </span>
-                    </div>
-                    <p className="text-sm text-lightgray text-right capitalize">
-                      {profile?.drinking || "Not specified"}
-                    </p>
-                  </div>
-
-                  {/* Pets */}
-                  <div className="flex justify-between items-center py-1">
-                    <div className="flex items-center">
-                      <PawPrint className="w-4 h-4 mr-3 my-auto text-darkgray" />
-                      <span className="text-sm font-medium text-darkgray">
-                        Pets
-                      </span>
-                    </div>
-                    <p className="text-sm text-lightgray text-right capitalize">
-                      {profile?.pets || "Not specified"}
-                    </p>
-                  </div>
-
-                  {/* Children */}
-                  <div className="flex justify-between items-center py-1">
-                    <div className="flex items-center">
-                      <Baby className="w-4 h-4 mr-3 my-auto text-darkgray" />
-                      <span className="text-sm font-medium text-darkgray">
-                        Children
-                      </span>
-                    </div>
-                    <p className="text-sm text-lightgray text-right capitalize">
-                      {profile?.children || "Not specified"}
-                    </p>
-                  </div>
-
-                  {/* Zodiac Sign */}
-                  <div className="flex justify-between items-center py-1">
-                    <div className="flex items-center">
-                      <Telescope className="w-4 h-4 mr-3 my-auto text-darkgray" />
-                      <span className="text-sm font-medium text-darkgray">
-                        Zodiac Sign
-                      </span>
-                    </div>
-                    <p className="text-sm text-lightgray text-right capitalize">
-                      {profile?.zodiac || "Not specified"}
-                    </p>
-                  </div>
-
-                  {/* Religion */}
-                  <div className="flex justify-between items-center py-1">
-                    <div className="flex items-center">
-                      <Church className="w-4 h-4 mr-3 my-auto text-darkgray" />
-                      <span className="text-sm font-medium text-darkgray">
-                        Religion
-                      </span>
-                    </div>
-                    <p className="text-sm text-lightgray text-right capitalize">
-                      {profile?.religion || "Not specified"}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* NOTIFICATION SETTINGS SECTION -------------------- */}
-            {/* <NotificationRequest /> !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! */}
-
-            {/* INTERESTS SECTION -------------------- */}
-            <Card className="bg-white border-gray-200 shadow-sm">
-              <CardContent className="p-6">
-                <h3 className="text-base font-semibold mb-4">I enjoy</h3>
-                {/* INTERESTS CAPSULES */}
-                {profile?.interests && profile.interests.length > 0 ? (
-                  <div className="flex flex-wrap gap-2">
-                    {profile?.interests.map((interest) => (
-                      <div
-                        key={interest}
-                        className="flex items-center gap-2 bg-primary/80 rounded-full py-1 px-3"
-                      >
-                        <span className="text-xs text-white">{interest}</span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground text-lightgray">
-                    No interests added yet
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* LANGUAGES SECTION -------------------- */}
-            <Card className="bg-white border-gray-200 shadow-sm">
-              <CardContent className="p-6">
-                <h3 className="text-base font-semibold mb-4">
-                  I communicate in
-                </h3>
-                {/* LANGUAGE CAPSULES */}
-                {profile?.languages && profile.languages.length > 0 ? (
-                  <div className="flex flex-wrap gap-2">
-                    {profile?.languages.map((language) => (
-                      <div
-                        key={language}
-                        className="flex items-center gap-2 bg-primary/80 rounded-full py-1 px-3"
-                      >
-                        <span className="text-xs text-white">{language}</span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground text-lightgray">
-                    No languages added yet
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* SOCIAL LINKS SECTION -------------------- */}
-            <Card className="bg-white border-gray-200 shadow-sm">
-              <CardContent className="p-6">
-                <h3 className="text-base font-semibold mb-4">
-                  Linked accounts
-                </h3>
-                <div className="space-y-4">
-                  {/* IG */}
-                  <div className="flex justify-between items-center py-1">
-                    <div className="flex items-center">
-                      <Instagram className="w-4 h-4 mr-3 my-auto text-darkgray" />
-                      <span className="text-sm font-medium text-darkgray">
-                        Instagram
-                      </span>
-                    </div>
-                    <p className="text-sm text-lightgray text-right">
-                      {profile?.social_links?.instagram || "Not linked"}
-                    </p>
-                  </div>
-
-                  {/* FB */}
-                  <div className="flex justify-between items-center py-1">
-                    <div className="flex items-center">
-                      <Facebook className="w-4 h-4 mr-3 my-auto text-darkgray" />
-                      <span className="text-sm font-medium text-darkgray">
-                        Facebook
-                      </span>
-                    </div>
-                    <p className="text-sm text-lightgray text-right">
-                      {profile?.social_links?.facebook || "Not linked"}
-                    </p>
-                  </div>
-
-                  {/* TWITTER */}
-                  <div className="flex justify-between items-center py-1">
-                    <div className="flex items-center">
-                      <Twitter className="w-4 h-4 mr-3 my-auto text-darkgray" />
-                      <span className="text-sm font-medium text-darkgray">
-                        Twitter
-                      </span>
-                    </div>
-                    <p className="text-sm text-lightgray text-right">
-                      {profile?.social_links?.twitter || "Not linked"}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* MEMBER SINCE -------------------- */}
-            <Card className="bg-white border-gray-200 shadow-sm">
-              <CardContent className="p-6">
-                <h3 className="text-base font-semibold mb-4">Member Since</h3>
-                <p className="text-sm text-darkgray flex items-center gap-2">
-                  <Calendar className="w-4 h-4" />
-                  <span>{formatDate(profile?.created_at)}</span>
-                </p>
-              </CardContent>
-            </Card>
+        {/* FEEDBACK LINK ========================================================== */}
+        <div
+          className="flex items-center justify-between py-3 cursor-pointer hover:bg-gray-50 transition-colors rounded-lg"
+          onClick={() => setIsFeedbackOpen(true)}
+        >
+          <div className="flex items-center gap-3">
+            <MessageSquare className="w-5 h-5 text-gray-800" />
+            <span className="text-xs font-light text-gray-800 font-body">
+              Feedback
+            </span>
           </div>
-        </CardContent>
-      </Card>
+          <ChevronRight className="w-5 h-5 text-gray-400" />
+        </div>
 
-      {/* Image Viewer Modal */}
-      <ImageViewerModal
-        isOpen={isImageViewerOpen}
-        onClose={() => setIsImageViewerOpen(false)}
-        images={profile?.user_profile_images?.map((img) => img.image_url) || []}
-        currentImageIndex={selectedImageIndex}
-        onPrevious={handlePreviousImage}
-        onNext={handleNextImage}
-        imageTransforms={profile?.user_profile_images?.map((img) => ({
-          position: img.position,
-          scale: img.scale,
-          rotation: img.rotation,
-        }))}
+        {/* LOG OUT LINK ========================================================== */}
+        <div
+          className="flex items-center justify-between py-3 cursor-pointer hover:bg-gray-50 transition-colors rounded-lg"
+          onClick={handleSignOut}
+        >
+          <div className="flex items-center gap-3">
+            <LogOut className="w-5 h-5 text-gray-800" />
+            <span className="text-xs font-light text-gray-800 font-body">
+              Log out
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* FEEDBACK DRAWER */}
+      <FeedbackDrawer open={isFeedbackOpen} onOpenChange={setIsFeedbackOpen} />
+
+      {/* SETTINGS DRAWER */}
+      <SettingsDrawer open={isSettingsOpen} onOpenChange={setIsSettingsOpen} />
+
+      {/* EDIT PROFILE DRAWER */}
+      <EditProfileDrawer
+        open={isEditProfileDrawerOpen}
+        onOpenChange={setIsEditProfileDrawerOpen}
+      />
+
+      {/* VIEW PROFILE DRAWER */}
+      <ViewProfileDrawer
+        open={isProfileDrawerOpen}
+        onClose={() => setIsProfileDrawerOpen(false)}
+        onEditClick={() => setIsEditProfileDrawerOpen(true)}
+        profile={profile}
       />
     </div>
   );
@@ -509,12 +218,10 @@ const UserProfile = () => {
 
 export default function Profile() {
   return (
-    <ScrollArea>
-      <ErrorBoundary FallbackComponent={AppErrorBoundary}>
-        <Suspense fallback={<ProfileSkeleton />}>
-          <UserProfile />
-        </Suspense>
-      </ErrorBoundary>
-    </ScrollArea>
+    <ErrorBoundary FallbackComponent={AppErrorBoundary}>
+      <Suspense fallback={<ProfileSkeleton />}>
+        <UserProfile />
+      </Suspense>
+    </ErrorBoundary>
   );
 }

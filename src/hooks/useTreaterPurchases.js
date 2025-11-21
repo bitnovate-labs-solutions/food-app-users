@@ -43,27 +43,35 @@ const fetchPurchaseInterests = async () => {
 const fetchUserProfiles = async (userIds) => {
   if (!userIds.length) return [];
 
-  const { data, error } = await supabase
-    .from("user_profiles")
-    .select(
-      `
-      *,
-      user_profile_images!inner(
-        id, 
-        image_url,
-        is_primary,
-        position,
-        scale,
-        rotation,
-        order
-      )
-    `
-    )
-    .in("user_id", userIds);
+  // purchases.user_id references profiles.id (which equals auth.users.id)
+  // Get app_users records
+  const { data: appUsers, error: appUsersError } = await supabase
+    .from("app_users")
+    .select("*")
+    .in("profile_id", userIds);
 
-  if (error) throw new Error(`Failed to fetch user profiles: ${error.message}`);
-  if (!data) throw new Error("No user profiles data received");
-  return data;
+  if (appUsersError) throw new Error(`Failed to fetch app_users: ${appUsersError.message}`);
+  if (!appUsers) throw new Error("No app_users data received");
+
+  // Get profiles to get display_name
+  const { data: profiles, error: profilesError } = await supabase
+    .from("profiles")
+    .select("id, display_name, email, phone_number, profile_image_url")
+    .in("id", userIds);
+
+  if (profilesError) throw new Error(`Failed to fetch profiles: ${profilesError.message}`);
+
+  // Merge app_users with profiles data
+  return (appUsers || []).map(appUser => {
+    const profile = (profiles || []).find(p => p.id === appUser.profile_id);
+    return {
+      ...appUser,
+      display_name: profile?.display_name,
+      email: profile?.email,
+      phone_number: profile?.phone_number,
+      profile_image_url: profile?.profile_image_url,
+    };
+  });
 };
 
 // Main data fetching function with parallel queries
@@ -82,8 +90,9 @@ const getTreaterPurchases = async (menuPackages) => {
     const userProfiles = await fetchUserProfiles(userIds);
 
     // Create optimized lookup maps
+    // Map by profile_id since purchases.user_id references profiles.id
     const userProfilesMap = new Map(
-      userProfiles.map((profile) => [profile.user_id, profile])
+      userProfiles.map((profile) => [profile.profile_id, profile])
     );
 
     // Create a map of purchase items by package_id for faster lookups
@@ -139,8 +148,8 @@ const getTreaterPurchases = async (menuPackages) => {
         .map((item) => userProfilesMap.get(item.purchase.user_id))
         .filter(Boolean)
         .filter((treater) => {
-          if (uniqueTreaterIds.has(treater.user_id)) return false;
-          uniqueTreaterIds.add(treater.user_id);
+          if (uniqueTreaterIds.has(treater.profile_id)) return false;
+          uniqueTreaterIds.add(treater.profile_id);
           return true;
         });
 

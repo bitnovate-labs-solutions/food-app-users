@@ -1,6 +1,5 @@
 import { getCurrentUserProfile } from "@/lib/getUserProfile";
 import { supabase } from "@/lib/supabase";
-import { backOfficeSupabase } from "@/lib/supabase-bo";
 import { useQuery } from "@tanstack/react-query";
 import dayjs from "dayjs";
 
@@ -10,22 +9,23 @@ export const getRedeemedVouchersWithMenu = async () => {
   if (!profile) throw new Error("User not authenticated");
 
   // Fetch both in parallel
-  const [menuPackagesResult, voucherInstancesResult] = await Promise.all([
-    backOfficeSupabase
-      .from("menu_packages")
+  const [menuItemsResult, voucherInstancesResult] = await Promise.all([
+    supabase
+      .from("menu_items")
       .select(
         `
         *,
-        menu_images (*),
         restaurant:restaurants!inner (
           id,
           name,
-          location,
           address,
+          hours,
           phone_number,
           image_url,
           cuisine_type,
-          food_category
+          food_category,
+          latitude,
+          longitude
         )
       `
       )
@@ -48,19 +48,20 @@ export const getRedeemedVouchersWithMenu = async () => {
       .order("redeemed_at", { ascending: false }),
   ]);
 
-  const { data: menuPackages, error: menuError } = menuPackagesResult;
+  const { data: menuItems, error: menuError } = menuItemsResult;
   const { data: vouchers, error: voucherError } = voucherInstancesResult;
 
   if (menuError) throw new Error(menuError.message);
   if (voucherError) throw new Error(voucherError.message);
 
-  // Merge: attach full menu_package to each voucher using purchase_items.package_id
+  // Merge: attach full menu_item to each voucher using purchase_items.package_id
   const enrichedVouchers = vouchers.map((voucher) => {
     const packageId = voucher.purchase_item_id?.package_id;
-    const matchedPackage = menuPackages.find((pkg) => pkg.id === packageId);
+    const matchedItem = menuItems.find((item) => item.id === packageId);
     return {
       ...voucher,
-      menu_package: matchedPackage || null,
+      menu_item: matchedItem || null,
+      menu_package: matchedItem || null, // Keep for backward compatibility
       expiry_date: voucher.purchase_item_id?.expiry_date,
     };
   });

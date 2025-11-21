@@ -14,34 +14,41 @@ export function useUserProfile(authUser) {
   const fetchProfile = async () => {
     if (!authUser?.id) return null;
 
-    const { data, error } = await supabase
-      .from("user_profiles")
-      .select(
-        `
-        *,
-          user_profile_images!inner(
-          id, 
-          image_url,
-          is_primary,
-          position,
-          scale,
-          rotation,
-          order
-        )
-        `
-      )
-      .eq("user_id", authUser.id)
+    // Get app_users record
+    const { data: appUserData, error: appUserError } = await supabase
+      .from("app_users")
+      .select("*")
+      .eq("profile_id", authUser.id)
       .single();
 
-    if (error) {
+    if (appUserError) {
       // PGRST116 means no profile found - this is expected for new users
-      if (error.code === "PGRST116") {
-        console.log("No profile found for new user");
+      if (appUserError.code === "PGRST116") {
+        console.log("No app_users record found for new user");
         return null;
       }
-      console.error("Profile fetch error:", error);
-      throw error;
+      console.error("Profile fetch error:", appUserError);
+      throw appUserError;
     }
+
+    // Get profile data from profiles table
+    const { data: profileData, error: profileError } = await supabase
+      .from("profiles")
+      .select("id, display_name, email, phone_number, profile_image_url")
+      .eq("id", authUser.id)
+      .single();
+
+    // If profile doesn't exist in profiles table, it's okay - we'll still return app_users data
+    // profileError with code PGRST116 means no rows found, which is acceptable
+    if (profileError && profileError.code !== "PGRST116") {
+      console.error("Error fetching profile from profiles table:", profileError);
+    }
+
+    // Combine the data - always include profile data if available
+    const data = {
+      ...appUserData,
+      profile: profileError && profileError.code === "PGRST116" ? null : profileData,
+    };
 
     return data;
   };

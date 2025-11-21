@@ -12,6 +12,7 @@ const ImageWithFallback = ({
   width,
   height,
   quality = 80,
+  fill, // Extract fill prop to prevent it from being passed to img
   ...props 
 }) => {
   const [error, setError] = useState(false);

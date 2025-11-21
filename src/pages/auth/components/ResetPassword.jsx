@@ -12,7 +12,7 @@ import { Lock } from "lucide-react";
 import { toast } from "sonner";
 
 // ASSETS
-import Logo from "@/assets/tyd_logo.png";
+import Logo from "@/assets/logos/logo1.png";
 
 export default function ResetPassword() {
   const navigate = useNavigate();

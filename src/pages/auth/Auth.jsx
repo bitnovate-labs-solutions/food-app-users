@@ -1,10 +1,12 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { useUserProfile } from "@/hooks/useUserProfile";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { loginSchema, registerSchema } from "@/lib/zod_schema";
 import { toast } from "sonner";
+import { supabase } from "@/lib/supabase";
 
 // COMPONENTS
 import { Button } from "@/components/ui/button";
@@ -16,19 +18,32 @@ import {
 import { FormInput } from "./components/FormInput";
 
 // ASSETS
-import Logo from "@/assets/tyd_logo.png";
+import Logo from "@/assets/logos/logo1.png";
 import { FormFieldError } from "@/components/common/FormFieldError";
 
 const Auth = ({ initialMode = "login" }) => {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [showResetPassword, setShowResetPassword] = useState(false);
   const [confirmedEmail, setConfirmedEmail] = useState("");
-  const [isPasswordFocused, setIsPasswordFocused] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const location = useLocation();
   const navigate = useNavigate();
-  const { signIn, signUp, resetPassword } = useAuth();
+  const { user, signIn, signUp, resetPassword } = useAuth();
+  const { data: profile, isLoading: isProfileLoading } = useUserProfile(user);
+
+  // Redirect authenticated users away from auth pages
+  useEffect(() => {
+    if (user && !isProfileLoading) {
+      if (!profile) {
+        // User is authenticated but no profile, redirect to create-profile
+        navigate("/create-profile", { replace: true });
+      } else {
+        // User is authenticated and has profile, redirect to home
+        navigate("/home", { replace: true });
+      }
+    }
+  }, [user, profile, isProfileLoading, navigate]);
 
   const [activeTab, setActiveTab] = useState(() => {
     // First check location state for mode
@@ -38,6 +53,11 @@ const Auth = ({ initialMode = "login" }) => {
     // Then check if we're on confirmation path
     if (location.pathname.includes("/auth/confirmation")) {
       return "signup";
+    }
+    // Check if user is existing (from localStorage) - show sign in by default
+    const isExistingUser = localStorage.getItem("isExistingUser") === "true";
+    if (isExistingUser) {
+      return "login";
     }
     // Finally fall back to initialMode prop
     return initialMode;
@@ -97,15 +117,49 @@ const Auth = ({ initialMode = "login" }) => {
         }
       } catch (error) {
         if (activeTab === "login") {
-          form.setError("root", {
-            type: "manual",
-            message: "Incorrect email or password",
+          // Check if email exists to show appropriate error message
+          try {
+            const { data: emailExists, error: checkError } = await supabase.rpc(
+              "check_email_exists",
+              { check_email: data.email }
+            );
+
+            // If email check succeeded and email doesn't exist
+            if (!checkError && emailExists === false) {
+              form.setError("root", {
+                type: "manual",
+                message: "No account found with this email",
+              });
+              toast.error("Account not found", {
+                description: "Please sign up to create an account.",
+              });
+            } else {
+              // Email exists but password is wrong, or check failed (default to generic message)
+              form.setError("root", {
+                type: "manual",
+                message: "Incorrect email or password",
+              });
+              toast.error("Error", {
+                description: error.message,
+              });
+            }
+          } catch (checkErr) {
+            // If email check fails, show generic error
+            console.error("Error checking email:", checkErr);
+            form.setError("root", {
+              type: "manual",
+              message: "Incorrect email or password",
+            });
+            toast.error("Error", {
+              description: error.message,
+            });
+          }
+        } else {
+          // Sign up error
+          toast.error("Error", {
+            description: error.message,
           });
         }
-
-        toast.error("Error", {
-          description: error.message,
-        });
       } finally {
         setIsLoading(false);
       }
@@ -190,7 +244,7 @@ const Auth = ({ initialMode = "login" }) => {
             <p className="text-lightgray text-sm">
               {activeTab === "login"
                 ? "Great to see you again! Ready to continue your journey?"
-                : "Create an account to start sharing and discovering amazing treats"}
+                : "Create an account to start discovering delicious food spots and sharing your favourite treats."}
             </p>
           </div>
 
@@ -224,8 +278,6 @@ const Auth = ({ initialMode = "login" }) => {
               placeholder="Password"
               type="password"
               form={form}
-              onFocus={() => setIsPasswordFocused(true)}
-              onBlur={() => setIsPasswordFocused(false)}
             />
 
             {activeTab === "signup" && (

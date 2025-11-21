@@ -8,9 +8,9 @@ import { toast } from "sonner";
 // Helper function to fetch a single user profile
 const fetchUserProfile = async (userId) => {
   const { data, error } = await supabase
-    .from("user_profiles")
+    .from("app_users")
     .select("id")
-    .eq("user_id", userId) // takes a userId as input
+    .eq("profile_id", userId) // takes a userId as input (which is profile.id = auth.users.id)
     .single();
 
   if (error) {

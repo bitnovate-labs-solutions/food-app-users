@@ -70,7 +70,7 @@ export function useExploreMenuPackageStats(menuPackageId) {
           treaterUserIds.length > 0
             ? supabase
                 .from("explore_card_stats")
-                .select("user_id, user_profile_images")
+                .select("user_id")
                 .in("user_id", treaterUserIds)
             : { data: [], error: null },
           
@@ -78,7 +78,7 @@ export function useExploreMenuPackageStats(menuPackageId) {
           treateeIds.length > 0
             ? supabase
                 .from("explore_card_stats")
-                .select("id, user_profile_images")
+                .select("id")
                 .in("id", treateeIds)
             : { data: [], error: null }
         ]);
@@ -112,7 +112,7 @@ export function useExploreMenuPackageStats(menuPackageId) {
     const seen = new Map();
     profiles.forEach((p) => {
       const key = p.user_id || p.id;
-      const avatar = p.user_profile_images?.[0]?.image_url;
+      const avatar = null; // Profile images not available in current schema
       if (avatar && !seen.has(key)) {
         seen.set(key, { id: key, image_url: avatar });
       }
@@ -123,12 +123,16 @@ export function useExploreMenuPackageStats(menuPackageId) {
   // Combine all data
   const combinedData = menuPackage && statsData
     ? {
-        // Menu package details
-        menu_package_id: menuPackage.id,
-        package_name: menuPackage.name,
+        // Menu item details
+        menu_item_id: menuPackage.id,
+        menu_package_id: menuPackage.id, // Keep for backward compatibility
+        item_name: menuPackage.name,
+        package_name: menuPackage.name, // Keep for backward compatibility
         price: menuPackage.price,
-        package_type: menuPackage.package_type,
+        image_url: menuPackage.image_url,
+        is_available: menuPackage.is_available,
         created_at: menuPackage.created_at,
+        category: menuPackage.category,
         
         // Restaurant details
         restaurant_id: menuPackage.restaurant.id,

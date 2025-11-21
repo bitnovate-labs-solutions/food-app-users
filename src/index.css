@@ -1,9 +1,98 @@
 @import "tailwindcss";
+@import "./assets/fonts/fonts.css";
+
+:root {
+  /* System font fallback (original default) */
+  --app-font-system: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
+    "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+
+  /* Custom fonts - change these to test different fonts */
+  /* --app-font-body: "YouBlockhead", var(--app-font-system);
+  --app-font-heading: "YouBlockheadOpen", var(--app-font-system); */
+
+  /* To fallback to system fonts, uncomment these and comment the custom fonts above: */
+  --app-font-body: var(--app-font-system);
+  --app-font-heading: var(--app-font-system);
+}
+
+html {
+  overflow-y: auto;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+html::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
+}
 
 body {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  overflow-y: auto;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+  font-family: var(--app-font-body);
+}
+
+body::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
+}
+
+/* Custom animations for CreateProfile */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.6s ease-out;
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.6s ease-out;
+}
+
+/* Sheet slide animations */
+@keyframes slide-in-from-right {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-out-to-right {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+.slide-in-from-right {
+  animation: slide-in-from-right 0.3s ease-out;
+}
+
+.slide-out-to-right {
+  animation: slide-out-to-right 0.3s ease-out;
 }
 
 /* Hide scrollbar for Chrome, Safari and Opera */
@@ -13,16 +102,16 @@ body {
 
 /* Hide scrollbar for IE, Edge and Firefox */
 .no-scrollbar {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
 }
 
 @theme {
-  --color-primary: #ff637e; 
-  --color-primary-hover: #ff2056; 
-  --color-secondary: #ffe4e6;
-  --color-secondary-hover: #ffccd3;
-  --color-secondary-border: #ffccd3;
+  --color-primary: #ffa500;
+  --color-primary-hover: #e69500;
+  --color-secondary: #0056b3;
+  --color-secondary-hover: #004494;
+  --color-secondary-border: #d98e00;
   --color-darkgray: #6a7282;
   --color-darkgray-title: #101828;
   --color-darkgray-hover: #4a5565;
@@ -35,10 +124,24 @@ body {
   --foreground: #111827;
   --accent: #d1d5db; */
 
-  --text-
+  /* Custom Font Families */
+  --font-youblockhead: "YouBlockhead", ui-sans-serif, system-ui, sans-serif;
+  --font-youblockhead-caps: "YouBlockheadCaps", ui-sans-serif, system-ui,
+    sans-serif;
+  --font-youblockhead-caps-open: "YouBlockheadCapsOpen", ui-sans-serif,
+    system-ui, sans-serif;
+  --font-youblockhead-open: "YouBlockheadOpen", ui-sans-serif, system-ui,
+    sans-serif;
 
-  --font-weight-
-  --font-sans: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
-    "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  /* Default font stack */
+  --font-sans: var(--app-font-body);
 }
 
+/* Font utility classes for easy swapping/testing */
+.font-body {
+  font-family: var(--app-font-body);
+}
+
+.font-heading {
+  font-family: var(--app-font-heading);
+}

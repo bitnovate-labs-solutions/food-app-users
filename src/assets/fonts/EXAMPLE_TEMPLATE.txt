@@ -1,0 +1,53 @@
+# Font Implementation Template
+
+Copy this template and replace [FontName] with your actual font name.
+
+## 1. Create folder structure:
+src/assets/fonts/[FontName]/
+
+## 2. Add to fonts.css:
+
+@font-face {
+  font-family: '[FontName]';
+  src: url('./[FontName]/[FontName]-Regular.woff2') format('woff2'),
+       url('./[FontName]/[FontName]-Regular.woff') format('woff');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: '[FontName]';
+  src: url('./[FontName]/[FontName]-Medium.woff2') format('woff2'),
+       url('./[FontName]/[FontName]-Medium.woff') format('woff');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: '[FontName]';
+  src: url('./[FontName]/[FontName]-SemiBold.woff2') format('woff2'),
+       url('./[FontName]/[FontName]-SemiBold.woff') format('woff');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: '[FontName]';
+  src: url('./[FontName]/[FontName]-Bold.woff2') format('woff2'),
+       url('./[FontName]/[FontName]-Bold.woff') format('woff');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+## 3. Add to index.css @theme section:
+
+--font-sans: '[FontName]', ui-sans-serif, system-ui, sans-serif;
+
+## 4. Use in components:
+
+<div className="font-sans">Your text here</div>
+

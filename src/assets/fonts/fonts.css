@@ -1,0 +1,122 @@
+/* 
+ * Custom Fonts Configuration
+ * 
+ * Add your @font-face declarations here.
+ * Replace the example fonts with your actual font files.
+ */
+
+/* Example: Inter Font Family */
+/* Uncomment and modify based on your fonts */
+
+@font-face {
+  font-family: "YouBlockhead";
+  src: url("./you_blockhead/YouBlockhead.woff2") format("woff2"),
+    url("./you_blockhead/YouBlockhead.woff") format("woff");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "YouBlockheadCaps";
+  src: url("./you_blockhead/YouBlockheadCaps.woff2") format("woff2"),
+    url("./you_blockhead/YouBlockheadCaps.woff") format("woff");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "YouBlockheadCapsOpen";
+  src: url("./you_blockhead/YouBlockheadCapsOpen.woff2") format("woff2"),
+    url("./you_blockhead/YouBlockheadCapsOpen.woff") format("woff");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "YouBlockheadOpen";
+  src: url("./you_blockhead/YouBlockheadOpen.woff2") format("woff2"),
+    url("./you_blockhead/YouBlockheadOpen.woff") format("woff");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/*
+@font-face {
+  font-family: 'Inter';
+  src: url('./Inter/Inter-Regular.woff2') format('woff2'),
+       url('./Inter/Inter-Regular.woff') format('woff');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: url('./Inter/Inter-Medium.woff2') format('woff2'),
+       url('./Inter/Inter-Medium.woff') format('woff');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: url('./Inter/Inter-SemiBold.woff2') format('woff2'),
+       url('./Inter/Inter-SemiBold.woff') format('woff');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: url('./Inter/Inter-Bold.woff2') format('woff2'),
+       url('./Inter/Inter-Bold.woff') format('woff');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+*/
+
+/* Example: Poppins Font Family */
+/*
+@font-face {
+  font-family: 'Poppins';
+  src: url('./Poppins/Poppins-Regular.woff2') format('woff2'),
+       url('./Poppins/Poppins-Regular.woff') format('woff');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Poppins';
+  src: url('./Poppins/Poppins-Medium.woff2') format('woff2'),
+       url('./Poppins/Poppins-Medium.woff') format('woff');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Poppins';
+  src: url('./Poppins/Poppins-Bold.woff2') format('woff2'),
+       url('./Poppins/Poppins-Bold.woff') format('woff');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+*/
+
+/* 
+ * Instructions:
+ * 1. Create a folder for each font family (e.g., Inter/, Poppins/)
+ * 2. Place your font files in the respective folders
+ * 3. Uncomment and modify the @font-face declarations above
+ * 4. Update the font paths to match your file structure
+ * 5. Add the font family to src/index.css in the @theme section
+ */

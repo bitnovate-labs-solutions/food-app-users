@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import Logo from "@/assets/tyd_logo.png";
+import Logo from "@/assets/logos/logo1.png";
 
 const LoadingComponent = ({
   type = "inline",
@@ -20,7 +20,7 @@ const LoadingComponent = ({
           <img
             src={Logo}
             alt="TreatYourDate Logo"
-            className="w-32 h-auto mb-10 animate-pulse"
+            className="w-34 h-auto mb-10 animate-pulse"
           />
           {/* <div className="animate-spin h-12 w-12 border-4 border-gray-300 border-t-primary rounded-full"></div> */}
 

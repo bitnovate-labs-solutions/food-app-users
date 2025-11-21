@@ -16,9 +16,9 @@ export const useMessageNotifications = () => {
     // Get user's profile ID
     const getProfileId = async () => {
       const { data: profile } = await supabase
-        .from('user_profiles')
+        .from('app_users')
         .select('id')
-        .eq('user_id', user.id)
+        .eq('profile_id', user.id)
         .single();
       return profile?.id;
     };
@@ -46,22 +46,33 @@ export const useMessageNotifications = () => {
               ? payload.new.treatee_id 
               : payload.new.treater_id;
             
-            const { data: otherUser } = await supabase
-              .from('user_profiles')
-              .select('display_name, user_id')
+            // Get app_users to find profile_id, then get display_name from profiles
+            const { data: appUser } = await supabase
+              .from('app_users')
+              .select('profile_id')
               .eq('id', otherUserId)
               .single();
 
-            if (otherUser) {
-              // Show in-app notification
-              toast.info(`New message from ${otherUser.display_name}`, {
+            if (appUser) {
+              // Get display_name from profiles table
+              const { data: profile } = await supabase
+                .from('profiles')
+                .select('display_name')
+                .eq('id', appUser.profile_id)
+                .single();
+
+              const displayName = profile?.display_name || 'Someone';
+              
+              // Show in-app notification (Messages page removed - Collection replaces it)
+              toast.info(`New message from ${displayName}`, {
                 duration: 5000,
-                action: {
-                  label: 'View',
-                  onClick: () => {
-                    navigate(`/messages/${payload.new.id}`);
-                  },
-                },
+                // Navigation to messages removed - Collection page replaces Messages
+                // action: {
+                //   label: 'View',
+                //   onClick: () => {
+                //     navigate(`/messages/${payload.new.id}`);
+                //   },
+                // },
               });
 
               // Send push notification if subscribed
@@ -74,11 +85,11 @@ export const useMessageNotifications = () => {
                       'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
                     },
                     body: JSON.stringify({
-                      recipientId: otherUser.user_id,
+                      recipientId: appUser.profile_id,
                       title: 'New Message',
-                      body: `New message from ${otherUser.display_name}`,
+                      body: `New message from ${displayName}`,
                       data: {
-                        url: '/messages',
+                        url: '/collection', // Changed from /messages to /collection
                         conversationId: payload.new.id
                       }
                     }),

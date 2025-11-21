@@ -1,9 +1,9 @@
 // FETCH RESTAURANTS + MENU PACKAGES + MENU IMAGES FROM BO DATABASE
 import { useQuery } from "@tanstack/react-query";
-import { backOfficeSupabase } from "@/lib/supabase-bo";
+import { supabase } from "@/lib/supabase";
 
 const fetchPromoVouchers = async () => {
-  const { data, error } = await backOfficeSupabase
+  const { data, error } = await supabase
     .from("vouchers")
     .select(`*`)
     .order("created_at", { ascending: false });

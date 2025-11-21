@@ -1,22 +1,23 @@
 import { useQuery } from "@tanstack/react-query";
-import { backOfficeSupabase } from "@/lib/supabase-bo";
+import { supabase } from "@/lib/supabase";
 
 const fetchMenuPackages = async () => {
-  const { data, error } = await backOfficeSupabase
-    .from("menu_packages")
+  const { data, error } = await supabase
+    .from("menu_items")
     .select(
       `
       *,
-      menu_images (*),
       restaurant:restaurants!inner (
         id,
         name,
-        location,
         address,
+        hours,
         phone_number,
         image_url,
         cuisine_type,
-        food_category
+        food_category,
+        latitude,
+        longitude
       )
     `
     )
@@ -25,18 +26,18 @@ const fetchMenuPackages = async () => {
   if (error) throw new Error(error.message);
 
   // Log the fetched data
-  console.log("📦 Menu Packages Fetched:", {
+  console.log("📦 Menu Items Fetched:", {
     total: data.length,
-    packages: data.map(pkg => ({
-      id: pkg.id,
-      name: pkg.name,
-      price: pkg.price,
-      restaurant: pkg.restaurant?.name,
-      location: pkg.restaurant?.location,
-      cuisine: pkg.restaurant?.cuisine_type,
-      category: pkg.restaurant?.food_category,
-      images: pkg.menu_images?.length || 0,
-      created_at: pkg.created_at
+    packages: data.map(item => ({
+      id: item.id,
+      name: item.name,
+      price: item.price,
+      restaurant: item.restaurant?.name,
+      address: item.restaurant?.address,
+      cuisine: item.restaurant?.cuisine_type,
+      category: item.restaurant?.food_category,
+      image_url: item.image_url,
+      created_at: item.created_at
     }))
   });
 
@@ -54,12 +55,12 @@ export const useMenuPackages = () => {
     refetchOnReconnect: true, // Refetch when reconnecting to ensure fresh data
     onSuccess: (data) => {
       // Log when data is successfully fetched and cached
-      console.log("✅ Menu Packages Query Success:", {
+      console.log("✅ Menu Items Query Success:", {
         timestamp: new Date().toISOString(),
-        totalPackages: data.length,
-        restaurants: [...new Set(data.map(pkg => pkg.restaurant?.name))].filter(Boolean),
-        cuisines: [...new Set(data.map(pkg => pkg.restaurant?.cuisine_type))].filter(Boolean),
-        categories: [...new Set(data.map(pkg => pkg.restaurant?.food_category))].filter(Boolean)
+        totalItems: data.length,
+        restaurants: [...new Set(data.map(item => item.restaurant?.name))].filter(Boolean),
+        cuisines: [...new Set(data.map(item => item.restaurant?.cuisine_type))].filter(Boolean),
+        categories: [...new Set(data.map(item => item.category))].filter(Boolean)
       });
     }
   });

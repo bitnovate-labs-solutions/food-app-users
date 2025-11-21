@@ -1,5 +1,5 @@
 import {
-  TreaterCardSkeleton,
+  MenuCardSkeleton,
   ExploreCardSkeleton,
   TreateeCardSkeleton,
   OrderCardSkeleton,
@@ -21,9 +21,9 @@ export default function TestSkeletons() {
       <section>
         <h2 className="text-xl font-semibold mb-4">Food Card Skeleton</h2>
         <div className="space-y-4">
-          <TreaterCardSkeleton />
-          <TreaterCardSkeleton />
-          <TreaterCardSkeleton />
+          <MenuCardSkeleton />
+          <MenuCardSkeleton />
+          <MenuCardSkeleton />
         </div>
       </section>
 

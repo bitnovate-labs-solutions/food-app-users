@@ -8,6 +8,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { useQueryClient } from "@tanstack/react-query";
+import { checkAndCleanupStorage } from "@/utils/storageCleanup";
 
 // COMPONENTS
 import LoadingComponent from "@/components/LoadingComponent";
@@ -17,11 +18,20 @@ const AuthContext = createContext({});
 export function AuthProvider({ children }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // SESSION CHECK --------------------------------------------------
+  // INITIALIZE SESSION --------------------------------------
   useEffect(() => {
+    // Clean up storage on app initialization
+    checkAndCleanupStorage();
+
+    // Periodic cleanup every 30 minutes
+    const cleanupInterval = setInterval(() => {
+      checkAndCleanupStorage();
+    }, 30 * 60 * 1000); // 30 minutes
+
     // Get initial session
     const initializeAuth = async () => {
       try {
@@ -33,6 +43,10 @@ export function AuthProvider({ children }) {
         setUser(session?.user ?? null);
       } catch (error) {
         console.error("Error getting session:", error);
+        // If it's a storage quota error, try cleanup
+        if (error.message?.includes('quota') || error.message?.includes('QuotaExceeded')) {
+          checkAndCleanupStorage();
+        }
       } finally {
         setLoading(false);
       }
@@ -44,43 +58,29 @@ export function AuthProvider({ children }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log("Auth state changed:", event, session?.user?.id); // Debug log
-      if (event === "SIGNED_IN") {
-        setUser(session?.user);
-        // Only check profile if email is confirmed
-        if (session.user.email_confirmed_at && location.pathname === "/") {
-          // Redirect to "/create-profile" logic (When the user clicks the link in the email, it logs them in (SIGNED_IN event),the onAuthStateChange listener detects this state change.)
-          // session.user.email_confirmed_at -> ✅ ensures the email was verified.
-          // location.pathname === "/" -> ensures the user was on the homepage (or whatever is set after redirect)
-          navigate("/create-profile", { replace: true });
-        }
-      } else if (event === "USER_UPDATED") {
-        setUser(session.user);
-      } else if (event === "SIGNED_OUT") {
-        localStorage.setItem("isExistingUser", "true");
-        setUser(null);
-        navigate("/auth", { state: { mode: "login" }, replace: true });
-      }
+      setUser(session?.user ?? null);
     });
 
     return () => {
       subscription.unsubscribe();
+      clearInterval(cleanupInterval);
     };
   }, []);
 
-  // CHECK USER PROFILE in 'user_profiles' table --------------------------------------------------
+  // CHECK USER PROFILE in 'app_users' table --------------------------------------------------
   const checkUserProfile = async (userId) => {
     try {
       const { data: profile, error } = await supabase
-        .from("user_profiles")
-        .select("role")
-        .eq("user_id", userId)
+        .from("app_users")
+        .select("*")
+        .eq("profile_id", userId)
         .single();
 
       if (error && error?.code === "PGRST116") {
         navigate("/create-profile", { replace: true }); // No profile found, redirect to create profile
-      } else if (profile?.role) {
-        navigate(`/${profile.role}`, { replace: true }); // If we have a role, navigate to the role page
+          } else if (profile) {
+            // Profile exists, redirect to home page
+            navigate("/home", { replace: true });
       }
 
       if (error) throw error;
@@ -92,16 +92,32 @@ export function AuthProvider({ children }) {
   };
 
   // SIGN IN --------------------------------------------------
-  const signIn = async (credentials) => {
+  const signIn = async ({ email, password }) => {
     try {
-      const { data, error } = await supabase.auth.signInWithPassword(
-        credentials
-      );
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
       if (error) throw error;
 
-      if (data.user.email_confirmed_at) {
-        await checkUserProfile(data.user.id);
+      // After successful sign-in, check if user has a profile and redirect
+      if (data.user) {
+        const { data: profile, error: profileError } = await supabase
+          .from("app_users")
+          .select("id")
+          .eq("profile_id", data.user.id)
+          .single();
+
+        if (profileError && profileError.code === "PGRST116") {
+          // No profile found, redirect to create-profile
+          navigate("/create-profile", { replace: true });
+        } else if (profile) {
+          // Profile exists, redirect to home
+          navigate("/home", { replace: true });
       }
+      }
+
       return data;
     } catch (error) {
       console.error("Sign-in error:", error.message);
@@ -110,19 +126,37 @@ export function AuthProvider({ children }) {
   };
 
   // SIGN UP --------------------------------------------------
-  const signUp = async (credentials) => {
+  const signUp = async ({
+    email,
+    password,
+    display_name,
+    app_type = "user",
+  }) => {
     try {
       const { data, error } = await supabase.auth.signUp({
-        ...credentials,
+        email,
+        password,
         options: {
           data: {
-            name: credentials.display_name, // Set name in user metadata
-            // display_name: credentials.display_name // Keep display_name for backward compatibility
+            display_name: display_name ?? null,
           },
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
         },
       });
 
       if (error) throw error; // Ensure errors are caught in catch block
+      if (!data.user) throw new Error("Signup failed");
+
+      // Detect new user
+      const isNewUser = data.user.identities && data.user.identities.length > 0;
+
+      if (isNewUser) {
+        await supabase.functions.invoke("create-profile", {
+          body: {
+            app_type, // only hint, backend decides role
+          },
+        });
+      }
 
       return data;
     } catch (error) {
@@ -186,12 +220,12 @@ export function AuthProvider({ children }) {
   };
 
   const value = {
+    user,
     signUp,
     signIn,
     signOut,
     resetPassword,
     updatePassword,
-    user,
     checkUserProfile,
   };
 

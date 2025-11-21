@@ -1,4 +1,4 @@
-import BrandLogo from "@/assets/tyd_logo.png";
+import BrandLogo from "@/assets/logos/logo1.png";
 
 export function Logo() {
   return (

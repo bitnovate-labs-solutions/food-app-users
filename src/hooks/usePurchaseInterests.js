@@ -15,14 +15,7 @@ const getInterestedUsers = async (purchaseId, packageId) => {
     .select(
       `
       *,
-      treatee:user_profiles!purchase_interests_treatee_id_fkey(
-        *,
-        user_profile_images(
-          id,
-          image_url,
-          is_primary
-        )
-      )
+      treatee:app_users!purchase_interests_treatee_id_fkey(*)
     `
     )
     .eq("purchase_id", purchaseId)
@@ -30,7 +23,43 @@ const getInterestedUsers = async (purchaseId, packageId) => {
     .order("expressed_at", { ascending: false });
 
   if (error) throw error;
-  return data || []; // Returns empty array if no data found
+  if (!data || data.length === 0) return [];
+
+  // Get profile_ids from treatees
+  const profileIds = data
+    .map(interest => interest.treatee?.profile_id)
+    .filter(Boolean);
+
+  if (profileIds.length === 0) return data;
+
+  // Fetch profiles to get display_name
+  const { data: profiles, error: profilesError } = await supabase
+    .from("profiles")
+    .select("id, display_name, email, phone_number, profile_image_url")
+    .in("id", profileIds);
+
+  if (profilesError) {
+    console.error("Error fetching profiles:", profilesError);
+    return data; // Return data without profiles if fetch fails
+  }
+
+  // Merge treatee data with profiles
+  return data.map(interest => {
+    if (interest.treatee) {
+      const profile = profiles?.find(p => p.id === interest.treatee.profile_id);
+      return {
+        ...interest,
+        treatee: {
+          ...interest.treatee,
+          display_name: profile?.display_name || interest.treatee.display_name,
+          email: profile?.email || interest.treatee.email,
+          phone_number: profile?.phone_number || interest.treatee.phone_number,
+          profile_image_url: profile?.profile_image_url || interest.treatee.profile_image_url,
+        },
+      };
+    }
+    return interest;
+  });
 };
 
 // ===============================================================================================

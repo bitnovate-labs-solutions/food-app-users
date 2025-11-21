@@ -1,5 +1,4 @@
 import { supabase } from '../src/lib/supabase';
-import { backOfficeSupabase } from '../src/lib/supabase-bo';
 
 async function testExpiry() {
   try {
@@ -21,7 +20,7 @@ async function testExpiry() {
     if (purchaseError) throw purchaseError;
 
     // 3. Get a menu package to purchase
-    const { data: menuPackage, error: menuError } = await backOfficeSupabase
+    const { data: menuPackage, error: menuError } = await supabase
       .from('menu_packages')
       .select('id, price')
       .limit(1)

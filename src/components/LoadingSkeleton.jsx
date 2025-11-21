@@ -22,7 +22,7 @@ export function CardSkeleton() {
 }
 
 // Food Card Skeleton
-export function TreaterCardSkeleton() {
+export function MenuCardSkeleton() {
   return (
     <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
       <div className="p-3">

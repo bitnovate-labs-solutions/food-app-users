@@ -19,9 +19,9 @@ export const getCurrentUserProfile = async () => {
   }
 
   const { data: profile, error: profileError } = await supabase
-    .from("user_profiles")
-    .select("id, role")
-    .eq("user_id", user.id)
+    .from("app_users")
+    .select("id")
+    .eq("profile_id", user.id)
     .single();
 
   if (profileError || !profile) {

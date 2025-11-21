@@ -11,30 +11,12 @@ export default function AuthCallback() {
 
       if (error || !session?.session?.user) {
         console.error("Authentication error: ", error);
-        return navigate("/auth"); // redirect to login if there's an issue
+        return navigate("/auth");
       }
 
-      const userId = session.session.user.id;
-
-      // Check if the user exists in 'user_profile'
-      const { data: userProfile, error: profileError } = await supabase
-        .from("user_profile")
-        .select("role")
-        .eq("id", userId).single;
-
-      if (profileError || !userProfile) {
-        // If the user does NOT exist, send them to create profile
-        return navigate("/create-profile");
-      }
-
-      // Redirect based on user role
-      if (userProfile.role === "treater") {
-        navigate("/treater");
-      } else if (userProfile.role === "treatee") {
-        navigate("/treatee");
-      } else {
-        navigate("/"); // Fallback route
-      }
+      // After email confirmation, always redirect to create-profile
+      // The create-profile page will handle checking if app_users exists
+      navigate("/create-profile", { replace: true });
     };
 
     handleAuthRedirect();

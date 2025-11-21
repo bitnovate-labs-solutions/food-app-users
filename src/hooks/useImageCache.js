@@ -120,7 +120,31 @@ export const useImageCache = (imageSource) => {
 
     // 3. Fallback: Load fresh image
     clearOldCache();
-    if (getCacheSize() > MAX_CACHE_SIZE) clearOldCache();
+    if (getCacheSize() > MAX_CACHE_SIZE) {
+      clearOldCache();
+      // If still too large, clear more aggressively
+      if (getCacheSize() > MAX_CACHE_SIZE) {
+        // Clear oldest 50% of cache
+        const cacheEntries = [];
+        Object.keys(localStorage)
+          .filter((key) => key.startsWith(CACHE_PREFIX))
+          .forEach((key) => {
+            try {
+              const item = JSON.parse(localStorage.getItem(key));
+              if (item && item.timestamp) {
+                cacheEntries.push({ key, timestamp: item.timestamp });
+              }
+            } catch {
+              localStorage.removeItem(key);
+            }
+          });
+        cacheEntries.sort((a, b) => a.timestamp - b.timestamp);
+        const toRemove = Math.floor(cacheEntries.length / 2);
+        cacheEntries.slice(0, toRemove).forEach(({ key }) => {
+          localStorage.removeItem(key);
+        });
+      }
+    }
 
     loadImage(
       imageUrl,
@@ -129,8 +153,16 @@ export const useImageCache = (imageSource) => {
           const cacheData = { url: imageUrl, timestamp: Date.now() };
           localStorage.setItem(cacheKey, JSON.stringify(cacheData));
           handleSuccess(imageUrl);
-        } catch {
+        } catch (error) {
+          // If quota exceeded, try cleanup and continue without caching
+          if (error.name === 'QuotaExceededError' || error.message?.includes('quota')) {
+            console.warn('Storage quota exceeded, clearing cache...');
+            clearOldCache();
+            // Continue without caching
+            handleSuccess(imageUrl);
+          } else {
           handleFailure("Error caching image");
+          }
         }
       },
       () => handleFailure("Failed to load image")

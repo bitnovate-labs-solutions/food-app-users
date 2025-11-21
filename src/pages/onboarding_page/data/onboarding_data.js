@@ -1,22 +1,25 @@
-import OnboardingImage1 from "@/assets/tyd_logo.png";
-// import OnboardingImage2 from "@/assets/images/welcome2.png";
-import OnboardingImage2 from "@/assets/images/welcome_2.jpg";
+// import OnboardingImage1 from "@/assets/logos/logo1.png";
+import OnboardingImage1 from "@/assets/images/welcome-1.jpeg";
+import OnboardingImage2 from "@/assets/images/welcome-2.png";
+import OnboardingImage3 from "@/assets/images/welcome-3.png";
 
 export const onboardingSteps = [
   {
-    title: "Welcome to TreatYourDate",
-    description: "Connect with food lovers and share amazing meals together",
+    title: "Welcome to Food Hunter",
+    description: "Search for foods, dine in and get rewarded",
     image: OnboardingImage1,
   },
   {
-    title: "Find Your Perfect Match",
+    title: "Eat. Earn. Enjoy.",
     description:
-      "Whether you're here for love, friendship, or just great conversations, find your right match starting with the right food interests",
+      "Every meal gets you closer to rewards you’ll actually love — start discovering food that fits your taste.",
+    // "Discover hidden gems and popular spots, all in one app. Your next meal is just a tap away!",
     image: OnboardingImage2,
   },
   {
-    title: "Share a meal and make meaningful connections",
-    description: "",
-    image: null,
+    title: "Match Through Food",
+    description:
+      "Explore new eats, share your favourites, and collect points as you discover your next must-try spot.",
+    image: OnboardingImage3,
   },
 ];

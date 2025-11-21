@@ -1,5 +1,4 @@
 import { supabase } from "@/lib/supabase";
-import { backOfficeSupabase } from "@/lib/supabase-bo";
 import { useQuery } from "@tanstack/react-query";
 import dayjs from "dayjs";
 
@@ -50,54 +49,64 @@ const getPurchases = async () => {
   if (interestsError) throw new Error(interestsError.message);
 
   // Then get all user profiles of the Treaters for these purchases
+  // purchases.user_id references profiles.id (which equals auth.users.id)
   const userIds = validPurchases.map((purchase) => purchase.user_id);
-  const { data: userProfiles, error: profilesError } = await supabase
-    .from("user_profiles")
-    .select(
-      `
-      *,
-        user_profile_images!inner(
-          id, 
-          image_url,
-          is_primary,
-          position,
-          scale,
-          rotation,
-          order
-        )
-      `
-    )
-    .in("user_id", userIds);
+  
+  // Get app_users records
+  const { data: appUsers, error: appUsersError } = await supabase
+    .from("app_users")
+    .select("*")
+    .in("profile_id", userIds);
+
+  if (appUsersError) throw new Error(appUsersError.message);
+
+  // Get profiles to get display_name
+  const { data: profiles, error: profilesError } = await supabase
+    .from("profiles")
+    .select("id, display_name, email, phone_number, profile_image_url")
+    .in("id", userIds);
 
   if (profilesError) throw new Error(profilesError.message);
 
-  // Get all menu packages from back office database
+  // Merge app_users with profiles data
+  const userProfiles = (appUsers || []).map(appUser => {
+    const profile = (profiles || []).find(p => p.id === appUser.profile_id);
+    return {
+      ...appUser,
+      display_name: profile?.display_name,
+      email: profile?.email,
+      phone_number: profile?.phone_number,
+      profile_image_url: profile?.profile_image_url,
+    };
+  });
+
+  // Get all menu items from back office database
   const packageIds = validPurchases.flatMap((purchase) =>
     purchase.purchase_items.map((item) => item.package_id)
   );
 
-  const { data: menuPackages, error: menuError } = await backOfficeSupabase
-    .from("menu_packages")
+  const { data: menuItems, error: menuError } = await supabase
+    .from("menu_items")
     .select(
       `
       id,
       name,
       description,
       price,
-      package_type,
-      menu_images (
-        id,
-        image_url
-      ),
+      image_url,
+      is_available,
+      category,
       restaurant:restaurants!inner (
         id,
         name,
-        location,
         address,
+        hours,
         phone_number,
         image_url, 
         cuisine_type,
-        food_category
+        food_category,
+        latitude,
+        longitude
       )
     `
     )
@@ -105,21 +114,21 @@ const getPurchases = async () => {
 
   if (menuError) throw new Error(menuError.message);
 
-  // Create a map of menu packages for easy lookup
-  const menuPackageMap = menuPackages.reduce((acc, pkg) => {
-    acc[pkg.id] = pkg;
+  // Create a map of menu items for easy lookup
+  const menuItemMap = menuItems.reduce((acc, item) => {
+    acc[item.id] = item;
     return acc;
   }, {});
 
-  // Group purchases by menu package
+  // Group purchases by menu item
   const groupedPurchases = validPurchases.reduce((acc, purchase) => {
     purchase.purchase_items.forEach((item) => {
-      const menuPackage = menuPackageMap[item.package_id];
-      if (!menuPackage) return; // Skip if menu package not found
+      const menuItem = menuItemMap[item.package_id];
+      if (!menuItem) return; // Skip if menu item not found
 
-      const menuPackageId = menuPackage.id;
+      const menuItemId = menuItem.id;
       const existingGroup = acc.find(
-        (group) => group.menuPackageId === menuPackageId
+        (group) => group.menuItemId === menuItemId
       );
 
       // Get interests for this purchase
@@ -131,18 +140,18 @@ const getPurchases = async () => {
       if (existingGroup) {
         // Add this purchase's user to the treaters list if not already included
         const treaterProfile = userProfiles.find(
-          (profile) => profile.user_id === purchase.user_id
+          (profile) => profile.profile_id === purchase.user_id
         );
         if (
           treaterProfile &&
           !existingGroup.user_profiles.some(
-            (p) => p.user_id === treaterProfile.user_id
+            (p) => p.profile_id === treaterProfile.profile_id
           )
         ) {
           existingGroup.user_profiles.push(treaterProfile);
         }
 
-        // Find the existing purchase item for this package
+        // Find the existing purchase item for this menu item
         const existingItem = existingGroup.purchase_items.find(
           (pi) => pi.package_id === item.package_id
         );
@@ -160,7 +169,7 @@ const getPurchases = async () => {
           // Add new purchase item if it doesn't exist
           existingGroup.purchase_items.push({
             ...item,
-            menu_packages: menuPackage,
+            menu_item: menuItem,
             quantity: item.quantity || 0,
             voucher_instances: item.voucher_instances || [],
           });
@@ -183,16 +192,16 @@ const getPurchases = async () => {
       } else {
         // Create new group
         const treaterProfile = userProfiles.find(
-          (profile) => profile.user_id === purchase.user_id
+          (profile) => profile.profile_id === purchase.user_id
         );
         acc.push({
           ...purchase,
-          menuPackageId,
+          menuItemId,
           user_profiles: treaterProfile ? [treaterProfile] : [],
           purchase_items: [
             {
               ...item,
-              menu_packages: menuPackage,
+              menu_item: menuItem,
               quantity: item.quantity || 0,
               voucher_instances: item.voucher_instances || [],
             },

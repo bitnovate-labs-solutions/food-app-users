@@ -18,15 +18,15 @@ export default function Onboarding() {
   const { user } = useAuth();
   const { data: profile, isLoading } = useUserProfile(user);
 
-  // CHECK AUTH STATE AND REDIRECT BASED ON ROLE
+  // CHECK AUTH STATE AND REDIRECT
   useEffect(() => {
     if (user && !isLoading) {
-      if (profile?.role) {
-        // If user has a profile, redirect to their role page
-        navigate(`/${profile.role}`, { replace: true });
-      } else {
+      if (!profile) {
         // If user is authenticated but no profile, redirect to create profile
         navigate("/create-profile", { replace: true });
+      } else {
+        // If user has a profile, redirect to home
+        navigate("/home", { replace: true });
       }
     }
   }, [user, profile, isLoading, navigate]);
@@ -47,29 +47,30 @@ export default function Onboarding() {
     if (currentStep < onboardingSteps.length - 1) {
       setCurrentStep((prev) => prev + 1);
     } else {
-      // Navigate to Explore page instead of auth
-      navigate("/explore", { replace: true });
+      // Navigate to auth page for sign up
+      navigate("/auth/signup", { replace: true });
     }
   };
 
   return (
-    <div className="h-screen max-w-sm mx-auto bg-white flex flex-col justify-center px-6">
-      <div className="flex-1 flex flex-col items-center justify-center p-4">
-        {/* WELCOME IMAGE */}
-        {onboardingSteps[currentStep].image && (
-          <div className="flex justify-center items-center mb-6 w-full max-w-[300px] h-[250px]">
-            <img
-              src={onboardingSteps[currentStep].image}
-              alt={`Step ${currentStep + 1}`}
-              className="w-full h-full object-cover rounded-lg"
-              loading="eager"
-            />
-          </div>
-        )}
+    <div className="h-screen bg-white flex flex-col overflow-hidden">
+      {/* WELCOME IMAGE - Takes 3/4 of screen height, full width within mobile max-width */}
+      {onboardingSteps[currentStep].image && (
+        <div className="flex justify-center items-center w-full max-w-md mx-auto h-[70vh] flex-shrink-0">
+          <img
+            src={onboardingSteps[currentStep].image}
+            alt={`Step ${currentStep + 1}`}
+            className="w-full h-full object-cover rounded-lg"
+            loading="eager"
+          />
+        </div>
+      )}
 
+      {/* CONTENT SECTION - Remaining 1/4 space */}
+      <div className="flex-1 flex flex-col items-center justify-center px-4 pb-4 min-h-0 max-w-sm mx-auto w-full">
         {/* TITLE & DESCRIPTION */}
         <div className="text-center mb-6 text-sm">
-          <h1 className="text-2xl font-black text-gray-600 mb-6">
+          <h1 className="text-2xl font-black text-gray-600 mb-2">
             {onboardingSteps[currentStep].title}
           </h1>
           {/* RENDER DESCRIPTION COMPONENT */}

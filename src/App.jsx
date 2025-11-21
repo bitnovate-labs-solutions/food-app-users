@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/sonner";
 import AppRoutes from "@/routes/AppRoutes";
 import { PWAPrompt } from "./components/PWAPrompt";
 import { FilterProvider } from "./context/FilterContext";
+import { FilterDrawerProvider } from "./context/FilterDrawerContext";
 // import { useEffect } from "react";
 
 const queryClient = new QueryClient({
@@ -41,7 +42,9 @@ function App() {
       <BrowserRouter>
         <AuthProvider>
           <FilterProvider>
+            <FilterDrawerProvider>
             <AppRoutes />
+            </FilterDrawerProvider>
           </FilterProvider>
           <Toaster
             position="top-center"

@@ -15,22 +15,9 @@ export const useUsers = (currentUserId) => {
 
       try {
         const { data, error } = await supabase
-          .from("user_profiles")
-          .select(
-            `
-            *,
-            user_profile_images!inner(
-              id, 
-              image_url,
-              is_primary,
-              position,
-              scale,
-              rotation,
-              order
-            )
-          `
-          )
-          .neq("user_id", currentUserId);
+          .from("app_users")
+          .select("*")
+          .neq("profile_id", currentUserId);
 
         if (error) throw error;
         setUsers(data || []);

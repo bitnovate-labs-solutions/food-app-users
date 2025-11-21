@@ -24,19 +24,15 @@ export default function ProtectedRoute() {
     return <Navigate to="/auth" replace />;
   }
 
-  // If on create-profile page
+  // If on create-profile page, always allow access
+  // The create-profile page will handle checking if app_users exists
   if (location.pathname === "/create-profile") {
-    // If user has a profile, redirect to their role page
-    if (profile?.role) {
-      return <Navigate to={`/${profile.role}`} replace />;
-    }
-    // Otherwise, show the create profile page
     return <Outlet />;
   }
 
   // For all other protected routes...
   // If user has no profile, redirect to create-profile
-  if (!profile || !profile?.role) {
+  if (!profile) {
     return <Navigate to="/create-profile" replace />;
   }
 

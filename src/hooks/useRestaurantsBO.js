@@ -1,10 +1,10 @@
-// FETCH RESTAURANTS + MENU PACKAGES + MENU IMAGES FROM BO DATABASE
-import { useQuery } from "@tanstack/react-query";
-import { backOfficeSupabase } from "@/lib/supabase-bo";
-import { useMenuPackages } from "./useMenuPackages";
+// FETCH RESTAURANTS + MENU ITEMS FROM BO DATABASE
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
+import { supabase } from "@/lib/supabase";
 
 const fetchRestaurants = async () => {
-  const { data, error } = await backOfficeSupabase
+  const { data, error } = await supabase
     .from("restaurants")
     .select(
       `
@@ -12,7 +12,7 @@ const fetchRestaurants = async () => {
       vendor:vendors (
         id,
         business_name,
-        name,
+        contact_name,
         email,
         phone,
         business_logo_url,
@@ -25,17 +25,16 @@ const fetchRestaurants = async () => {
         payment_details,
         verified_status
       ),
-      menu_packages (
+      menu_items (
         id,
         name,
         description,
-        package_type,
         price,
+        image_url,
+        is_available,
+        average_rating,
         created_at,
-        menu_images (
-          id, 
-          image_url
-        )
+        category
       )
     `
     )
@@ -48,60 +47,67 @@ const fetchRestaurants = async () => {
 
   // Add detailed console logging
   console.log(
-    "✅ Restaurants fetched with menu packages:",
+    "✅ Restaurants fetched with menu items:",
     data.map((r) => ({
       id: r.id,
       name: r.name,
-      menuCount: r.menu_packages?.length || 0,
-      menu_packages: r.menu_packages,
+      menuCount: r.menu_items?.length || 0,
+      menu_items: r.menu_items,
     }))
   );
 
   return data;
 };
 
-// Transform menu packages data to restaurant-centric view
-const transformToRestaurants = (menuPackages) => {
-  const restaurantsMap = new Map();
-
-  menuPackages.forEach((menuPackage) => {
-    const restaurant = menuPackage.restaurant;
-    if (!restaurantsMap.has(restaurant.id)) {
-      restaurantsMap.set(restaurant.id, {
-        ...restaurant,
-        menu_packages: []
-      });
-    }
-    restaurantsMap.get(restaurant.id).menu_packages.push({
-      id: menuPackage.id,
-      name: menuPackage.name,
-      description: menuPackage.description,
-      package_type: menuPackage.package_type,
-      price: menuPackage.price,
-      created_at: menuPackage.created_at,
-      menu_images: menuPackage.menu_images
-    });
-  });
-
-  return Array.from(restaurantsMap.values());
-};
-
 export const useRestaurantsBO = () => {
-  const {
-    data: menuPackages,
-    error: menuError,
-    isLoading: menuLoading,
-    ...rest
-  } = useMenuPackages();
+  const queryClient = useQueryClient();
 
-  const restaurants = menuPackages 
-    ? transformToRestaurants(menuPackages)
-    : [];
+  // Set up Realtime subscription to listen for menu_items changes
+  useEffect(() => {
+    const channel = supabase
+      .channel("restaurants-menu-items-updates")
+      .on(
+        "postgres_changes",
+        {
+          event: "*", // Listen to INSERT, UPDATE, DELETE
+          schema: "public",
+          table: "menu_items",
+        },
+        (payload) => {
+          console.log("📦 Menu item change detected:", payload.eventType);
+          // Invalidate restaurants cache to refetch with new menu items
+          queryClient.invalidateQueries({ queryKey: ["restaurantsBO"] });
+          // Also invalidate menu packages cache
+          queryClient.invalidateQueries({ queryKey: ["menuPackages"] });
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*", // Also listen to restaurant changes
+          schema: "public",
+          table: "restaurants",
+        },
+        (payload) => {
+          console.log("🏪 Restaurant change detected:", payload.eventType);
+          queryClient.invalidateQueries({ queryKey: ["restaurantsBO"] });
+        }
+      )
+      .subscribe();
 
-  return {
-    data: restaurants,
-    error: menuError,
-    isLoading: menuLoading,
-    ...rest
-  };
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+
+  return useQuery({
+    queryKey: ["restaurantsBO"],
+    queryFn: fetchRestaurants,
+    staleTime: 0, // Always consider data stale to ensure fresh data on mount/refresh
+    cacheTime: 1000 * 60 * 2, // Keep in cache for 2 minutes (reduced from 5)
+    refetchOnWindowFocus: true, // Refetch when window regains focus
+    refetchOnMount: true, // Always refetch on mount to ensure fresh data
+    refetchOnReconnect: true, // Refetch when reconnecting
+    // Removed refetchInterval - using Realtime instead for better performance
+  });
 };

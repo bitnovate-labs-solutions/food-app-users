@@ -1,912 +1,577 @@
-import { useEffect, useRef, useState } from "react";
-// import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  User,
-  MapPin,
-  Camera,
-  Briefcase,
-  GraduationCap,
-  Ruler,
-  Cigarette,
-  Wine,
-  Dog,
-  Baby,
-  Sparkles,
-  Church,
-  Instagram,
-  Facebook,
-  Twitter,
-  Heart,
-  UtensilsCrossed,
-  Cake,
-} from "lucide-react";
-
+import { useNavigate } from "react-router-dom";
+import { User, MapPin, Users, UserPlus, Gift, Loader2 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Progress } from "@/components/ui/progress";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { toast } from "sonner";
-import { createProfileSchema } from "@/lib/zod_schema";
-import { calculateProfileCompletion } from "@/utils/profileUtils";
+import { createTreasureHuntProfileSchema } from "@/lib/zod_schema";
 import { useQueryClient } from "@tanstack/react-query";
 import { FormFieldError } from "@/components/common/FormFieldError";
-import { uploadImageToSupabase } from "@/lib/uploadImageToSupabase";
+import { useUserProfile } from "@/hooks/useUserProfile";
 
 export default function CreateProfile() {
-  // const navigate = useNavigate();
   const { user } = useAuth();
-  const fileInputRef = useRef(null); // to track the file input element
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
-
-  // USESTATES
+  const { data: existingProfile } = useUserProfile(user); // Load existing profile if any
   const [isLoading, setIsLoading] = useState(false);
-  const [profileImage, setProfileImage] = useState(null);
-  const [completion, setCompletion] = useState(0);
+  const [locationPermission, setLocationPermission] = useState("prompt"); // "granted" | "denied" | "prompt"
+  const [location, setLocation] = useState(null); // { lat, lng } | null
+  const [referralUserId, setReferralUserId] = useState(null);
 
-  const [selectedInterests, setSelectedInterests] = useState([]);
-  const [selectedLanguages, setSelectedLanguages] = useState([]);
-  const [selectedLanguage, setSelectedLanguage] = useState(""); // state to track the currently selected language
-  const [selectedRole, setSelectedRole] = useState("");
-
-  // FORM INITIALIZATION -----------------------------------------------------------------
   const form = useForm({
-    resolver: zodResolver(createProfileSchema),
+    resolver: zodResolver(createTreasureHuntProfileSchema),
     defaultValues: {
-      role: "",
-      age: "",
-      about_me: "",
-      occupation: "",
-      education: "",
-      location: "",
-      gender: "",
-      height: "",
-      phone_number: "",
-      smoking: "",
-      drinking: "",
-      pets: "",
-      children: "",
-      zodiac: "",
-      religion: "",
-      interests: selectedInterests,
-      languages: selectedLanguages,
-      social_links: {
-        instagram: "",
-        facebook: "",
-        twitter: "",
-      },
+      display_name: "",
+      preferred_mode: "solo",
+      referral_code: "",
     },
   });
 
-  // useEffect to sync selectedRole with React Hook Form
-  // must include { shouldValidate: true } — this triggers validation, so it clears any previous error.
+  // Update form when existing profile loads - prioritize signup form value
   useEffect(() => {
-    if (selectedRole) {
-      form.setValue("role", selectedRole, { shouldValidate: true });
-    }
-  }, [selectedRole]);
-
-  // Update completion whenever form values change
-  useEffect(() => {
-    const formData = form.getValues();
-    const newCompletion = calculateProfileCompletion({
-      ...formData,
-      avatar_url: profileImage,
-      interests: selectedInterests,
-      languages: selectedLanguages,
-    });
-    setCompletion(newCompletion);
-  }, [form.watch(), profileImage, selectedInterests, selectedLanguages]);
-
-  // HANDLE IMAGE UPLOAD -----------------------------------------------------------------
-  const handleImageUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file || !user?.id) return;
-
-    setIsLoading(true);
-
-    try {
-      const { publicUrl } = await uploadImageToSupabase(file, user.id);
-      setProfileImage(publicUrl);
-    } catch (error) {
-      toast.error("Error uploading image", {
-        description: error.message,
+    // Priority order:
+    // 1. display_name from signup form (user.user_metadata.display_name)
+    // 2. display_name from profiles table (existingProfile.profile?.display_name)
+    // 3. Don't auto-fill - let user enter their name
+    
+    const signupDisplayName = user?.user_metadata?.display_name;
+    const profileDisplayName = existingProfile?.profile?.display_name;
+    
+    // Use signup display_name first, then profile display_name
+    const displayName = signupDisplayName || profileDisplayName;
+    
+    if (displayName && displayName.trim().length > 0) {
+      form.reset({
+        display_name: displayName.trim(),
+        preferred_mode: existingProfile?.preferred_mode || "solo",
+        referral_code: "",
       });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // HANDLE SUBMIT -----------------------------------------------------------------
-  const onSubmit = async (data) => {
-    setIsLoading(true);
-    try {
-      if (!selectedRole) {
-        toast.error("Role Required", {
-          description: "Please select a role to continue",
+    } else if (existingProfile) {
+      // If profile exists but no display_name, just set preferred_mode
+        form.reset({
+        display_name: "",
+          preferred_mode: existingProfile.preferred_mode || "solo",
+          referral_code: "",
         });
+    }
+    // If no display_name from signup or profile, form stays empty (user enters their name)
+  }, [existingProfile, form, user]);
+
+  // Request location permission on mount
+  useEffect(() => {
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          });
+          setLocationPermission("granted");
+        },
+        () => {
+          setLocationPermission("denied");
+        }
+      );
+    }
+  }, []);
+
+  // Watch referral code for validation
+  const referralCode = form.watch("referral_code");
+
+  // Check referral code if provided
+  useEffect(() => {
+    const checkReferralCode = async () => {
+      if (!referralCode || referralCode.trim().length < 8) {
+        setReferralUserId(null);
         return;
       }
 
-      // Update user metadata first
+    try {
+        const { data, error } = await supabase
+          .from("app_users")
+          .select("id")
+          .eq("referral_code", referralCode.toUpperCase().trim())
+          .single();
+
+        if (error || !data) {
+          setReferralUserId(null);
+          return;
+        }
+
+        setReferralUserId(data.id);
+    } catch {
+        setReferralUserId(null);
+    }
+  };
+
+    // Debounce the check
+    const timeoutId = setTimeout(() => {
+      checkReferralCode();
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [referralCode]);
+
+  const handleSubmit = async (data) => {
+    setIsLoading(true);
+
+    try {
+      // Update user metadata
       const { error: metadataError } = await supabase.auth.updateUser({
         data: { profile_completed: true },
       });
 
       if (metadataError) throw metadataError;
 
-      // Then create/update profile
-      const { data: profile, error } = await supabase
-        .from("user_profiles")
-        .upsert(
-          {
-            user_id: user.id,
-            email: user.email,
-            role: selectedRole,
-            age: parseInt(data.age),
-            phone_number: data.phone_number,
-            about_me: data.about_me,
-            occupation: data.occupation,
-            education: data.education,
-            location: data.location,
-            gender: data.gender,
-            height: data.height,
-            smoking: data.smoking,
-            drinking: data.drinking,
-            pets: data.pets,
-            children: data.children,
-            zodiac: data.zodiac,
-            religion: data.religion,
-            interests: selectedInterests,
-            languages: selectedLanguages,
-            social_links: data.social_links,
-            updated_at: new Date().toISOString(),
-          },
-          {
-            onConflict: "user_id",
-          }
-        )
-        .select()
+      // Prepare update data - ensure display_name is always set
+      // Priority order:
+      // 1. What user entered in the form (submitted or current form value)
+      // 2. display_name from signup form (user.user_metadata.display_name)
+      // 3. display_name from existing profile (profiles table)
+      // 4. Email prefix as last resort
+      
+      const formDisplayName = form.getValues("display_name");
+      const submittedDisplayName = data.display_name;
+      const signupDisplayName = user?.user_metadata?.display_name;
+      const existingProfileDisplayName = existingProfile?.profile?.display_name;
+
+      // Use the submitted value, or form value, prioritizing what user actually entered
+      const displayNameValue = submittedDisplayName || formDisplayName;
+      const displayName = displayNameValue?.trim();
+
+      // Final display name with fallback chain
+      const finalDisplayName =
+        displayName && displayName.length > 0
+          ? displayName
+          : (signupDisplayName && signupDisplayName.trim().length > 0)
+          ? signupDisplayName.trim()
+          : existingProfileDisplayName ||
+            user?.email?.split("@")[0] ||
+            "User";
+
+      // Ensure profile exists in profiles table before updating
+      // Check if profile exists first
+      const { data: existingProfileRecord, error: profileCheckError } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("id", user?.id)
         .single();
 
-      if (error) throw error;
+      if (profileCheckError && profileCheckError.code !== "PGRST116") {
+        // PGRST116 means no rows found, which is expected for new users
+        console.error("Error checking profiles table:", profileCheckError);
+        throw profileCheckError;
+      }
 
-      // Handle profile image if exists
-      if (profileImage) {
-        const { error: imageError } = await supabase
-          .from("user_profile_images")
+      // If profile doesn't exist, create it first
+      if (!existingProfileRecord) {
+        const { error: createProfileError } = await supabase
+          .from("profiles")
           .insert({
-            user_profile_id: profile.id,
-            image_url: profileImage,
-            is_primary: true,
-            position: { x: 50, y: 50 },
-            order: 0,
+            id: user?.id,
+            role: "user",
+            email: user?.email || "",
+            display_name: finalDisplayName,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           });
 
-        if (imageError) throw imageError;
+        if (createProfileError) {
+          console.error("Error creating profile in profiles table:", createProfileError);
+          throw createProfileError;
+        }
+      } else {
+        // Profile exists, update it
+        const { error: profileError } = await supabase
+          .from("profiles")
+          .update({
+        display_name: finalDisplayName,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", user?.id);
+
+        if (profileError) {
+          console.error("Error updating profiles table:", profileError);
+          throw profileError;
+        }
       }
 
-      console.log(
-        "Profile updated successfully, redirecting to:",
-        `/${selectedRole}`
-      ); // Debug log
+      // Prepare app_users update data
+      const appUsersUpdateData = {
+        preferred_mode: data.preferred_mode,
+        updated_at: new Date().toISOString(),
+      };
 
-      // Update React Query cache
-      queryClient.setQueryData(["profile", user.id], profile);
+      // Add location if available
+      if (location) {
+        appUsersUpdateData.current_latitude = location.lat;
+        appUsersUpdateData.current_longitude = location.lng;
+        appUsersUpdateData.location_updated_at = new Date().toISOString();
+      }
 
-      // Show success toast
-      toast.success("Profile created!", {
-        description: `Your profile has been set up successfully. Welcome ${selectedRole}!`,
-        duration: 2000,
+      // Add referral if valid
+      if (referralUserId) {
+        appUsersUpdateData.referred_by_profile_id = referralUserId;
+      }
+
+      // Check if app_users record exists, create if not
+      const { data: existingAppUser } = await supabase
+        .from("app_users")
+        .select("id")
+        .eq("profile_id", user?.id)
+        .single();
+
+      let appUser;
+      if (existingAppUser) {
+        // Update existing app_users record
+        const { data: updatedAppUser, error: appUserError } = await supabase
+          .from("app_users")
+          .update(appUsersUpdateData)
+          .eq("profile_id", user?.id)
+          .select()
+          .single();
+
+        if (appUserError) {
+          console.error("Error updating app_users:", appUserError);
+          throw appUserError;
+      }
+        appUser = updatedAppUser;
+      } else {
+        // Create new app_users record
+        // Generate a unique referral code
+        const generateReferralCode = () => {
+          const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+          let code = '';
+          for (let i = 0; i < 8; i++) {
+            code += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+          return code;
+        };
+
+        let referralCode = generateReferralCode();
+        // Check if code exists and regenerate if needed (simple check)
+        const { data: existingCode } = await supabase
+          .from("app_users")
+          .select("id")
+          .eq("referral_code", referralCode)
+          .single();
+        
+        // If code exists, generate a new one (very unlikely but handle it)
+        if (existingCode) {
+          referralCode = generateReferralCode();
+        }
+
+        const { data: newAppUser, error: createError } = await supabase
+          .from("app_users")
+          .insert({
+            profile_id: user?.id,
+            preferred_mode: data.preferred_mode,
+            referral_code: referralCode,
+            points_balance: 0,
+            total_points_earned: 0,
+            status: 'active',
+            ...appUsersUpdateData,
+          })
+          .select()
+          .single();
+
+        if (createError) {
+          console.error("Error creating app_users:", createError);
+          throw createError;
+        }
+        appUser = newAppUser;
+      }
+
+      // Get the updated profile data from profiles table to include in cache
+      const { data: updatedProfileData } = await supabase
+        .from("profiles")
+        .select("id, display_name, email, phone_number, profile_image_url")
+        .eq("id", user?.id)
+        .single();
+
+      // Update React Query cache with the correct structure
+      // This matches what useUserProfile returns: { ...appUserData, profile: profileData }
+      // This ensures the Profile page displays the correct data immediately without refetching
+      queryClient.setQueryData(["profile", user?.id], {
+        ...appUser,
+        profile: updatedProfileData || null,
       });
 
-      // Immediate hard redirect
-      window.location.href = `/${selectedRole}`;
+      toast.success("Profile created!", {
+        description: "Welcome to the treasure hunt! Let's start exploring.",
+        duration: 3000,
+      });
+
+      // Redirect to home page
+      navigate("/home", { replace: true });
     } catch (error) {
-      console.error("Error in onSubmit:", error); // Debug log
+      console.error("Error creating profile:", error);
       toast.error("Error", {
-        description: error.message,
+        description:
+          error.message || "Failed to create profile. Please try again.",
       });
     } finally {
       setIsLoading(false);
     }
   };
 
+  const requestLocation = () => {
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          });
+          setLocationPermission("granted");
+          toast.success("Location enabled", {
+            description: "We'll show you places near you!",
+          });
+        },
+        () => {
+          setLocationPermission("denied");
+          toast.error("Location denied", {
+            description: "You can enable it later in settings.",
+          });
+        }
+      );
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-white w-full max-w-sm sm:max-w-md mx-auto">
-      {/* TITLE ----------------------------------------------- */}
-      <div className="px-4 py-4 border-b border-b-gray-300">
-        <div className="flex items-center">
-          <h1 className="flex-1 text-center font-semibold text-lg">
-            Create profile
-          </h1>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-primary/10 via-white to-primary/5 flex flex-col relative overflow-hidden">
+      {/* Animated background elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-20 left-10 w-72 h-72 bg-primary/5 rounded-full blur-3xl animate-pulse" />
+        <div
+          className="absolute bottom-20 right-10 w-96 h-96 bg-primary/5 rounded-full blur-3xl animate-pulse"
+          style={{ animationDelay: "1s" }}
+        />
       </div>
 
-      <div className="px-4 py-6">
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-darkgray">Profile completion</span>
-            <span className="text-sm font-medium">{completion}%</span>
-          </div>
-          {/* PROGRESS BAR */}
-          <Progress value={completion} className="h-2" />
-        </div>
-
-        {/* FORMS */}
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-          {/* AVATAR PHOTO SECTION ----------------------------------------------- */}
-          <div>
-            <h2 className="text-xl font-semibold mb-2">Photo</h2>
-            <p className="text-sm text-lightgray mb-4">
-              Add a photo that clearly shows your face. This is how you appear
-              to others on the swipe view.
+      <div className="flex-1 flex flex-col items-center justify-center w-full max-w-md mx-auto px-4 relative z-10 py-8">
+        {/* Content area - centered like onboarding */}
+        <div className="w-full">
+          {/* Header with better typography */}
+          <div className="text-center mb-6 animate-fade-in-up">
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 bg-clip-text text-transparent mb-2">
+              Let&apos;s Get Started!
+            </h1>
+            <p className="text-gray-600 text-sm px-2">
+              Set up your profile to start your treasure hunt adventure
             </p>
-
-            {/* AVATAR UPLOAD */}
-            <div className="flex justify-center">
-              <label className="aspect-square bg-lightgray/20 rounded-lg overflow-hidden relative h-[500px]">
-                {profileImage ? (
-                  <img
-                    src={profileImage}
-                    alt="Profile"
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <div className="flex flex-col items-center gap-2">
-                      <Camera className="w-8 h-8 text-gray-400" />
-                      <span className="text-sm text-gray-500">Add photo</span>
                     </div>
+
+          {/* Form with glassmorphism */}
+          <form
+            onSubmit={form.handleSubmit(handleSubmit)}
+            className="space-y-4 bg-white/80 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 px-4 py-6 animate-fade-in-up"
+            style={{ animationDelay: "0.1s" }}
+          >
+            {/* Display Name */}
+            <div className="space-y-3">
+              <label className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                <div className="p-1.5 bg-primary/10 rounded-lg">
+                  <User className="h-4 w-4 text-primary" />
                   </div>
-                )}
-                <input
-                  type="file"
-                  accept="image/*"
-                  ref={fileInputRef}
-                  onChange={handleImageUpload}
-                  className="absolute inset-0 opacity-0"
-                />
+                Display Name
               </label>
+              <Input
+                {...form.register("display_name")}
+                placeholder="Enter your name"
+                className="h-12 text-base border-2 border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl transition-all duration-200 hover:border-gray-300"
+              />
+              <FormFieldError form={form} name="display_name" />
             </div>
-            {profileImage && (
-              <div className="mt-4 flex justify-center">
+
+            {/* Preferred Mode */}
+            <div className="space-y-3">
+              <label className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                <div className="p-1.5 bg-primary/10 rounded-lg">
+                  <Users className="h-4 w-4 text-primary" />
+                </div>
+                How do you want to play?
+              </label>
+              <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
-                  onClick={() => {
-                    setProfileImage(null);
-                    // when removing the photo, clear the profile image state and reset the file input value
-                    if (fileInputRef.current) {
-                      fileInputRef.current.value = "";
-                    }
-                  }}
-                  className="text-sm text-primary hover:text-red-600"
+                  onClick={() => form.setValue("preferred_mode", "solo")}
+                  className={`p-3 rounded-xl border-2 transition-all duration-200 transform hover:scale-105 hover:shadow-lg ${
+                    form.watch("preferred_mode") === "solo"
+                      ? "border-primary bg-gradient-to-br from-primary/20 to-primary/10 shadow-md scale-105"
+                      : "border-gray-200 hover:border-primary/50 bg-white hover:bg-gray-50"
+                  }`}
+              >
+                <div
+                    className={`p-1.5 rounded-lg mb-2 w-fit mx-auto ${
+                      form.watch("preferred_mode") === "solo"
+                        ? "bg-primary/20"
+                        : "bg-gray-100"
+                  }`}
                 >
-                  Remove photo
+                    <UserPlus
+                      className={`h-5 w-5 ${
+                        form.watch("preferred_mode") === "solo"
+                          ? "text-primary"
+                          : "text-gray-600"
+                      }`}
+                    />
+                </div>
+                <div
+                    className={`font-bold text-sm ${
+                      form.watch("preferred_mode") === "solo"
+                        ? "text-gray-900"
+                        : "text-gray-700"
+                  }`}
+                >
+                    Solo
+                  </div>
+                  <div className="text-xs text-gray-500 mt-0.5">
+                    Hunt alone
+                </div>
+              </button>
+              <button
+                type="button"
+                  onClick={() => form.setValue("preferred_mode", "team")}
+                  className={`p-3 rounded-xl border-2 transition-all duration-200 transform hover:scale-105 hover:shadow-lg ${
+                    form.watch("preferred_mode") === "team"
+                      ? "border-primary bg-gradient-to-br from-primary/20 to-primary/10 shadow-md scale-105"
+                      : "border-gray-200 hover:border-primary/50 bg-white hover:bg-gray-50"
+                  }`}
+                >
+                  <div
+                    className={`p-1.5 rounded-lg mb-2 w-fit mx-auto ${
+                      form.watch("preferred_mode") === "team"
+                        ? "bg-primary/20"
+                        : "bg-gray-100"
+                    }`}
+                  >
+                    <Users
+                      className={`h-5 w-5 ${
+                        form.watch("preferred_mode") === "team"
+                          ? "text-primary"
+                          : "text-gray-600"
+                      }`}
+                />
+              </div>
+                  <div
+                    className={`font-bold text-sm ${
+                      form.watch("preferred_mode") === "team"
+                        ? "text-gray-900"
+                        : "text-gray-700"
+                    }`}
+                  >
+                    Team
+                  </div>
+                  <div className="text-xs text-gray-500 mt-0.5">
+                    Play with friends
+                  </div>
                 </button>
               </div>
-            )}
+              <FormFieldError form={form} name="preferred_mode" />
           </div>
 
-          {/* USER NAME AND EMAIL SECTION ----------------------------------------------- */}
-          <div className="text-center border-b border-lightgray/50 py-6">
-            <div className="space-y-2">
-              <h2 className="text-lg font-semibold text-darkgray">
-                Welcome, {user?.user_metadata?.name || "User"}
-              </h2>
-              <p className="text-lightgray">{user?.email}</p>
-            </div>
-          </div>
-
-          {/* ROLE SELECTION SECTION ----------------------------------------------- */}
-          <div>
-            <h2 className="text-xl font-semibold mb-4">Choose Your Role</h2>
-            <p className="text-sm text-gray-500 mb-4">
-              Select how you want to use TreatYourDate
-            </p>
-            <div className="grid grid-cols-2 gap-4 mb-8">
-              {/* TREATER BUTTON */}
-              <button
-                type="button"
-                className={`p-6 rounded-2xl border-2 transition-all ${
-                  selectedRole === "treater"
-                    ? "border-primary/90 bg-primary/90 shadow-xl"
-                    : "border-gray-100 hover:border-gray-200"
-                }`}
-                onClick={() => setSelectedRole("treater")}
-              >
-                <div
-                  className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 ${
-                    selectedRole === "treater" ? "bg-white" : "bg-primary/20"
-                  }`}
-                >
-                  <UtensilsCrossed className="h-10 w-10 text-primary" />
-                </div>
-                <div
-                  className={`${
-                    selectedRole === "treater" ? "text-white" : "text-darkgray"
-                  }`}
-                >
-                  <h3 className="font-medium text-center">Treater</h3>
-                  <p className="text-xs text-center text-muted-foreground mt-1">
-                    The one who buys the meal
-                  </p>
-                </div>
-              </button>
-
-              {/* TREATEE BUTTON */}
-              <button
-                type="button"
-                className={`p-6 rounded-2xl border-2 transition-all ${
-                  selectedRole === "treatee"
-                    ? "border-primary/90 bg-primary/90 shadow-xl"
-                    : "border-gray-100 hover:border-gray-200"
-                }`}
-                onClick={() => setSelectedRole("treatee")}
-              >
-                <div
-                  className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 ${
-                    selectedRole === "treatee" ? "bg-white" : "bg-primary/20"
-                  }`}
-                >
-                  <Heart className={`h-10 w-10 text-primary`} />
-                </div>
-                <div
-                  className={`${
-                    selectedRole === "treatee" ? "text-white" : "text-darkgray"
-                  }`}
-                >
-                  <h3 className="font-medium text-center">Treatee</h3>
-                  <p className="text-xs text-center text-muted-foreground mt-1">
-                    The one who gets the meal
-                  </p>
-                </div>
-              </button>
-            </div>
-            {/* REQUIRED FIELD ALERT -------------------- */}
-            <FormFieldError form={form} name="role" className="text-center" />
-          </div>
-
-          {/* ABOUT ME SECTION ------------------------------ */}
-          <div>
-            {/* TITLE */}
-            <h2 className="text-xl font-semibold mb-2">About me</h2>
-            <p className="text-sm text-lightgray mb-4">
-              Make it easy for others to get a sense of who you are.
-            </p>
-            {/* TEXTAREA */}
-            <Textarea
-              placeholder="Share a few words about yourself, your interests, and what you're looking for in a connection..."
-              className="min-h-[150px] text-sm text-darkgray border-none bg-lightgray/20"
-              {...form.register("about_me")}
-            />
-          </div>
-
-          {/* MY DETAILS SECTION ------------------------------ */}
-          <div>
-            <h2 className="text-xl font-semibold mb-4">My details</h2>
+            {/* Referral Code */}
             <div className="space-y-3">
-              {/* AGE ------------------------------ */}
-              <div className="flex items-center justify-between rounded-lg">
-                <div className="flex items-center gap-4">
-                  <Cake className="w-4 h-4 text-lightgray" />
-                  <span className="text-sm font-semibold text-darkgray">
-                    Age
-                  </span>
+              <label className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                <div className="p-1.5 bg-primary/10 rounded-lg">
+                  <Gift className="h-4 w-4 text-primary" />
                 </div>
-                <Input
-                  placeholder="Add"
-                  type="number"
-                  min="18"
-                  max="120"
-                  className="w-2/5 h-auto text-right text-sm text-lightgray border-none shadow-none bg-white"
-                  {...form.register("age")}
-                />
-              </div>
-              {/* REQUIRED FIELD ALERT -------------------- */}
-              <FormFieldError form={form} name="age" />
-
-              {/* PHONE NUMBER ------------------------------ */}
-              <div className="flex items-center justify-between rounded-lg">
-                <div className="flex items-center gap-4">
-                  <User className="w-4 h-4 text-lightgray" />
-                  <span className="text-sm font-semibold text-darkgray">
-                    Phone Number
-                  </span>
-                </div>
-                <Input
-                  placeholder="Add"
-                  className="w-2/5 h-auto text-right text-sm text-lightgray border-none shadow-none bg-white"
-                  {...form.register("phone_number")}
-                />
-              </div>
-
-              {/* OCCUPATION FIELD */}
-              <div className="flex items-center justify-between rounded-lg">
-                <div className="flex items-center gap-4">
-                  <Briefcase className="w-4 h-4 text-lightgray" />
-                  <span className="text-sm font-semibold text-darkgray">
-                    Occupation
-                  </span>
-                </div>
-                <Input
-                  placeholder="Add"
-                  className="w-1/2 h-auto text-right text-sm text-lightgray border-none shadow-none bg-white"
-                  {...form.register("occupation")}
-                />
-              </div>
-
-              {/* GENDER FIELD */}
-              <div className="flex items-center justify-between rounded-lg">
-                <div className="flex items-center gap-4">
-                  <User className="w-4 h-4 text-lightgray" />
-                  <span className="text-sm font-semibold text-darkgray">
-                    Gender & Pronouns
-                  </span>
-                </div>
-                <Select
-                  value={form.watch("gender")}
-                  onValueChange={(value) =>
-                    form.setValue("gender", value, { shouldValidate: true })
-                  }
-                >
-                  <SelectTrigger className="h-auto bg-white border-none shadow-none text-darkgray">
-                    <SelectValue placeholder="Add" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white border-lightgray/20">
-                    <SelectItem value="Male">Male</SelectItem>
-                    <SelectItem value="Female">Female</SelectItem>
-                    <SelectItem value="Other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              {/* REQUIRED FIELD ALERT -------------------- */}
-              <FormFieldError form={form} name="gender" />
-
-              {/* EDUCATION FIELD */}
-              <div className="flex items-center justify-between rounded-lg">
-                <div className="flex items-center gap-4">
-                  <GraduationCap className="w-4 h-4 text-lightgray" />
-                  <span className="text-sm font-semibold text-darkgray">
-                    Education
-                  </span>
-                </div>
-                <Input
-                  placeholder="Add"
-                  className="w-2/5 h-auto text-right text-sm text-darkgray border-none shadow-none bg-white"
-                  {...form.register("education")}
-                />
-              </div>
-
-              {/* LOCATION FIELD */}
-              <div className="flex items-center justify-between rounded-lg">
-                <div className="flex items-center gap-4">
-                  <MapPin className="w-4 h-4 text-lightgray" />
-                  <span className="text-sm font-semibold text-darkgray">
-                    Location
-                  </span>
-                </div>
-                <Input
-                  placeholder="Add"
-                  className="w-2/5 h-auto text-right text-sm text-darkgray border-none shadow-none bg-white"
-                  {...form.register("location")}
-                />
-              </div>
-              {/* REQUIRED FIELD ALERT -------------------- */}
-              <FormFieldError form={form} name="location" />
-            </div>
-          </div>
-
-          {/* MOST PEOPLE ALSO WANT TO KNOW SECTION -------------------- */}
-          <div>
-            <h2 className="text-sm text-lightgray mb-4">
-              Most people also want to know:
-            </h2>
-            <div className="space-y-3">
-              {/* HEIGHT FIELD */}
-              <div className="flex items-center justify-between rounded-lg">
-                <div className="flex items-center gap-4">
-                  <Ruler className="w-4 h-4 text-lightgray" />
-                  <span className="text-sm font-semibold text-darkgray">
-                    Height
-                  </span>
-                </div>
-                <div className="flex items-center justify-end">
-                  <Input
-                    placeholder="Add"
-                    className="w-2/5 h-auto text-right text-sm text-lightgray border-none shadow-none bg-white"
-                    {...form.register("height")}
-                  />
-                  <p className="text-sm text-lightgray mr-1">cm</p>
-                </div>
-              </div>
-
-              {/* SMOKING FIELD */}
-              <div className="flex items-center justify-between rounded-lg">
-                <div className="flex items-center gap-4">
-                  <Cigarette className="w-4 h-4 text-lightgray" />
-                  <span className="text-sm font-semibold text-darkgray">
-                    Smoking
-                  </span>
-                </div>
-                <Select
-                  value={form.watch("smoking")}
-                  onValueChange={(value) => form.setValue("smoking", value)}
-                >
-                  <SelectTrigger className="h-auto bg-white border-none shadow-none text-darkgray">
-                    <SelectValue placeholder="Add" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white border-lightgray/20">
-                    <SelectItem value="Never">Never</SelectItem>
-                    <SelectItem value="Sometimes">Sometimes</SelectItem>
-                    <SelectItem value="Regular">Regular</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* DRINKING FIELD */}
-              <div className="flex items-center justify-between rounded-lg">
-                <div className="flex items-center gap-4">
-                  <Wine className="w-4 h-4 text-lightgray" />
-                  <span className="text-sm font-semibold text-darkgray">
-                    Drinking
-                  </span>
-                </div>
-                <Select
-                  value={form.watch("drinking")}
-                  onValueChange={(value) => form.setValue("drinking", value)}
-                >
-                  <SelectTrigger className="h-auto bg-white border-none shadow-none text-darkgray">
-                    <SelectValue placeholder="Add" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white border-lightgray/20">
-                    <SelectItem value="Never">Never</SelectItem>
-                    <SelectItem value="Socially">Socially</SelectItem>
-                    <SelectItem value="Regularly">Regularly</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* PETS FIELD */}
-              <div className="flex items-center justify-between rounded-lg">
-                <div className="flex items-center gap-4">
-                  <Dog className="w-4 h-4 text-lightgray" />
-                  <span className="text-sm font-semibold text-darkgray">
-                    Pets
-                  </span>
-                </div>
-                <Select
-                  value={form.watch("pets")}
-                  onValueChange={(value) => form.setValue("pets", value)}
-                >
-                  <SelectTrigger className="h-auto bg-white border-none shadow-none text-darkgray">
-                    <SelectValue placeholder="Add" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white border-lightgray/20">
-                    <SelectItem value="Have">Have</SelectItem>
-                    <SelectItem value="Want">Want</SelectItem>
-                    <SelectItem value="No">No</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* CHILDREN FIELD */}
-              <div className="flex items-center justify-between rounded-lg">
-                <div className="flex items-center gap-4">
-                  <Baby className="w-4 h-4 text-lightgray" />
-                  <span className="text-sm font-semibold text-darkgray">
-                    Children
-                  </span>
-                </div>
-                <Select
-                  value={form.watch("children")}
-                  onValueChange={(value) => form.setValue("children", value)}
-                >
-                  <SelectTrigger className="h-auto bg-white border-none shadow-none text-darkgray">
-                    <SelectValue placeholder="Add" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white border-lightgray/20">
-                    <SelectItem value="Have">Have</SelectItem>
-                    <SelectItem value="Want">Want</SelectItem>
-                    <SelectItem value="No">No</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* ZODIAC FIELD */}
-              <div className="flex items-center justify-between rounded-lg">
-                <div className="flex items-center gap-4">
-                  <Sparkles className="w-4 h-4 text-lightgray" />
-                  <span className="text-sm font-semibold text-darkgray">
-                    Zodiac sign
-                  </span>
-                </div>
-                <Select
-                  value={form.watch("zodiac")}
-                  onValueChange={(value) => form.setValue("zodiac", value)}
-                >
-                  <SelectTrigger className="h-auto bg-white border-none shadow-none text-darkgray">
-                    <SelectValue placeholder="Add" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white border-lightgray/20">
-                    {[
-                      "Aries",
-                      "Taurus",
-                      "Gemini",
-                      "Cancer",
-                      "Leo",
-                      "Virgo",
-                      "Libra",
-                      "Scorpio",
-                      "Sagittarius",
-                      "Capricorn",
-                      "Aquarius",
-                      "Pisces",
-                    ].map((sign) => (
-                      <SelectItem key={sign} value={sign}>
-                        {sign}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* RELIGION FIELD */}
-              <div className="flex items-center justify-between rounded-lg">
-                <div className="flex items-center gap-4">
-                  <Church className="w-4 h-4 text-lightgray" />
-                  <span className="text-sm font-semibold text-darkgray">
-                    Religion
-                  </span>
-                </div>
-                <Select
-                  value={form.watch("religion")}
-                  onValueChange={(value) => form.setValue("religion", value)}
-                >
-                  <SelectTrigger className="h-auto bg-white border-none shadow-none text-darkgray">
-                    <SelectValue placeholder="Add" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white border-lightgray/20">
-                    {[
-                      "Christian",
-                      "Muslim",
-                      "Jewish",
-                      "Hindu",
-                      "Buddhist",
-                      "Spiritual",
-                      "Agnostic",
-                      "Atheist",
-                      "Other",
-                    ].map((religion) => (
-                      <SelectItem key={religion} value={religion}>
-                        {religion}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
-
-          {/* I ENJOY SECTION ------------------- */}
-          <div>
-            <h2 className="text-xl font-semibold mb-4">I enjoy</h2>
-            <p className="text-sm text-gray-500 mb-4">
-              Adding your interests is a great way to find like-minded
-              connections.
-            </p>
-            <div className="space-y-3">
-              {/* INTEREST SELECTION DROPDOWN */}
-              <Select
-                onValueChange={(interest) => {
-                  setSelectedInterests((prev) => [...prev, interest]);
-                }}
-                value=""
-              >
-                <SelectTrigger className="w-full h-auto bg-lightgray/20 border-none shadow-none text-darkgray">
-                  <SelectValue placeholder="Add an interest" />
-                </SelectTrigger>
-                <SelectContent className="bg-white border-lightgray/20">
-                  {[
-                    "Reading",
-                    "Writing",
-                    "Cooking",
-                    "Baking",
-                    "Photography",
-                    "Traveling",
-                    "Hiking",
-                    "Gaming",
-                    "Music",
-                    "Movies",
-                    "Art",
-                    "Sports",
-                    "Dancing",
-                    "Yoga",
-                    "Meditation",
-                    "Coffee brewing",
-                    "Wine tasting",
-                    "Food exploring",
-                  ]
-                    .filter((interest) => !selectedInterests.includes(interest))
-                    .map((interest) => (
-                      <SelectItem key={interest} value={interest}>
-                        {interest}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-
-              {/* SELECTED INTERESTS CAPSULES */}
-              <div className="flex flex-wrap gap-2">
-                {selectedInterests.map((interest) => (
-                  <div
-                    key={interest}
-                    className="flex items-center gap-2 bg-primary/80 rounded-full px-3 py-0.5"
-                  >
-                    <span className="text-xs font-light text-white">
-                      {interest}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setSelectedInterests((interests) =>
-                          interests.filter((i) => i !== interest)
-                        )
-                      }
-                      className="text-white text-sm my-auto"
-                    >
-                      ×
-                    </button>
+                Referral Code{" "}
+                <span className="text-gray-400 font-normal">(Optional)</span>
+              </label>
+              <Input
+                {...form.register("referral_code")}
+                placeholder="Enter friend's code"
+                className="h-12 text-base uppercase border-2 border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl transition-all duration-200 hover:border-gray-300"
+                maxLength={12}
+              />
+              {referralUserId && (
+                <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-xl">
+                  <div className="p-1 bg-green-100 rounded-full">
+                    <Gift className="h-3 w-3 text-green-600" />
                   </div>
-                ))}
+                  <p className="text-sm font-medium text-green-700">
+                    Valid referral code!
+                  </p>
               </div>
-            </div>
+              )}
+              <FormFieldError form={form} name="referral_code" />
           </div>
 
-          {/* LANGUAGE SECTION ------------------- */}
-          <div>
-            <h2 className="text-xl font-semibold mb-4">I communicate in</h2>
+            {/* Location Permission */}
             <div className="space-y-3">
-              {/* LANGUAGE SELECTION DROPDOWN */}
-              <Select
-                value={selectedLanguage}
-                onValueChange={(language) => {
-                  setSelectedLanguage(language);
-                  setSelectedLanguages((prev) => [...prev, language]);
-                }}
-              >
-                <SelectTrigger className="w-full h-auto bg-lightgray/20 border-none shadow-none text-darkgray">
-                  <SelectValue placeholder="Add a language" />
-                </SelectTrigger>
-                <SelectContent className="bg-white border-lightgray/20">
-                  {[
-                    "English",
-                    "Spanish",
-                    "French",
-                    "German",
-                    "Italian",
-                    "Portuguese",
-                    "Russian",
-                    "Chinese",
-                    "Japanese",
-                    "Korean",
-                    "Arabic",
-                    "Hindi",
-                    "Finnish",
-                    "Swedish",
-                    "Norwegian",
-                  ]
-                    .filter((lang) => !selectedLanguages.includes(lang))
-                    .map((language) => (
-                      <SelectItem key={language} value={language}>
-                        {language}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-
-              {/* SELECTED LANGUAGES CAPSULES */}
-              <div className="flex flex-wrap gap-2">
-                {selectedLanguages.map((language) => (
-                  <div
-                    key={language}
-                    className="flex items-center gap-2 bg-primary/80 rounded-full px-3 py-0.5"
+              <label className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                <div className="p-1.5 bg-primary/10 rounded-lg">
+                  <MapPin className="h-4 w-4 text-primary" />
+                </div>
+                Location
+              </label>
+              {locationPermission === "granted" && location ? (
+                <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-green-100 rounded-lg">
+                      <MapPin className="h-5 w-5 text-green-600" />
+                    </div>
+                    <p className="text-sm font-medium text-green-700">
+                      Location enabled - We&apos;ll show you places near you!
+                    </p>
+              </div>
+                </div>
+              ) : locationPermission === "denied" ? (
+                <div className="p-4 bg-gray-50 border-2 border-gray-200 rounded-xl">
+                  <p className="text-sm text-gray-600 mb-3 font-medium">
+                    Location access denied
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={requestLocation}
+                    className="w-full h-11 border-2 hover:bg-primary hover:text-white hover:border-primary transition-all duration-200"
                   >
-                    <span className="text-xs font-light text-white">
-                      {language}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedLanguages((prev) =>
-                          prev.filter((l) => l !== language)
-                        );
-                        if (selectedLanguage === language) {
-                          setSelectedLanguage("");
-                        }
-                      }}
-                      className="text-white text-sm my-auto"
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
+                    <MapPin className="h-4 w-4 mr-2" />
+                    Enable Location
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={requestLocation}
+                  className="w-full h-14 border-2 border-gray-200 hover:border-primary hover:bg-primary/5 transition-all duration-200 rounded-xl font-medium"
+                >
+                  <MapPin className="h-5 w-5 mr-2" />
+                  Enable Location{" "}
+                  <span className="text-xs ml-1 opacity-70">(Recommended)</span>
+                </Button>
+              )}
           </div>
 
-          {/* LINKED ACCOUNTS SECTION */}
-          <div>
-            <h2 className="text-xl font-semibold mb-4">Linked accounts</h2>
-            <div className="space-y-3">
-              {/* INSTAGRAM */}
-              <div className="flex items-center justify-between rounded-lg">
-                <div className="flex items-center gap-4">
-                  <Instagram className="w-4 h-4 text-lightgray" />
-                  <span className="text-sm font-semibold text-darkgray">
-                    Instagram
-                  </span>
-                </div>
-                <Input
-                  placeholder="Add"
-                  className="w-2/5 h-auto text-right text-sm text-lightgray border-none shadow-none bg-white"
-                  {...form.register("social_links.instagram")}
-                />
-              </div>
-
-              {/* FACEBOOK */}
-              <div className="flex items-center justify-between rounded-lg">
-                <div className="flex items-center gap-4">
-                  <Facebook className="w-4 h-4 text-lightgray" />
-                  <span className="text-sm font-semibold text-darkgray">
-                    Facebook
-                  </span>
-                </div>
-                <Input
-                  placeholder="Add"
-                  className="w-2/5 h-auto text-right text-sm text-lightgray border-none shadow-none bg-white"
-                  {...form.register("social_links.facebook")}
-                />
-              </div>
-
-              {/* TIKTOK */}
-              <div className="flex items-center justify-between rounded-lg">
-                <div className="flex items-center gap-4">
-                  <Twitter className="w-4 h-4 text-lightgray" />
-                  <span className="text-sm font-semibold text-darkgray">
-                    Twitter
-                  </span>
-                </div>
-                <Input
-                  placeholder="Add"
-                  className="w-2/5 h-auto text-right text-sm text-lightgray border-none shadow-none bg-white"
-                  {...form.register("social_links.twitter")}
-                />
-              </div>
-            </div>
-          </div>
-
+            {/* Submit Button */}
           <Button
             type="submit"
-            size="lg"
-            className="mt-2 h-12 w-full bg-primary font-medium text-white hover:bg-primary-hover/90 shadow-xl"
             disabled={isLoading}
+              className="w-full h-12 bg-gradient-to-r from-primary to-primary-hover hover:from-primary-hover hover:to-primary text-white font-bold text-base shadow-xl hover:shadow-2xl rounded-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none mt-2"
           >
-            {isLoading ? "Saving..." : "Save Changes"}
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                  Creating Profile...
+                </>
+              ) : (
+                <>
+                  <span>Start Treasure Hunt</span>
+                </>
+              )}
           </Button>
         </form>
+        </div>
       </div>
     </div>
   );

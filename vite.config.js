@@ -52,6 +52,7 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg}"], // ✅ Ensures assets are cached
+        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024, // 3MB limit for precaching
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i, // ✅ Caches Supabase API responses

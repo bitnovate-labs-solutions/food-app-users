@@ -34,6 +34,9 @@ export default function RestaurantsView() {
   const [isPromotionDrawerOpen, setIsPromotionDrawerOpen] = useState(false);
   const [selectedPromotion, setSelectedPromotion] = useState(null);
   const isFilteringRef = useRef(false);
+  const touchStartX = useRef(null);
+  const touchEndX = useRef(null);
+  const touchStartY = useRef(null);
 
   // Memoize restaurants to prevent unnecessary re-renders
   const restaurantsWithItems = useMemo(() => {
@@ -164,6 +167,49 @@ export default function RestaurantsView() {
     setTimeout(() => setIsPaused(false), 5000);
   };
 
+  // Touch handlers for swipe functionality
+  const handleTouchStart = (e) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+  };
+
+  const handleTouchMove = (e) => {
+    touchEndX.current = e.touches[0].clientX;
+    // Prevent vertical scrolling when swiping horizontally
+    if (touchStartX.current !== null && touchStartY.current !== null) {
+      const deltaX = Math.abs(e.touches[0].clientX - touchStartX.current);
+      const deltaY = Math.abs(e.touches[0].clientY - touchStartY.current);
+      if (deltaX > deltaY && deltaX > 10) {
+        e.preventDefault();
+      }
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStartX.current || !touchEndX.current) return;
+
+    const distance = touchStartX.current - touchEndX.current;
+    const minSwipeDistance = 50; // Minimum distance for a swipe
+
+    if (Math.abs(distance) > minSwipeDistance) {
+      if (distance > 0) {
+        // Swipe left - go to next slide
+        setPromotionCarouselIndex((prev) => (prev + 1) % totalSlides);
+      } else {
+        // Swipe right - go to previous slide
+        setPromotionCarouselIndex((prev) => (prev - 1 + totalSlides) % totalSlides);
+      }
+      // Pause auto-swipe briefly when manually swiping
+      setIsPaused(true);
+      setTimeout(() => setIsPaused(false), 5000);
+    }
+
+    // Reset touch positions
+    touchStartX.current = null;
+    touchEndX.current = null;
+    touchStartY.current = null;
+  };
+
   return (
     <div className="px-6 space-y-5 pb-24">
       {/* Search Button - Fixed at top ========================================================= */}
@@ -193,6 +239,9 @@ export default function RestaurantsView() {
             className="relative"
             onMouseEnter={() => setIsPaused(true)}
             onMouseLeave={() => setIsPaused(false)}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
           >
             <div className="flex justify-center overflow-hidden">
               {getVisiblePromotions().map((promotion) => {
@@ -202,7 +251,7 @@ export default function RestaurantsView() {
                 return (
                   <div
                     key={promotion.id}
-                    className="flex-shrink-0 w-full cursor-pointer"
+                    className="flex-shrink-0 w-full cursor-pointer transition-transform duration-300 ease-in-out"
                     onClick={() => {
                       setSelectedPromotion(promotion);
                       setIsPromotionDrawerOpen(true);

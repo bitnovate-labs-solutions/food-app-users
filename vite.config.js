@@ -24,7 +24,8 @@ export default defineConfig({
       manifest: {
         name: "Food Hunts",
         short_name: "Food Hunts",
-        description: "A platform to treat your date with the best deals.",
+        description:
+          "A platform to search for foods, dine in and get rewarded.",
         theme_color: "#ffffff",
         background_color: "#ffffff",
         display: "standalone",

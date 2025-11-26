@@ -451,9 +451,10 @@ export default function RestaurantDetail() {
                         </p>
                       )}
                       <div className="flex items-center justify-between mt-2">
-                        <p className="text-sm font-semibold text-black">
+                        {/* CODE FOR FUTURE USE ================== */}
+                        {/* <p className="text-sm font-semibold text-black">
                           RM{menuItem.price?.toFixed(0) || 0}
-                        </p>
+                        </p> */}
                         <div className="flex items-center gap-1">
                           <Star className="w-3 h-3 fill-gray-400 text-gray-400" />
                           <span className="text-xs font-light text-gray-400">

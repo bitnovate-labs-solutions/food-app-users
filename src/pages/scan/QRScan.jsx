@@ -121,6 +121,9 @@ const QRScan = () => {
         handleScanSuccessRef.current || (() => {}),
         handleScanFailureRef.current || (() => {})
       );
+
+      // Clear any previous errors on successful start
+      setError(null);
     } catch (error) {
       // Handle specific error types
       if (
@@ -137,7 +140,14 @@ const QRScan = () => {
       if (error.message && error.message.toLowerCase().includes("camera")) {
         setError("Unable to access camera. Please check permissions.");
       } else {
-        setError(`Failed to start camera: ${error.message || "Unknown error"}`);
+        // Don't show error for transition/state errors - these are handled by retry
+        if (
+          !error.message?.includes("transition") &&
+          !error.message?.includes("state") &&
+          !error.message?.includes("already")
+        ) {
+          setError(`Failed to start camera: ${error.message || "Unknown error"}`);
+        }
       }
     } finally {
       isStarting.current = false;
@@ -151,6 +161,11 @@ const QRScan = () => {
   // Stop all media tracks (iOS-specific fix)
   // This function must be defined before useEffects that use it
   const stopAllMediaTracks = useCallback(() => {
+    // Don't stop tracks if scanner is currently starting
+    if (isStarting.current) {
+      return;
+    }
+
     try {
       // Get all video elements in the qr-reader container
       const qrReaderElement = document.getElementById("qr-reader");
@@ -162,8 +177,10 @@ const QRScan = () => {
             if (stream instanceof MediaStream) {
               // Stop all tracks in the stream
               stream.getTracks().forEach((track) => {
-                track.stop();
-                track.enabled = false;
+                if (track.readyState !== "ended") {
+                  track.stop();
+                  track.enabled = false;
+                }
               });
             }
             // Clear the srcObject
@@ -208,39 +225,49 @@ const QRScan = () => {
   // iOS-specific fix: Stop camera when navigating away
   // This ensures the screen recording indicator disappears on iOS
   useEffect(() => {
-    // Cleanup function
-    const cleanup = () => {
+    // Only cleanup if we're actually leaving the QR scan page
+    const isOnScanPage = location.pathname === "/scan";
+    
+    if (!isOnScanPage) {
+      // We've navigated away from scan page, cleanup immediately
+      stopAllMediaTracks();
+      if (scannerRef.current) {
+        try {
+          const currentState = scannerRef.current.getState();
+          if (currentState === Html5QrcodeScannerState.STARTED) {
+            scannerRef.current.stop().catch(() => {});
+          }
+        } catch (error) {
+          // Ignore errors
+        }
+      }
+      return;
+    }
+
+    // We're on the scan page, set up cleanup for when we leave
+    const handleBeforeUnload = () => {
       stopAllMediaTracks();
       if (scannerRef.current) {
         try {
           scannerRef.current.stop().catch(() => {});
-          scannerRef.current.clear().catch(() => {});
         } catch (error) {
           // Ignore errors
         }
       }
     };
 
-    // Handle visibility change (iOS Safari sometimes doesn't trigger unmount)
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        cleanup();
-      }
-    };
-
-    // Handle page unload
-    const handleBeforeUnload = () => {
-      cleanup();
-    };
-
-    // Add event listeners
-    document.addEventListener("visibilitychange", handleVisibilityChange);
     window.addEventListener("beforeunload", handleBeforeUnload);
 
     return () => {
-      // Cleanup on unmount or route change
-      cleanup();
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      // Cleanup on unmount or when pathname changes away from /scan
+      stopAllMediaTracks();
+      if (scannerRef.current) {
+        try {
+          scannerRef.current.stop().catch(() => {});
+        } catch (error) {
+          // Ignore errors
+        }
+      }
       window.removeEventListener("beforeunload", handleBeforeUnload);
     };
   }, [location.pathname, stopAllMediaTracks]); // Re-run when route changes

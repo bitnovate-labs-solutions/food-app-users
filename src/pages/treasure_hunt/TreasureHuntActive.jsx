@@ -74,6 +74,7 @@ export default function TreasureHuntActive({
   const drawerRef = useRef(null);
   const startYRef = useRef(0);
   const startHeightRef = useRef(0);
+  const hasMovedRef = useRef(false);
   
   // Calculate max height for drawer (30vh default, but can go up to ~70vh)
   const maxDrawerHeight = typeof window !== "undefined"
@@ -327,6 +328,7 @@ export default function TreasureHuntActive({
       setIsDragging(true);
       startYRef.current = clientY;
       startHeightRef.current = drawerHeight;
+      hasMovedRef.current = false;
     },
     [drawerHeight]
   );
@@ -334,10 +336,15 @@ export default function TreasureHuntActive({
   const handleMove = useCallback(
     (clientY) => {
       if (!isDragging) return;
-      const deltaY = startYRef.current - clientY; // Positive when dragging up
+      const deltaY = Math.abs(startYRef.current - clientY);
+      // Mark as moved if movement is more than 5px
+      if (deltaY > 5) {
+        hasMovedRef.current = true;
+      }
+      const newDeltaY = startYRef.current - clientY; // Positive when dragging up
       const newHeight = Math.max(
         minDrawerHeight,
-        Math.min(maxDrawerHeight, startHeightRef.current + deltaY)
+        Math.min(maxDrawerHeight, startHeightRef.current + newDeltaY)
       );
       setDrawerHeight(newHeight);
     },
@@ -345,8 +352,18 @@ export default function TreasureHuntActive({
   );
 
   const handleEnd = useCallback(() => {
+    // If it was a tap (no significant movement), toggle drawer state
+    if (!hasMovedRef.current) {
+      if (drawerHeight <= minDrawerHeight) {
+        // Expand drawer to initial height
+        setDrawerHeight(initialDrawerHeight);
+      } else {
+        // Collapse drawer to minimum height
+        setDrawerHeight(minDrawerHeight);
+      }
+    }
     setIsDragging(false);
-  }, []);
+  }, [drawerHeight, minDrawerHeight, initialDrawerHeight]);
 
   const handleMouseDown = useCallback(
     (e) => {

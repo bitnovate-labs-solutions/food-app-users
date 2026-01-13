@@ -256,6 +256,14 @@ function ShopBanner({ restaurant, distance, onBannerClick }) {
     }
   });
 
+  const handleBannerInteraction = (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    if (onBannerClick) {
+      onBannerClick();
+    }
+  };
+
   return (
     <group ref={bannerGroupRef} position={[0, 2.2, 0]}>
       <group ref={bannerRef}>
@@ -269,14 +277,14 @@ function ShopBanner({ restaurant, distance, onBannerClick }) {
             userSelect: "none",
             cursor: "pointer",
           }}
-          onClick={(e) => {
-            e.stopPropagation();
-            if (onBannerClick) {
-              onBannerClick();
-            }
-          }}
+          onClick={handleBannerInteraction}
+          onTouchStart={handleBannerInteraction}
         >
-          <div className="bg-primary rounded shadow-sm px-2 py-1.5 border border-primary/20 min-w-[160px] max-w-[200px] hover:shadow-md transition-shadow">
+          <div 
+            className="bg-primary rounded shadow-sm px-2 py-1.5 border border-primary/20 min-w-[160px] max-w-[200px] hover:shadow-md transition-shadow"
+            onClick={handleBannerInteraction}
+            onTouchStart={handleBannerInteraction}
+          >
             <div className="text-[11px] font-bold text-white truncate">
               {restaurant.name || "Restaurant"}
             </div>
@@ -362,7 +370,11 @@ function AnimatedShop({
         <ShopBanner
           restaurant={restaurant}
           distance={distance}
-          onBannerClick={() => handleClick({ stopPropagation: () => {} })}
+          onBannerClick={() => {
+            if (onShopClick) {
+              onShopClick(position);
+            }
+          }}
         />
       )}
 

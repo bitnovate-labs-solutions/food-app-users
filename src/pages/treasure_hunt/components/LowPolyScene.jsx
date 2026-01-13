@@ -545,7 +545,7 @@ function PlayerMarker({ position }) {
 }
 
 // Camera controller component to handle reset functionality and zoom to shop
-function CameraController({ onResetReady, onZoomReady, controlsRef }) {
+function CameraController({ onResetReady, onZoomReady, controlsRef, sharedIsAnimatingRef }) {
   const { camera } = useThree();
   const isAnimatingRef = useRef(false);
   const animationStartRef = useRef(null);
@@ -553,17 +553,31 @@ function CameraController({ onResetReady, onZoomReady, controlsRef }) {
   const startTargetRef = useRef(null);
   const targetPositionRef = useRef(null);
   const targetTargetRef = useRef(null);
+  const cameraInitializedRef = useRef(false);
+  const currentCameraPositionRef = useRef(new THREE.Vector3(12, 10, 12));
 
   const animateCamera = (targetPos, targetLookAt) => {
     if (!controlsRef.current || isAnimatingRef.current) return;
 
+    // Ensure controls are updated before reading position
+    controlsRef.current.update();
+
+    // Use tracked camera position as starting point - this is the actual current position
+    // Fall back to camera.position if tracked position isn't available yet
+    const startPos = currentCameraPositionRef.current.lengthSq() > 0.01
+      ? currentCameraPositionRef.current.clone()
+      : camera.position.clone();
+
     // Store starting values
-    startPositionRef.current = camera.position.clone();
+    startPositionRef.current = startPos;
     startTargetRef.current = controlsRef.current.target.clone();
     targetPositionRef.current = targetPos.clone();
     targetTargetRef.current = targetLookAt.clone();
     animationStartRef.current = Date.now();
     isAnimatingRef.current = true;
+    if (sharedIsAnimatingRef) {
+      sharedIsAnimatingRef.current = true;
+    }
   };
 
   const resetCamera = () => {
@@ -573,52 +587,99 @@ function CameraController({ onResetReady, onZoomReady, controlsRef }) {
   };
 
   const zoomToShop = (shopPosition) => {
+    if (!controlsRef.current) return;
+
     // Convert position array to Vector3 if needed
     const shopPos = Array.isArray(shopPosition)
       ? new THREE.Vector3(shopPosition[0], shopPosition[1], shopPosition[2])
       : shopPosition;
 
-    // Calculate direction from shop to current camera position
-    const directionToCamera = new THREE.Vector3().subVectors(
-      camera.position,
-      shopPos
-    );
+    // Use requestAnimationFrame to ensure controls are updated and we have the latest tracked position
+    requestAnimationFrame(() => {
+      if (!controlsRef.current) return;
 
-    const currentDistance = directionToCamera.length();
+      // Update controls to ensure camera position is synced
+      controlsRef.current.update();
 
-    // If camera is too close or direction is invalid, use default angle
-    if (currentDistance < 0.1) {
-      // Default viewing angle: slightly elevated and offset
-      directionToCamera.set(3, 4, 3).normalize();
-    } else {
-      directionToCamera.normalize();
-    }
+      // Use the tracked camera position - this is continuously updated in useFrame
+      // and represents the actual current position the user sees
+      let currentCameraPos = currentCameraPositionRef.current.clone();
 
-    // Calculate zoom distance - closer to the shop but maintaining perspective
-    // Use a fraction of current distance (e.g., 30-40% of current distance)
-    const zoomDistance = Math.max(3, currentDistance * 0.35);
+      // Safety check: if tracked position is invalid (at origin or uninitialized), use current camera position
+      // This handles edge cases on first load before tracking starts
+      if (currentCameraPos.lengthSq() < 0.01) {
+        // Fall back to reading directly from camera
+        currentCameraPos = camera.position.clone();
+        
+        // If still invalid, initialize to home position
+        if (currentCameraPos.lengthSq() < 0.01) {
+          currentCameraPos.set(12, 10, 12);
+          camera.position.copy(currentCameraPos);
+          if (controlsRef.current.target.lengthSq() < 0.01) {
+            controlsRef.current.target.set(0, 0, 0);
+          }
+          controlsRef.current.update();
+          // Update tracked position
+          currentCameraPositionRef.current.copy(currentCameraPos);
+        }
+      }
 
-    // Calculate zoom position maintaining the same viewing angle from current perspective
-    const zoomPosition = new THREE.Vector3()
-      .copy(shopPos)
-      .add(directionToCamera.multiplyScalar(zoomDistance));
+      // Calculate direction from shop to current camera position
+      const directionToCamera = new THREE.Vector3().subVectors(
+        currentCameraPos,
+        shopPos
+      );
 
-    // Ensure minimum height for good viewing angle
-    if (zoomPosition.y < 2) {
-      zoomPosition.y = 2;
-    }
+      const currentDistance = directionToCamera.length();
 
-    // Target is the shop center (slightly above ground where banner is)
-    const zoomTarget = new THREE.Vector3(
-      shopPos.x,
-      shopPos.y + 2.2, // Look at banner height (banner is at y=2.2)
-      shopPos.z
-    );
+      // If camera is too close or direction is invalid, use default angle
+      if (currentDistance < 0.1) {
+        // Default viewing angle: slightly elevated and offset
+        directionToCamera.set(3, 4, 3).normalize();
+      } else {
+        directionToCamera.normalize();
+      }
 
-    animateCamera(zoomPosition, zoomTarget);
+      // Calculate zoom distance - closer to the shop but maintaining perspective
+      // Use a fraction of current distance (e.g., 30-40% of current distance)
+      const zoomDistance = Math.max(3, currentDistance * 0.35);
+
+      // Calculate zoom position maintaining the same viewing angle from current perspective
+      const zoomPosition = new THREE.Vector3()
+        .copy(shopPos)
+        .add(directionToCamera.multiplyScalar(zoomDistance));
+
+      // Ensure minimum height for good viewing angle
+      if (zoomPosition.y < 2) {
+        zoomPosition.y = 2;
+      }
+
+      // Target is the shop center (slightly above ground where banner is)
+      const zoomTarget = new THREE.Vector3(
+        shopPos.x,
+        shopPos.y + 2.2, // Look at banner height (banner is at y=2.2)
+        shopPos.z
+      );
+
+      animateCamera(zoomPosition, zoomTarget);
+    });
   };
 
   useFrame(() => {
+    // Continuously track current camera position - this is the actual position the user sees
+    // This ensures we always have the correct position, even on first load
+    if (controlsRef.current) {
+      // Update controls first to ensure camera position is synced
+      controlsRef.current.update();
+      // Track the actual camera position
+      currentCameraPositionRef.current.copy(camera.position);
+      
+      // Mark camera as initialized once it's not at origin
+      if (!cameraInitializedRef.current && camera.position.lengthSq() > 0.01) {
+        cameraInitializedRef.current = true;
+      }
+    }
+
     if (!isAnimatingRef.current || !controlsRef.current) return;
 
     const duration = 1000; // 1 second animation
@@ -648,6 +709,9 @@ function CameraController({ onResetReady, onZoomReady, controlsRef }) {
 
     if (progress >= 1) {
       isAnimatingRef.current = false;
+      if (sharedIsAnimatingRef) {
+        sharedIsAnimatingRef.current = false;
+      }
     }
   });
 
@@ -660,6 +724,93 @@ function CameraController({ onResetReady, onZoomReady, controlsRef }) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onResetReady, onZoomReady]);
+
+  // Ensure camera and controls are properly initialized on mount
+  // This ensures the camera starts at the home position (same as clicking Home button)
+  useEffect(() => {
+    if (controlsRef.current) {
+      // Use requestAnimationFrame to ensure everything is ready
+      requestAnimationFrame(() => {
+        if (!controlsRef.current) return;
+
+        // Set camera to home position (same as resetCamera)
+        const homePosition = new THREE.Vector3(12, 10, 12);
+        const homeTarget = new THREE.Vector3(0, 0, 0);
+
+        // Only initialize if camera is at origin (uninitialized)
+        if (camera.position.lengthSq() < 0.01) {
+          camera.position.copy(homePosition);
+        }
+        if (controlsRef.current.target.lengthSq() < 0.01) {
+          controlsRef.current.target.copy(homeTarget);
+        }
+
+        // Update controls to sync everything
+        controlsRef.current.update();
+        
+        // Update tracked position to match initialized camera
+        currentCameraPositionRef.current.copy(camera.position);
+        cameraInitializedRef.current = true;
+      });
+    }
+  }, [camera, controlsRef]);
+
+  return null;
+}
+
+// Component to detect manual camera interactions and reset zoom state
+function CameraInteractionMonitor({ controlsRef, isAnimatingRef, onManualInteraction }) {
+  const interactionTimeoutRef = useRef(null);
+  const lastAnimationEndTimeRef = useRef(0);
+
+  useEffect(() => {
+    if (!controlsRef.current || !isAnimatingRef) return;
+
+    const handleChange = () => {
+      // Clear any pending timeout
+      if (interactionTimeoutRef.current) {
+        clearTimeout(interactionTimeoutRef.current);
+      }
+
+      // Check if we're currently animating
+      const isAnimating = isAnimatingRef.current || false;
+      const timeSinceAnimationEnd = Date.now() - lastAnimationEndTimeRef.current;
+
+      // Only reset if we're not animating and enough time has passed since animation ended
+      // This prevents resetting immediately after an animation completes
+      if (!isAnimating && timeSinceAnimationEnd > 300 && onManualInteraction) {
+        // Use a small timeout to debounce rapid changes
+        interactionTimeoutRef.current = setTimeout(() => {
+          // Double-check we're still not animating
+          if (!isAnimatingRef.current && onManualInteraction) {
+            onManualInteraction();
+          }
+        }, 200);
+      }
+    };
+
+    const controls = controlsRef.current;
+    controls.addEventListener('change', handleChange);
+
+    // Monitor animation state to track when animations end
+    let lastAnimatingState = isAnimatingRef.current;
+    const checkAnimationState = setInterval(() => {
+      const currentAnimatingState = isAnimatingRef.current;
+      // If animation just ended, record the time
+      if (lastAnimatingState && !currentAnimatingState) {
+        lastAnimationEndTimeRef.current = Date.now();
+      }
+      lastAnimatingState = currentAnimatingState;
+    }, 50);
+
+    return () => {
+      controls.removeEventListener('change', handleChange);
+      clearInterval(checkAnimationState);
+      if (interactionTimeoutRef.current) {
+        clearTimeout(interactionTimeoutRef.current);
+      }
+    };
+  }, [controlsRef, isAnimatingRef, onManualInteraction]);
 
   return null;
 }
@@ -790,6 +941,7 @@ export default function LowPolyScene({ restaurants = [], userLocation }) {
   const resetCameraRef = useRef(null);
   const zoomToShopRef = useRef(null);
   const controlsRef = useRef(null);
+  const isAnimatingRef = useRef(false);
 
   useEffect(() => {
     setIsClient(true);
@@ -868,7 +1020,15 @@ export default function LowPolyScene({ restaurants = [], userLocation }) {
           onZoomReady={(zoomFn) => {
             zoomToShopRef.current = zoomFn;
           }}
+          sharedIsAnimatingRef={isAnimatingRef}
           controlsRef={controlsRef}
+        />
+        <CameraInteractionMonitor
+          controlsRef={controlsRef}
+          isAnimatingRef={isAnimatingRef}
+          onManualInteraction={() => {
+            setHasZoomed(false);
+          }}
         />
         <SceneFog />
         <SceneContent

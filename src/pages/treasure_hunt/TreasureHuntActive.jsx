@@ -73,6 +73,7 @@ export default function TreasureHuntActive({
   
   // Refs for drag handling
   const drawerRef = useRef(null);
+  const dragHandleRef = useRef(null);
   const startYRef = useRef(0);
   const startHeightRef = useRef(0);
   const hasMovedRef = useRef(false);
@@ -80,13 +81,21 @@ export default function TreasureHuntActive({
   // Ref to store zoom function from LowPolyScene
   const zoomToShopRef = useRef(null);
   
-  // Calculate max height for drawer (30vh default, but can go up to ~70vh)
-  const maxDrawerHeight = typeof window !== "undefined"
-    ? window.innerHeight * 0.7
+  // Calculate header height (Solo/Team toggle bar)
+  // py-3 = 12px top + 12px bottom = 24px, button height ~40px, total ~64px
+  const headerHeight = 64;
+  
+  // Calculate container height (matching the container's calc(100vh - 200px))
+  const containerHeight = typeof window !== "undefined"
+    ? window.innerHeight - 200 // Subtract layout padding (200px)
     : 500;
+  
+  // Calculate max height for drawer - extend from bottom to just below header
+  // This allows the drawer to reach all the way up to touch the header
+  const maxDrawerHeight = containerHeight - headerHeight;
   const minDrawerHeight = 32; // Minimum height when collapsed (just the drag handle)
   const initialDrawerHeight = typeof window !== "undefined"
-    ? window.innerHeight * 0.3
+    ? (containerHeight - headerHeight) * 0.3
     : 300;
   
   // Initialize drawer height
@@ -466,7 +475,10 @@ export default function TreasureHuntActive({
 
   const handleTouchStart = useCallback(
     (e) => {
-      e.preventDefault();
+      // Only prevent default if we're on the drag handle
+      if (dragHandleRef.current && dragHandleRef.current.contains(e.target)) {
+        e.preventDefault();
+      }
       handleStart(e.touches[0].clientY);
     },
     [handleStart]
@@ -493,7 +505,9 @@ export default function TreasureHuntActive({
       document.addEventListener("touchmove", handleTouchMove, {
         passive: false,
       });
-      document.addEventListener("touchend", handleTouchEnd);
+      document.addEventListener("touchend", handleTouchEnd, {
+        passive: false,
+      });
       return () => {
         document.removeEventListener("mousemove", handleMouseMove);
         document.removeEventListener("mouseup", handleMouseUp);
@@ -508,6 +522,23 @@ export default function TreasureHuntActive({
     handleTouchMove,
     handleTouchEnd,
   ]);
+
+  // Add touchstart listener to drag handle with passive: false
+  useEffect(() => {
+    const dragHandle = dragHandleRef.current;
+    if (dragHandle) {
+      const touchStartHandler = (e) => {
+        e.preventDefault();
+        handleStart(e.touches[0].clientY);
+      };
+      dragHandle.addEventListener("touchstart", touchStartHandler, {
+        passive: false,
+      });
+      return () => {
+        dragHandle.removeEventListener("touchstart", touchStartHandler);
+      };
+    }
+  }, [handleStart]);
 
   if (profileLoading || restaurantsLoading) {
     return <LoadingComponent type="screen" text="Loading..." />;
@@ -598,9 +629,9 @@ export default function TreasureHuntActive({
       >
         {/* Drag Handle */}
         <div
+          ref={dragHandleRef}
           className="flex justify-center pt-3 pb-5 cursor-grab active:cursor-grabbing touch-none"
           onMouseDown={handleMouseDown}
-          onTouchStart={handleTouchStart}
         >
           <div className="w-12 h-1 bg-gray-300 rounded-full" />
         </div>

@@ -64,6 +64,7 @@ export default function RestaurantDetail() {
   const restaurant = location.state?.restaurant;
   const imageTransition = location.state?.imageTransition;
   const returnPath = location.state?.returnPath; // Store where user came from
+  const returnState = location.state?.returnState; // Store state needed to return to treasure hunt
 
   // Fetch reviews after restaurant is defined
   const { data: reviewsData } = useRestaurantReviews(restaurant?.id);
@@ -671,7 +672,9 @@ export default function RestaurantDetail() {
                 <button
                   onClick={() => {
                     if (returnPath) {
-                      navigate(returnPath);
+                      navigate(returnPath, {
+                        state: returnState || undefined,
+                      });
                     } else {
                       // Default to restaurants view
                       navigate("/home?tab=restaurants");

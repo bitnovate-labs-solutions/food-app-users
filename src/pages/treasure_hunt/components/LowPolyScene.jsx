@@ -1,4 +1,5 @@
 import { useRef, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import {
   OrbitControls,
@@ -7,7 +8,7 @@ import {
   Text,
 } from "@react-three/drei";
 import * as THREE from "three";
-import { Home } from "lucide-react";
+import { Home, Info } from "lucide-react";
 
 // Shared map constants
 const MAP_TILE_SIZE = 2;
@@ -51,8 +52,8 @@ function MapGround() {
         const radius = 20 + (i / 46) * 300; // Spread from 20 to 320 units
         const x = Math.cos(angle) * radius;
         const z = Math.sin(angle) * radius;
-        const height = 0.6 + (seededRandom(i * 7) * 0.6); // Height between 0.6 and 1.2
-        const size = 3.5 + (seededRandom(i * 11) * 2.5); // Size between 3.5 and 6
+        const height = 0.6 + seededRandom(i * 7) * 0.6; // Height between 0.6 and 1.2
+        const size = 3.5 + seededRandom(i * 11) * 2.5; // Size between 3.5 and 6
         return (
           <mesh key={`hill-${i}`} position={[x, height / 2, z]}>
             <coneGeometry args={[size, height, 8]} />
@@ -69,7 +70,7 @@ function MapGround() {
         const radius = 25 + (i / 48) * 310; // Spread from 25 to 335 units
         const x = Math.cos(angle) * radius;
         const z = Math.sin(angle) * radius;
-        const size = 2.5 + (seededRandom(i * 13) * 1.8); // Size between 2.5 and 4.3
+        const size = 2.5 + seededRandom(i * 13) * 1.8; // Size between 2.5 and 4.3
         return (
           <mesh
             key={`water-${i}`}
@@ -95,7 +96,7 @@ function MapGround() {
         const radius = 15 + (i / 56) * 305; // Spread from 15 to 320 units
         const x = Math.cos(angle) * radius;
         const z = Math.sin(angle) * radius;
-        const size = 1.7 + (seededRandom(i * 17) * 1.2); // Size between 1.7 and 2.9
+        const size = 1.7 + seededRandom(i * 17) * 1.2; // Size between 1.7 and 2.9
         return (
           <mesh key={`rock-${i}`} position={[x, 0.15, z]}>
             <dodecahedronGeometry args={[size, 0]} />
@@ -238,9 +239,10 @@ function latLngToScenePosition(lat, lng, referenceLat, referenceLng) {
 // ];
 
 // Banner component to show restaurant info above shop
-function ShopBanner({ restaurant, distance, onBannerClick }) {
+function ShopBanner({ restaurant, distance, onBannerClick, returnState }) {
   const bannerRef = useRef();
   const bannerGroupRef = useRef();
+  const navigate = useNavigate();
 
   useFrame((state) => {
     if (bannerRef.current && state.camera) {
@@ -264,6 +266,20 @@ function ShopBanner({ restaurant, distance, onBannerClick }) {
     }
   };
 
+  const handleViewDetails = (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    if (restaurant) {
+      navigate("/restaurant-detail", {
+        state: {
+          restaurant,
+          restaurantId: restaurant.id,
+          returnPath: "/home?tab=treasure",
+        },
+      });
+    }
+  };
+
   return (
     <group ref={bannerGroupRef} position={[0, 2.2, 0]}>
       <group ref={bannerRef}>
@@ -275,21 +291,18 @@ function ShopBanner({ restaurant, distance, onBannerClick }) {
           style={{
             pointerEvents: "auto",
             userSelect: "none",
-            cursor: "pointer",
           }}
-          onClick={handleBannerInteraction}
-          onTouchStart={handleBannerInteraction}
         >
-          <div 
-            className="bg-primary rounded shadow-sm px-2 py-1.5 border border-primary/20 min-w-[160px] max-w-[200px] hover:shadow-md transition-shadow"
+          <div
+            className="bg-primary rounded shadow-sm px-2 py-1.5 border border-primary/20 min-w-[160px] max-w-[200px] hover:shadow-md transition-shadow relative"
             onClick={handleBannerInteraction}
             onTouchStart={handleBannerInteraction}
           >
-            <div className="text-[11px] font-bold text-white truncate">
+            <div className="text-[10px] font-bold text-white truncate pr-6">
               {restaurant.name || "Restaurant"}
             </div>
             <div className="flex items-center justify-between mt-1 gap-1.5">
-              <span className="text-[10px] text-primary bg-white px-1.5 py-0.5 rounded">
+              <span className="text-[8px] text-primary bg-white px-1.5 py-0.5 rounded">
                 {restaurant.cuisine_type || "Food"}
               </span>
               {distance !== null && (
@@ -298,6 +311,16 @@ function ShopBanner({ restaurant, distance, onBannerClick }) {
                 </span>
               )}
             </div>
+            {/* View Details Button */}
+            <button
+              onClick={handleViewDetails}
+              onTouchStart={handleViewDetails}
+              className="absolute top-1.5 right-1.5 p-1 bg-white/20 hover:bg-white/30 rounded transition-colors z-10"
+              title="View restaurant details"
+              style={{ pointerEvents: "auto" }}
+            >
+              <Info className="w-3 h-3 text-white" />
+            </button>
           </div>
         </Html>
       </group>
@@ -312,6 +335,7 @@ function AnimatedShop({
   restaurant,
   userLocation,
   onShopClick,
+  returnState,
 }) {
   const groupRef = useRef();
   const signRef = useRef();
@@ -375,6 +399,7 @@ function AnimatedShop({
               onShopClick(position);
             }
           }}
+          returnState={returnState}
         />
       )}
 
@@ -545,7 +570,12 @@ function PlayerMarker({ position }) {
 }
 
 // Camera controller component to handle reset functionality and zoom to shop
-function CameraController({ onResetReady, onZoomReady, controlsRef, sharedIsAnimatingRef }) {
+function CameraController({
+  onResetReady,
+  onZoomReady,
+  controlsRef,
+  sharedIsAnimatingRef,
+}) {
   const { camera } = useThree();
   const isAnimatingRef = useRef(false);
   const animationStartRef = useRef(null);
@@ -564,9 +594,10 @@ function CameraController({ onResetReady, onZoomReady, controlsRef, sharedIsAnim
 
     // Use tracked camera position as starting point - this is the actual current position
     // Fall back to camera.position if tracked position isn't available yet
-    const startPos = currentCameraPositionRef.current.lengthSq() > 0.01
-      ? currentCameraPositionRef.current.clone()
-      : camera.position.clone();
+    const startPos =
+      currentCameraPositionRef.current.lengthSq() > 0.01
+        ? currentCameraPositionRef.current.clone()
+        : camera.position.clone();
 
     // Store starting values
     startPositionRef.current = startPos;
@@ -610,7 +641,7 @@ function CameraController({ onResetReady, onZoomReady, controlsRef, sharedIsAnim
       if (currentCameraPos.lengthSq() < 0.01) {
         // Fall back to reading directly from camera
         currentCameraPos = camera.position.clone();
-        
+
         // If still invalid, initialize to home position
         if (currentCameraPos.lengthSq() < 0.01) {
           currentCameraPos.set(12, 10, 12);
@@ -641,8 +672,8 @@ function CameraController({ onResetReady, onZoomReady, controlsRef, sharedIsAnim
       }
 
       // Calculate zoom distance - closer to the shop but maintaining perspective
-      // Use a fraction of current distance (e.g., 30-40% of current distance)
-      const zoomDistance = Math.max(3, currentDistance * 0.35);
+      // Use a fraction of current distance (e.g., 60-70% of current distance for better view)
+      const zoomDistance = Math.max(8, currentDistance * 0.65);
 
       // Calculate zoom position maintaining the same viewing angle from current perspective
       const zoomPosition = new THREE.Vector3()
@@ -673,7 +704,7 @@ function CameraController({ onResetReady, onZoomReady, controlsRef, sharedIsAnim
       controlsRef.current.update();
       // Track the actual camera position
       currentCameraPositionRef.current.copy(camera.position);
-      
+
       // Mark camera as initialized once it's not at origin
       if (!cameraInitializedRef.current && camera.position.lengthSq() > 0.01) {
         cameraInitializedRef.current = true;
@@ -747,7 +778,7 @@ function CameraController({ onResetReady, onZoomReady, controlsRef, sharedIsAnim
 
         // Update controls to sync everything
         controlsRef.current.update();
-        
+
         // Update tracked position to match initialized camera
         currentCameraPositionRef.current.copy(camera.position);
         cameraInitializedRef.current = true;
@@ -759,7 +790,11 @@ function CameraController({ onResetReady, onZoomReady, controlsRef, sharedIsAnim
 }
 
 // Component to detect manual camera interactions and reset zoom state
-function CameraInteractionMonitor({ controlsRef, isAnimatingRef, onManualInteraction }) {
+function CameraInteractionMonitor({
+  controlsRef,
+  isAnimatingRef,
+  onManualInteraction,
+}) {
   const interactionTimeoutRef = useRef(null);
   const lastAnimationEndTimeRef = useRef(0);
 
@@ -774,7 +809,8 @@ function CameraInteractionMonitor({ controlsRef, isAnimatingRef, onManualInterac
 
       // Check if we're currently animating
       const isAnimating = isAnimatingRef.current || false;
-      const timeSinceAnimationEnd = Date.now() - lastAnimationEndTimeRef.current;
+      const timeSinceAnimationEnd =
+        Date.now() - lastAnimationEndTimeRef.current;
 
       // Only reset if we're not animating and enough time has passed since animation ended
       // This prevents resetting immediately after an animation completes
@@ -790,7 +826,7 @@ function CameraInteractionMonitor({ controlsRef, isAnimatingRef, onManualInterac
     };
 
     const controls = controlsRef.current;
-    controls.addEventListener('change', handleChange);
+    controls.addEventListener("change", handleChange);
 
     // Monitor animation state to track when animations end
     let lastAnimatingState = isAnimatingRef.current;
@@ -804,7 +840,7 @@ function CameraInteractionMonitor({ controlsRef, isAnimatingRef, onManualInterac
     }, 50);
 
     return () => {
-      controls.removeEventListener('change', handleChange);
+      controls.removeEventListener("change", handleChange);
       clearInterval(checkAnimationState);
       if (interactionTimeoutRef.current) {
         clearTimeout(interactionTimeoutRef.current);
@@ -818,24 +854,24 @@ function CameraInteractionMonitor({ controlsRef, isAnimatingRef, onManualInterac
 // Subtle fog component for horizon fade effect
 function SceneFog() {
   const { scene } = useThree();
-  
+
   useEffect(() => {
     // Add subtle exponential fog for a gentle fade at the horizon
     // Using a light cyan-blue color that matches the sky gradient
     // Lower density (0.004) pushes the fog effect farther out
     const fog = new THREE.FogExp2(0xb0e0e6, 0.004);
     scene.fog = fog;
-    
+
     return () => {
       scene.fog = null;
     };
   }, [scene]);
-  
+
   return null;
 }
 
 // Main scene component
-function SceneContent({ restaurants, userLocation, onZoomToShop }) {
+function SceneContent({ restaurants, userLocation, onZoomToShop, returnState }) {
   const lightRef = useRef();
 
   useFrame((state) => {
@@ -911,6 +947,7 @@ function SceneContent({ restaurants, userLocation, onZoomToShop }) {
               restaurant={restaurant}
               userLocation={userLocation}
               onShopClick={onZoomToShop}
+              returnState={returnState}
             />
           );
         })
@@ -935,7 +972,12 @@ function SceneContent({ restaurants, userLocation, onZoomToShop }) {
   );
 }
 
-export default function LowPolyScene({ restaurants = [], userLocation }) {
+export default function LowPolyScene({
+  restaurants = [],
+  userLocation,
+  onZoomReady,
+  returnState,
+}) {
   const [isClient, setIsClient] = useState(false);
   const [hasZoomed, setHasZoomed] = useState(false);
   const resetCameraRef = useRef(null);
@@ -976,19 +1018,24 @@ export default function LowPolyScene({ restaurants = [], userLocation }) {
   return (
     <div className="w-full h-full pointer-events-auto relative overflow-hidden">
       {/* 2D Pokemon Go style sky background */}
-      <div 
+      <div
         className="absolute inset-0 z-0 pointer-events-none"
         style={{
-          background: 'linear-gradient(to bottom, #5B9BD5 0%, #6BB6FF 30%, #7EC8E3 60%, #B0E0E6 100%)',
+          background:
+            "linear-gradient(to bottom, #5B9BD5 0%, #6BB6FF 30%, #7EC8E3 60%, #B0E0E6 100%)",
         }}
       />
-      
+
       <Canvas
         camera={{ position: [12, 10, 12], fov: 55 }}
         gl={{ antialias: true, alpha: true }}
-        style={{ touchAction: "none", position: 'relative', zIndex: 1, background: 'transparent' }}
+        style={{
+          touchAction: "none",
+          position: "relative",
+          zIndex: 1,
+          background: "transparent",
+        }}
       >
-
         <PerspectiveCamera makeDefault position={[12, 10, 12]} />
         <OrbitControls
           ref={controlsRef}
@@ -1019,6 +1066,16 @@ export default function LowPolyScene({ restaurants = [], userLocation }) {
           }}
           onZoomReady={(zoomFn) => {
             zoomToShopRef.current = zoomFn;
+            // Expose zoom function to parent component when it's ready
+            if (onZoomReady) {
+              const zoomWrapper = (shopPosition) => {
+                // Allow zooming from external calls (like drawer clicks)
+                if (zoomToShopRef.current) {
+                  zoomToShopRef.current(shopPosition);
+                }
+              };
+              onZoomReady(zoomWrapper);
+            }
           }}
           sharedIsAnimatingRef={isAnimatingRef}
           controlsRef={controlsRef}
@@ -1035,6 +1092,7 @@ export default function LowPolyScene({ restaurants = [], userLocation }) {
           restaurants={restaurants}
           userLocation={userLocation}
           onZoomToShop={handleZoomToShop}
+          returnState={returnState}
         />
       </Canvas>
 

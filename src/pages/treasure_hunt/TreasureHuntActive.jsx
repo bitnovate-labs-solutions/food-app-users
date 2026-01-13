@@ -17,6 +17,7 @@ import ErrorComponent from "@/components/ErrorComponent";
 import { calculateDistance } from "@/lib/calculateDistance";
 import { geocodeAddressWithCache } from "@/lib/geocodeAddress";
 import chestImage from "@/assets/images/chest.png";
+import * as THREE from "three";
 
 export default function TreasureHuntActive({
   location: propLocation,
@@ -75,6 +76,9 @@ export default function TreasureHuntActive({
   const startYRef = useRef(0);
   const startHeightRef = useRef(0);
   const hasMovedRef = useRef(false);
+  
+  // Ref to store zoom function from LowPolyScene
+  const zoomToShopRef = useRef(null);
   
   // Calculate max height for drawer (30vh default, but can go up to ~70vh)
   const maxDrawerHeight = typeof window !== "undefined"
@@ -322,6 +326,80 @@ export default function TreasureHuntActive({
     userLocation,
   ]);
 
+  // Helper function to convert lat/lng to scene position (same as LowPolyScene)
+  const latLngToScenePosition = useCallback((lat, lng, referenceLat, referenceLng) => {
+    if (
+      typeof lat !== "number" ||
+      typeof lng !== "number" ||
+      typeof referenceLat !== "number" ||
+      typeof referenceLng !== "number"
+    ) {
+      return null;
+    }
+
+    const METERS_PER_UNIT = 100; // 1 unit in scene ≈ 100 meters in real life
+    const MAP_SAFE_BORDER = 195; // (MAP_TOTAL_SIZE / 2) - 5, where MAP_TOTAL_SIZE = 200
+
+    const earthRadiusMeters = 6371000; // approximate Earth radius
+    const deltaLatRad = THREE.MathUtils.degToRad(lat - referenceLat);
+    const deltaLngRad = THREE.MathUtils.degToRad(lng - referenceLng);
+    const meanLatRad = THREE.MathUtils.degToRad((lat + referenceLat) / 2);
+
+    const zMeters = deltaLatRad * earthRadiusMeters;
+    const xMeters = deltaLngRad * earthRadiusMeters * Math.cos(meanLatRad);
+
+    return {
+      x: THREE.MathUtils.clamp(
+        xMeters / METERS_PER_UNIT,
+        -MAP_SAFE_BORDER,
+        MAP_SAFE_BORDER
+      ),
+      // Negative so that north appears upward (matching standard maps)
+      z: THREE.MathUtils.clamp(
+        -zMeters / METERS_PER_UNIT,
+        -MAP_SAFE_BORDER,
+        MAP_SAFE_BORDER
+      ),
+    };
+  }, []);
+
+  // Function to zoom to a restaurant shop
+  const handleZoomToRestaurant = useCallback((restaurant) => {
+    if (!zoomToShopRef.current || !userLocation.lat || !userLocation.lng) {
+      return;
+    }
+
+    // Calculate shop position
+    let shopPosition = null;
+    
+    if (restaurant?.latitude && restaurant?.longitude) {
+      const position = latLngToScenePosition(
+        restaurant.latitude,
+        restaurant.longitude,
+        userLocation.lat,
+        userLocation.lng
+      );
+      
+      if (position) {
+        shopPosition = [position.x, 0, position.z];
+      }
+    }
+
+    // Fallback: use index-based circular placement if no coordinates
+    if (!shopPosition) {
+      const index = nearbyRestaurants.findIndex(r => r.id === restaurant.id);
+      if (index !== -1) {
+        const angle = (index / Math.max(nearbyRestaurants.length, 1)) * Math.PI * 2;
+        const radius = 3 + (index % 3) * 0.5;
+        shopPosition = [Math.cos(angle) * radius, 0, Math.sin(angle) * radius];
+      }
+    }
+
+    if (shopPosition && zoomToShopRef.current) {
+      zoomToShopRef.current(shopPosition);
+    }
+  }, [userLocation, latLngToScenePosition, nearbyRestaurants]);
+
   // Drawer drag handlers
   const handleStart = useCallback(
     (clientY) => {
@@ -465,6 +543,15 @@ export default function TreasureHuntActive({
         <LowPolyScene
           restaurants={nearbyRestaurants}
           userLocation={userLocation}
+          onZoomReady={(zoomFn) => {
+            zoomToShopRef.current = zoomFn;
+          }}
+          returnState={{
+            selectedLevel,
+            formData,
+            mode: mode,
+            returnMode: mode,
+          }}
         />
       </div>
 
@@ -585,13 +672,7 @@ export default function TreasureHuntActive({
                         <div
                           key={restaurant.id}
                           onClick={() => {
-                            navigate("/restaurant-detail", {
-                              state: {
-                                restaurant,
-                                restaurantId: restaurant.id,
-                                returnPath: "/treasure-hunt-active",
-                              },
-                            });
+                            handleZoomToRestaurant(restaurant);
                           }}
                           className="flex items-center gap-3 bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-shadow cursor-pointer"
                         >

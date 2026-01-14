@@ -421,12 +421,12 @@ export default function TreasureHuntActive({
         height: "calc(100dvh - 200px)",
       }}
     >
-      {/* 3D Low Poly Scene - Fixed and static below tabs */}
+      {/* 3D Low Poly Scene - Fixed and static below tabs - extends behind Nav to eliminate gap */}
       <div 
-        className="fixed left-0 right-0 z-0 pointer-events-auto max-w-md mx-auto"
+        className="fixed left-0 right-0 z-0 pointer-events-auto max-w-md mx-auto overflow-hidden"
         style={{
           top: '155px',
-          bottom: 'calc(5.3rem + max(env(safe-area-inset-bottom), 0px))',
+          bottom: '0px',
         }}
       >
         <LowPolyScene

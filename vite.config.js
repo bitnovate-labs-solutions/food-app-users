@@ -78,4 +78,7 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  server: {
+    allowedHosts: ["coastal-playing-authorized-angle.trycloudflare.com"],
+  },
 });

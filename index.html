@@ -5,7 +5,7 @@
     <link rel="icon" type="image/svg+xml" href="/tyd.svg" />
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover"
     />
     <title>Food App</title>
     <!-- PWA configs -->
@@ -19,6 +19,36 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // Set viewport height CSS variable early to prevent layout shifts
+      (function() {
+        function setViewportHeight() {
+          const vh = window.innerHeight * 0.01;
+          document.documentElement.style.setProperty('--vh', vh + 'px');
+        }
+        
+        // Set immediately
+        setViewportHeight();
+        
+        // Update on resize and orientation change
+        window.addEventListener('resize', setViewportHeight);
+        window.addEventListener('orientationchange', function() {
+          setTimeout(setViewportHeight, 100);
+        });
+        
+        // Update on scroll (for address bar changes)
+        let scrollTimeout;
+        window.addEventListener('scroll', function() {
+          clearTimeout(scrollTimeout);
+          scrollTimeout = setTimeout(setViewportHeight, 150);
+        }, { passive: true });
+        
+        // Use Visual Viewport API if available (better for mobile)
+        if (window.visualViewport) {
+          window.visualViewport.addEventListener('resize', setViewportHeight);
+        }
+      })();
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

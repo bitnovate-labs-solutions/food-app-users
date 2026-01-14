@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
+import { useViewportHeight } from "@/hooks/useViewportHeight";
 
 // COMPONENTS
 import Header from "./Header";
@@ -12,6 +13,7 @@ export default function Layout({ title }) {
   const location = useLocation();
   const { user } = useAuth();
   const [subtitle, setSubtitle] = useState(null);
+  const { viewportHeight, safeAreaInsets } = useViewportHeight();
 
   // Define page routes for Header
   const isHomePage =
@@ -85,8 +87,11 @@ export default function Layout({ title }) {
   return (
     <div
       className={`flex flex-col w-full max-w-md mx-auto bg-gray-100 no-scrollbar ${
-        isMapExplorePage ? "h-screen overflow-hidden" : "min-h-screen"
+        isMapExplorePage ? "h-[100dvh] h-screen overflow-hidden" : "min-h-[100dvh] min-h-screen"
       }`}
+      style={{
+        paddingBottom: 'max(env(safe-area-inset-bottom), 0px)',
+      }}
     >
       {/* HEADER */}
       {!isRestaurantDetailPage && <Header title={title} subtitle={subtitle} />}
@@ -102,6 +107,11 @@ export default function Layout({ title }) {
             ? "px-3 pt-33"
             : "pt-13 p-0"
         }`}
+        style={{
+          paddingBottom: isMapExplorePage 
+            ? '0' 
+            : 'calc(5.3rem + max(env(safe-area-inset-bottom), 0px))',
+        }}
       >
         <Outlet context={{ setSubtitle }} />
       </main>

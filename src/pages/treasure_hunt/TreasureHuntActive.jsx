@@ -6,7 +6,7 @@ import {
   CheckCircle2,
   ChevronDown,
   QrCode,
-  ChevronLeft,
+  ChevronUp,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
@@ -21,7 +21,6 @@ import * as THREE from "three";
 
 export default function TreasureHuntActive({
   location: propLocation,
-  onClearActiveHunt,
 }) {
   const navigate = useNavigate();
   const routerLocation = useLocation();
@@ -40,7 +39,7 @@ export default function TreasureHuntActive({
   const { selectedLevel, formData, mode: initialMode } = location.state || {};
 
   const [mode, setMode] = useState(initialMode || "solo"); // "solo" or "team"
-  
+
   // Update mode when location state changes (e.g., when coming back from Invite Friends)
   useEffect(() => {
     if (initialMode) {
@@ -62,53 +61,16 @@ export default function TreasureHuntActive({
       }
     }
   }, [mode]);
-  const [drawerHeight, setDrawerHeight] = useState(0); // Dynamic height in pixels
-  const [isDragging, setIsDragging] = useState(false);
+  const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [isDetailsCollapsed, setIsDetailsCollapsed] = useState(true);
   const [userLocation, setUserLocation] = useState({
     lat: 3.139,
     lng: 101.6869,
   }); // Kuala Lumpur default
   const [isLocationReady, setIsLocationReady] = useState(false);
-  
-  // Refs for drag handling
-  const drawerRef = useRef(null);
-  const dragHandleRef = useRef(null);
-  const startYRef = useRef(0);
-  const startHeightRef = useRef(0);
-  const hasMovedRef = useRef(false);
-  
+
   // Ref to store zoom function from LowPolyScene
   const zoomToShopRef = useRef(null);
-  
-  // Calculate header height (Solo/Team toggle bar)
-  // py-3 = 12px top + 12px bottom = 24px, button height ~40px, total ~64px
-  const headerHeight = 64;
-  
-  // Calculate container height (matching the container's calc(100vh - 200px))
-  const containerHeight = typeof window !== "undefined"
-    ? window.innerHeight - 200 // Subtract layout padding (200px)
-    : 500;
-  
-  // Calculate max height for drawer - extend from bottom to just below header
-  // This allows the drawer to reach all the way up to touch the header
-  const maxDrawerHeight = containerHeight - headerHeight;
-  const minDrawerHeight = 32; // Minimum height when collapsed (just the drag handle)
-  const initialDrawerHeight = typeof window !== "undefined"
-    ? (containerHeight - headerHeight) * 0.3
-    : 300;
-  
-  // Initialize drawer height
-  useEffect(() => {
-    if (drawerHeight === 0) {
-      setDrawerHeight(initialDrawerHeight);
-    }
-  }, []);
-
-  // Reset drawer height when switching between solo and team tabs
-  useEffect(() => {
-    setDrawerHeight(initialDrawerHeight);
-  }, [mode, initialDrawerHeight]);
 
   // Adventure level configuration
   const adventureLevels = {
@@ -312,6 +274,7 @@ export default function TreasureHuntActive({
     userLocation,
     restaurantsLoading,
     currentLevel.locations,
+    isLocationReady,
   ]);
 
   // Debug logging
@@ -336,209 +299,96 @@ export default function TreasureHuntActive({
   ]);
 
   // Helper function to convert lat/lng to scene position (same as LowPolyScene)
-  const latLngToScenePosition = useCallback((lat, lng, referenceLat, referenceLng) => {
-    if (
-      typeof lat !== "number" ||
-      typeof lng !== "number" ||
-      typeof referenceLat !== "number" ||
-      typeof referenceLng !== "number"
-    ) {
-      return null;
-    }
+  const latLngToScenePosition = useCallback(
+    (lat, lng, referenceLat, referenceLng) => {
+      if (
+        typeof lat !== "number" ||
+        typeof lng !== "number" ||
+        typeof referenceLat !== "number" ||
+        typeof referenceLng !== "number"
+      ) {
+        return null;
+      }
 
-    const METERS_PER_UNIT = 100; // 1 unit in scene ≈ 100 meters in real life
-    const MAP_SAFE_BORDER = 195; // (MAP_TOTAL_SIZE / 2) - 5, where MAP_TOTAL_SIZE = 200
+      const METERS_PER_UNIT = 100; // 1 unit in scene ≈ 100 meters in real life
+      const MAP_SAFE_BORDER = 195; // (MAP_TOTAL_SIZE / 2) - 5, where MAP_TOTAL_SIZE = 200
 
-    const earthRadiusMeters = 6371000; // approximate Earth radius
-    const deltaLatRad = THREE.MathUtils.degToRad(lat - referenceLat);
-    const deltaLngRad = THREE.MathUtils.degToRad(lng - referenceLng);
-    const meanLatRad = THREE.MathUtils.degToRad((lat + referenceLat) / 2);
+      const earthRadiusMeters = 6371000; // approximate Earth radius
+      const deltaLatRad = THREE.MathUtils.degToRad(lat - referenceLat);
+      const deltaLngRad = THREE.MathUtils.degToRad(lng - referenceLng);
+      const meanLatRad = THREE.MathUtils.degToRad((lat + referenceLat) / 2);
 
-    const zMeters = deltaLatRad * earthRadiusMeters;
-    const xMeters = deltaLngRad * earthRadiusMeters * Math.cos(meanLatRad);
+      const zMeters = deltaLatRad * earthRadiusMeters;
+      const xMeters = deltaLngRad * earthRadiusMeters * Math.cos(meanLatRad);
 
-    return {
-      x: THREE.MathUtils.clamp(
-        xMeters / METERS_PER_UNIT,
-        -MAP_SAFE_BORDER,
-        MAP_SAFE_BORDER
-      ),
-      // Negative so that north appears upward (matching standard maps)
-      z: THREE.MathUtils.clamp(
-        -zMeters / METERS_PER_UNIT,
-        -MAP_SAFE_BORDER,
-        MAP_SAFE_BORDER
-      ),
-    };
-  }, []);
+      return {
+        x: THREE.MathUtils.clamp(
+          xMeters / METERS_PER_UNIT,
+          -MAP_SAFE_BORDER,
+          MAP_SAFE_BORDER
+        ),
+        // Negative so that north appears upward (matching standard maps)
+        z: THREE.MathUtils.clamp(
+          -zMeters / METERS_PER_UNIT,
+          -MAP_SAFE_BORDER,
+          MAP_SAFE_BORDER
+        ),
+      };
+    },
+    []
+  );
 
   // Function to zoom to a restaurant shop
-  const handleZoomToRestaurant = useCallback((restaurant) => {
-    if (!zoomToShopRef.current || !userLocation.lat || !userLocation.lng) {
-      return;
-    }
-
-    // Calculate shop position
-    let shopPosition = null;
-    
-    if (restaurant?.latitude && restaurant?.longitude) {
-      const position = latLngToScenePosition(
-        restaurant.latitude,
-        restaurant.longitude,
-        userLocation.lat,
-        userLocation.lng
-      );
-      
-      if (position) {
-        shopPosition = [position.x, 0, position.z];
+  const handleZoomToRestaurant = useCallback(
+    (restaurant) => {
+      if (!zoomToShopRef.current || !userLocation.lat || !userLocation.lng) {
+        return;
       }
-    }
 
-    // Fallback: use index-based circular placement if no coordinates
-    if (!shopPosition) {
-      const index = nearbyRestaurants.findIndex(r => r.id === restaurant.id);
-      if (index !== -1) {
-        const angle = (index / Math.max(nearbyRestaurants.length, 1)) * Math.PI * 2;
-        const radius = 3 + (index % 3) * 0.5;
-        shopPosition = [Math.cos(angle) * radius, 0, Math.sin(angle) * radius];
+      // Calculate shop position
+      let shopPosition = null;
+
+      if (restaurant?.latitude && restaurant?.longitude) {
+        const position = latLngToScenePosition(
+          restaurant.latitude,
+          restaurant.longitude,
+          userLocation.lat,
+          userLocation.lng
+        );
+
+        if (position) {
+          shopPosition = [position.x, 0, position.z];
+        }
       }
-    }
 
-    if (shopPosition && zoomToShopRef.current) {
-      zoomToShopRef.current(shopPosition);
-    }
-  }, [userLocation, latLngToScenePosition, nearbyRestaurants]);
-
-  // Drawer drag handlers
-  const handleStart = useCallback(
-    (clientY) => {
-      setIsDragging(true);
-      startYRef.current = clientY;
-      startHeightRef.current = drawerHeight;
-      hasMovedRef.current = false;
-    },
-    [drawerHeight]
-  );
-
-  const handleMove = useCallback(
-    (clientY) => {
-      if (!isDragging) return;
-      const deltaY = Math.abs(startYRef.current - clientY);
-      // Mark as moved if movement is more than 5px
-      if (deltaY > 5) {
-        hasMovedRef.current = true;
+      // Fallback: use index-based circular placement if no coordinates
+      if (!shopPosition) {
+        const index = nearbyRestaurants.findIndex(
+          (r) => r.id === restaurant.id
+        );
+        if (index !== -1) {
+          const angle =
+            (index / Math.max(nearbyRestaurants.length, 1)) * Math.PI * 2;
+          const radius = 3 + (index % 3) * 0.5;
+          shopPosition = [
+            Math.cos(angle) * radius,
+            0,
+            Math.sin(angle) * radius,
+          ];
+        }
       }
-      const newDeltaY = startYRef.current - clientY; // Positive when dragging up
-      const newHeight = Math.max(
-        minDrawerHeight,
-        Math.min(maxDrawerHeight, startHeightRef.current + newDeltaY)
-      );
-      setDrawerHeight(newHeight);
-    },
-    [isDragging, maxDrawerHeight, minDrawerHeight]
-  );
 
-  const handleEnd = useCallback(() => {
-    // If it was a tap (no significant movement), toggle drawer state
-    if (!hasMovedRef.current) {
-      if (drawerHeight <= minDrawerHeight) {
-        // Expand drawer to initial height
-        setDrawerHeight(initialDrawerHeight);
-      } else {
-        // Collapse drawer to minimum height
-        setDrawerHeight(minDrawerHeight);
+      if (shopPosition && zoomToShopRef.current) {
+        zoomToShopRef.current(shopPosition);
       }
-    }
-    setIsDragging(false);
-  }, [drawerHeight, minDrawerHeight, initialDrawerHeight]);
-
-  const handleMouseDown = useCallback(
-    (e) => {
-      e.preventDefault();
-      handleStart(e.clientY);
     },
-    [handleStart]
+    [userLocation, latLngToScenePosition, nearbyRestaurants]
   );
 
-  const handleMouseMove = useCallback(
-    (e) => {
-      if (!isDragging) return;
-      e.preventDefault();
-      handleMove(e.clientY);
-    },
-    [isDragging, handleMove]
-  );
-
-  const handleMouseUp = useCallback(() => {
-    handleEnd();
-  }, [handleEnd]);
-
-  const handleTouchStart = useCallback(
-    (e) => {
-      // Only prevent default if we're on the drag handle
-      if (dragHandleRef.current && dragHandleRef.current.contains(e.target)) {
-        e.preventDefault();
-      }
-      handleStart(e.touches[0].clientY);
-    },
-    [handleStart]
-  );
-
-  const handleTouchMove = useCallback(
-    (e) => {
-      if (!isDragging) return;
-      e.preventDefault();
-      handleMove(e.touches[0].clientY);
-    },
-    [isDragging, handleMove]
-  );
-
-  const handleTouchEnd = useCallback(() => {
-    handleEnd();
-  }, [handleEnd]);
-
-  // Add event listeners for dragging
-  useEffect(() => {
-    if (isDragging) {
-      document.addEventListener("mousemove", handleMouseMove);
-      document.addEventListener("mouseup", handleMouseUp);
-      document.addEventListener("touchmove", handleTouchMove, {
-        passive: false,
-      });
-      document.addEventListener("touchend", handleTouchEnd, {
-        passive: false,
-      });
-      return () => {
-        document.removeEventListener("mousemove", handleMouseMove);
-        document.removeEventListener("mouseup", handleMouseUp);
-        document.removeEventListener("touchmove", handleTouchMove);
-        document.removeEventListener("touchend", handleTouchEnd);
-      };
-    }
-  }, [
-    isDragging,
-    handleMouseMove,
-    handleMouseUp,
-    handleTouchMove,
-    handleTouchEnd,
-  ]);
-
-  // Add touchstart listener to drag handle with passive: false
-  useEffect(() => {
-    const dragHandle = dragHandleRef.current;
-    if (dragHandle) {
-      const touchStartHandler = (e) => {
-        e.preventDefault();
-        handleStart(e.touches[0].clientY);
-      };
-      dragHandle.addEventListener("touchstart", touchStartHandler, {
-        passive: false,
-      });
-      return () => {
-        dragHandle.removeEventListener("touchstart", touchStartHandler);
-      };
-    }
-  }, [handleStart]);
+  // Handler to close popup
+  const handleClosePopup = () => {
+    setIsPopupOpen(false);
+  };
 
   if (profileLoading || restaurantsLoading) {
     return <LoadingComponent type="screen" text="Loading..." />;
@@ -567,10 +417,18 @@ export default function TreasureHuntActive({
   return (
     <div
       className="relative w-full h-full overflow-hidden"
-      style={{ height: "calc(100vh - 200px)" }}
+      style={{ 
+        height: "calc(100dvh - 200px)",
+      }}
     >
-      {/* 3D Low Poly Scene */}
-      <div className="absolute inset-0 z-0 pointer-events-auto">
+      {/* 3D Low Poly Scene - Fixed and static below tabs */}
+      <div 
+        className="fixed left-0 right-0 z-0 pointer-events-auto max-w-md mx-auto"
+        style={{
+          top: '155px',
+          bottom: 'calc(5.3rem + max(env(safe-area-inset-bottom), 0px))',
+        }}
+      >
         <LowPolyScene
           restaurants={nearbyRestaurants}
           userLocation={userLocation}
@@ -586,8 +444,8 @@ export default function TreasureHuntActive({
         />
       </div>
 
-      {/* Header with Tabs - Below Layout Header */}
-      <div className="absolute top-0 left-0 right-0 z-10 bg-white/95 backdrop-blur-sm border-b border-gray-200 pointer-events-auto">
+      {/* Header with Tabs - Below Layout Header and NavigationTabs */}
+      <div className="fixed top-[100px] left-0 right-0 max-w-md mx-auto z-20 bg-white/95 backdrop-blur-sm border-b border-gray-200 pointer-events-auto">
         <div className="px-4 py-3">
           {/* Solo/Team Toggle */}
           <div className="flex gap-2">
@@ -615,189 +473,196 @@ export default function TreasureHuntActive({
         </div>
       </div>
 
-      {/* Draggable Bottom Card */}
-      <div
-        ref={drawerRef}
-        className={`absolute bottom-0 left-0 right-0 z-20 bg-white rounded-t-3xl shadow-2xl pointer-events-auto flex flex-col ${
-          isDragging ? "transition-none" : "transition-all duration-300"
-        }`}
-        style={{
-          height: `${drawerHeight}px`,
-          minHeight: `${minDrawerHeight}px`,
-          maxHeight: `${maxDrawerHeight}px`,
-        }}
-      >
-        {/* Drag Handle */}
-        <div
-          ref={dragHandleRef}
-          className="flex justify-center pt-3 pb-5 cursor-grab active:cursor-grabbing touch-none"
-          onMouseDown={handleMouseDown}
-        >
-          <div className="w-12 h-1 bg-gray-300 rounded-full" />
+      {/* Floating Button to Open Popup */}
+      {!isPopupOpen && (
+        <div className="fixed bottom-32 right-0 left-0 z-30 max-w-md mx-auto pointer-events-none">
+          <button
+            onClick={() => setIsPopupOpen(true)}
+            className="absolute bottom-0 left-1/2 -translate-x-1/2 px-6 py-3 bg-primary text-white rounded-xl shadow-2xl flex items-center justify-center hover:bg-primary-hover transition-colors pointer-events-auto"
+            aria-label="View treasure hunt details"
+          >
+            <ChevronUp className="w-5 h-5" />
+          </button>
         </div>
+      )}
 
-        {/* Header Content */}
-        <div 
-          className={`px-4 pb-4 flex-1 flex flex-col ${
-            drawerHeight > initialDrawerHeight 
-              ? "overflow-y-auto" 
-              : "overflow-hidden"
-          }`}
-        >
-          {/* Collapsible Details Card */}
-          <div className="bg-primary/5 border-2 border-primary/20 rounded-xl overflow-hidden">
-            {/* Clickable Header */}
-            <button
-              onClick={() => setIsDetailsCollapsed(!isDetailsCollapsed)}
-              className="w-full px-4 py-1 flex items-center justify-between hover:bg-primary/10 transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                <div className="flex items-center justify-center mr-2">
-                  <img
-                    src={chestImage}
-                    alt="Treasure chest"
-                    className="w-14 h-14 object-contain"
-                  />
-                </div>
-                <div className="text-left">
-                  <p className="text-sm font-semibold text-gray-900 mb-1">
-                    Earn {currentLevel.points} PTS
-                  </p>
-                  <p className="text-xs font-light text-gray-500">
-                    0/{currentLevel.locations} locations
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="px-3 py-1 bg-primary rounded-full">
-                  <div className="flex items-center gap-1">
-                    <Clock className="w-3 h-3 text-white" />
-                    <span className="text-xs font-medium text-white">
-                      {currentLevel.duration} days
-                    </span>
-                  </div>
-                </div>
-                <ChevronDown
-                  className={`w-5 h-5 text-gray-400 transition-transform duration-300 ${
-                    !isDetailsCollapsed ? "rotate-180" : ""
-                  }`}
-                />
-              </div>
-            </button>
-
-            {/* Collapsible Content - Restaurant List */}
-            {!isDetailsCollapsed && (
-              <div className="border-t border-primary/20 bg-white">
-                {/* Restaurant List */}
-                <div className="px-2 pb-2 pt-4 space-y-3">
-                  {nearbyRestaurants.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500">
-                      <p>No restaurants found matching your criteria</p>
+      {/* Popup Box - Similar to MapView pin card */}
+      {isPopupOpen && (
+        <div className="fixed bottom-30 left-0 right-0 z-[25] max-w-md mx-auto pointer-events-none">
+          <div className="bg-white rounded-3xl shadow-2xl pointer-events-auto mx-8 max-h-[70vh] overflow-hidden flex flex-col">
+            {/* Popup Content */}
+            <div className="overflow-y-auto px-4 pb-4 pt-6">
+              {/* Collapsible Details Card */}
+              <div className="bg-primary/5 border-2 border-primary/20 rounded-xl overflow-hidden">
+                {/* Clickable Header */}
+                <button
+                  onClick={() => setIsDetailsCollapsed(!isDetailsCollapsed)}
+                  className="w-full px-4 py-3 flex items-center justify-between hover:bg-primary/10 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center justify-center mr-2">
+                      <img
+                        src={chestImage}
+                        alt="Treasure chest"
+                        className="w-14 h-14 object-contain"
+                      />
                     </div>
-                  ) : (
-                    nearbyRestaurants.map((restaurant, index) => {
-                      const isCompleted = false; // TODO: Check if restaurant is completed
-                      const spotLetter = String.fromCharCode(65 + index); // A, B, C, D...
+                    <div className="text-left">
+                      <p className="text-sm font-semibold text-gray-900 mb-1">
+                        Earn {currentLevel.points} PTS
+                      </p>
+                      <p className="text-xs font-light text-gray-500">
+                        0/{currentLevel.locations} locations
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="px-3 py-1 bg-primary rounded-full">
+                      <div className="flex items-center gap-1">
+                        <Clock className="w-3 h-3 text-white" />
+                        <span className="text-xs font-medium text-white">
+                          {currentLevel.duration} days
+                        </span>
+                      </div>
+                    </div>
+                    <ChevronDown
+                      className={`w-5 h-5 text-gray-400 transition-transform duration-300 ${
+                        !isDetailsCollapsed ? "rotate-180" : ""
+                      }`}
+                    />
+                  </div>
+                </button>
 
-                      return (
-                        <div
-                          key={restaurant.id}
-                          onClick={() => {
-                            handleZoomToRestaurant(restaurant);
-                          }}
-                          className="flex items-center gap-3 bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-                        >
-                          {/* Restaurant Image */}
-                          <div className="relative w-20 h-20 rounded-tl-lg rounded-bl-lg overflow-hidden flex-shrink-0">
-                            {restaurant.image_url ? (
-                              <img
-                                src={restaurant.image_url}
-                                alt={restaurant.name}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                                <MapPin className="w-6 h-6 text-gray-400" />
-                              </div>
-                            )}
-                            {isCompleted && (
-                              <div className="absolute inset-0 bg-primary/80 flex items-center justify-center">
-                                <CheckCircle2 className="w-6 h-6 text-white" />
-                              </div>
-                            )}
-                            {!isCompleted && (
-                              <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                                <span className="text-white text-xs font-bold">
-                                  ?
-                                </span>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Restaurant Info */}
-                          <div className="flex-1 min-w-0 space-y-1.5">
-                            <p className="text-sm font-medium text-gray-900 truncate">
-                              {restaurant.name}
-                            </p>
-                            <p className="text-xs font-light text-gray-500 truncate">
-                              {restaurant.location ||
-                                restaurant.vendor?.city ||
-                                "Location"}
-                            </p>
-                          </div>
-
-                          {/* Scan Button */}
-                          {!isCompleted && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation(); // Prevent card click from firing
-                                navigate("/scan", {
-                                  state: {
-                                    restaurant,
-                                    restaurantId: restaurant.id,
-                                  },
-                                });
-                              }}
-                              className="w-14 flex flex-col items-center gap-1 px-3 py-1.5 bg-primary/10 rounded-lg mr-2 text-primary border border-primary"
-                            >
-                              <QrCode className="w-6 h-6" />
-                              <span className="text-[10px] font-medium">
-                                Scan
-                              </span>
-                            </button>
-                          )}
+                {/* Collapsible Content - Restaurant List */}
+                {!isDetailsCollapsed && (
+                  <div className="border-t border-primary/20 bg-white">
+                    {/* Restaurant List */}
+                    <div className="px-2 pb-2 pt-4 space-y-3">
+                      {nearbyRestaurants.length === 0 ? (
+                        <div className="text-center py-8 text-gray-500">
+                          <p>No restaurants found matching your criteria</p>
                         </div>
-                      );
-                    })
-                  )}
-                </div>
+                      ) : (
+                        nearbyRestaurants.map((restaurant) => {
+                          const isCompleted = false; // TODO: Check if restaurant is completed
+
+                          return (
+                            <div
+                              key={restaurant.id}
+                              onClick={() => {
+                                handleZoomToRestaurant(restaurant);
+                                handleClosePopup();
+                              }}
+                              className="flex items-center gap-3 bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                            >
+                              {/* Restaurant Image */}
+                              <div className="relative w-20 h-20 rounded-tl-lg rounded-bl-lg overflow-hidden flex-shrink-0">
+                                {restaurant.image_url ? (
+                                  <img
+                                    src={restaurant.image_url}
+                                    alt={restaurant.name}
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                                    <MapPin className="w-6 h-6 text-gray-400" />
+                                  </div>
+                                )}
+                                {isCompleted && (
+                                  <div className="absolute inset-0 bg-primary/80 flex items-center justify-center">
+                                    <CheckCircle2 className="w-6 h-6 text-white" />
+                                  </div>
+                                )}
+                                {!isCompleted && (
+                                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                                    <span className="text-white text-xs font-bold">
+                                      ?
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Restaurant Info */}
+                              <div className="flex-1 min-w-0 space-y-1.5">
+                                <p className="text-sm font-medium text-gray-900 truncate">
+                                  {restaurant.name}
+                                </p>
+                                <p className="text-xs font-light text-gray-500 truncate">
+                                  {restaurant.location ||
+                                    restaurant.vendor?.city ||
+                                    "Location"}
+                                </p>
+                              </div>
+
+                              {/* Scan Button */}
+                              {!isCompleted && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation(); // Prevent card click from firing
+                                    handleClosePopup();
+                                    navigate("/scan", {
+                                      state: {
+                                        restaurant,
+                                        restaurantId: restaurant.id,
+                                      },
+                                    });
+                                  }}
+                                  className="w-14 flex flex-col items-center gap-1 px-3 py-1.5 bg-primary/10 rounded-lg mr-2 text-primary border border-primary"
+                                >
+                                  <QrCode className="w-6 h-6" />
+                                  <span className="text-[10px] font-medium">
+                                    Scan
+                                  </span>
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
+
+              {/* Invite Friend Button */}
+              {mode === "team" && (
+                <div className="mt-4">
+                  <button
+                    onClick={() => {
+                      handleClosePopup();
+                      navigate("/invite-friends", {
+                        state: {
+                          returnPath: "/treasure-hunt-active",
+                          returnState: {
+                            selectedLevel: location.state?.selectedLevel,
+                            formData: location.state?.formData,
+                            mode: location.state?.mode || "team",
+                            returnMode: location.state?.returnMode || "team",
+                          },
+                        },
+                      });
+                    }}
+                    className="w-full py-3 bg-primary text-white rounded-xl font-medium text-sm"
+                  >
+                    Invite Friend
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Close Button - Down Arrow at Bottom */}
+            <div className="flex justify-center py-3 border-t border-gray-200">
+              <button
+                onClick={handleClosePopup}
+                className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors"
+                aria-label="Close popup"
+              >
+                <ChevronDown className="w-5 h-5 text-gray-600" />
+              </button>
+            </div>
           </div>
         </div>
-
-        {/* Invite Friend Button - Always at bottom */}
-        {mode === "team" && (
-          <div className="px-4 pb-4 mt-auto">
-            <button
-              onClick={() => navigate("/invite-friends", {
-                state: {
-                  returnPath: "/treasure-hunt-active",
-                  returnState: {
-                    selectedLevel: location.state?.selectedLevel,
-                    formData: location.state?.formData,
-                    mode: location.state?.mode || "team",
-                    returnMode: location.state?.returnMode || "team",
-                  },
-                },
-              })}
-              className="w-full py-3 bg-primary text-white rounded-xl font-medium text-sm"
-            >
-              Invite Friend
-            </button>
-          </div>
-        )}
-      </div>
+      )}
     </div>
   );
 }

@@ -55,7 +55,12 @@ export default function Nav({
 
   return (
     <div>
-      <nav className="w-full max-w-md mx-auto fixed bottom-0 left-0 right-0 z-10 rounded-t-2xl border-t border-gray-200 shadow-2xl bg-white">
+      <nav 
+        className="w-full max-w-md mx-auto fixed bottom-0 left-0 right-0 z-10 rounded-t-2xl border-t border-gray-200 shadow-2xl bg-white"
+        style={{
+          paddingBottom: 'max(env(safe-area-inset-bottom), 0px)',
+        }}
+      >
         <div className="container mx-auto px-4 shadow-lg h-[5.3rem]">
           <div className="flex justify-around py-4">
             {/* USER ICON (PROFILE) BUTTON */}

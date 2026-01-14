@@ -239,7 +239,7 @@ function latLngToScenePosition(lat, lng, referenceLat, referenceLng) {
 // ];
 
 // Banner component to show restaurant info above shop
-function ShopBanner({ restaurant, distance, onBannerClick, returnState }) {
+function ShopBanner({ restaurant, distance, onBannerClick }) {
   const bannerRef = useRef();
   const bannerGroupRef = useRef();
   const navigate = useNavigate();
@@ -259,6 +259,10 @@ function ShopBanner({ restaurant, distance, onBannerClick, returnState }) {
   });
 
   const handleBannerInteraction = (e) => {
+    // Don't trigger if clicking on the info button
+    if (e.target.closest("button")) {
+      return;
+    }
     e.stopPropagation();
     e.preventDefault();
     if (onBannerClick) {
@@ -267,22 +271,74 @@ function ShopBanner({ restaurant, distance, onBannerClick, returnState }) {
   };
 
   const handleViewDetails = (e) => {
-    e.stopPropagation();
-    e.preventDefault();
-    if (restaurant) {
-      navigate("/restaurant-detail", {
-        state: {
-          restaurant,
-          restaurantId: restaurant.id,
-          returnPath: "/home?tab=treasure",
-        },
-      });
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+    console.log("Info button clicked, restaurant:", restaurant);
+    if (restaurant && restaurant.id) {
+      try {
+        navigate("/restaurant-detail", {
+          state: {
+            restaurant,
+            restaurantId: restaurant.id,
+            returnPath: "/home?tab=treasure",
+          },
+        });
+      } catch (error) {
+        console.error("Navigation error:", error);
+      }
+    } else {
+      console.warn("No restaurant data available", restaurant);
     }
   };
 
   return (
     <group ref={bannerGroupRef} position={[0, 2.2, 0]}>
       <group ref={bannerRef}>
+        {/* Info Button - Separate Html component above banner */}
+        <Html
+          position={[0, 1.2, 0]}
+          center
+          transform
+          style={{
+            pointerEvents: "auto",
+            userSelect: "none",
+          }}
+        >
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              handleViewDetails(e);
+            }}
+            onTouchEnd={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              handleViewDetails(e);
+            }}
+            onMouseDown={(e) => {
+              e.stopPropagation();
+            }}
+            className="p-2 bg-white/90 hover:bg-white active:bg-white/80 rounded-full transition-all duration-200 shadow-md active:scale-90 touch-manipulation"
+            title="View restaurant details"
+            style={{
+              pointerEvents: "auto",
+              minWidth: "32px",
+              minHeight: "32px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              border: "none",
+              outline: "none",
+            }}
+          >
+            <Info className="w-4 h-4 text-primary pointer-events-none" />
+          </button>
+        </Html>
+
+        {/* Banner */}
         <Html
           position={[0, 0, 0]}
           center
@@ -294,11 +350,11 @@ function ShopBanner({ restaurant, distance, onBannerClick, returnState }) {
           }}
         >
           <div
-            className="bg-primary rounded shadow-sm px-2 py-1.5 border border-primary/20 min-w-[160px] max-w-[200px] hover:shadow-md transition-shadow relative"
+            className="bg-primary rounded shadow-sm px-2 py-1.5 border border-primary/20 min-w-[160px] max-w-[200px] hover:shadow-md transition-shadow"
             onClick={handleBannerInteraction}
             onTouchStart={handleBannerInteraction}
           >
-            <div className="text-[10px] font-bold text-white truncate pr-6">
+            <div className="text-[10px] font-bold text-white truncate">
               {restaurant.name || "Restaurant"}
             </div>
             <div className="flex items-center justify-between mt-1 gap-1.5">
@@ -311,16 +367,6 @@ function ShopBanner({ restaurant, distance, onBannerClick, returnState }) {
                 </span>
               )}
             </div>
-            {/* View Details Button */}
-            <button
-              onClick={handleViewDetails}
-              onTouchStart={handleViewDetails}
-              className="absolute top-1.5 right-1.5 p-1 bg-white/20 hover:bg-white/30 rounded transition-colors z-10"
-              title="View restaurant details"
-              style={{ pointerEvents: "auto" }}
-            >
-              <Info className="w-3 h-3 text-white" />
-            </button>
           </div>
         </Html>
       </group>
@@ -672,8 +718,8 @@ function CameraController({
       }
 
       // Calculate zoom distance - closer to the shop but maintaining perspective
-      // Use a fraction of current distance (e.g., 60-70% of current distance for better view)
-      const zoomDistance = Math.max(8, currentDistance * 0.65);
+      // Use a fraction of current distance (e.g., 35-40% of current distance for closer view)
+      const zoomDistance = Math.max(4, currentDistance * 0.4);
 
       // Calculate zoom position maintaining the same viewing angle from current perspective
       const zoomPosition = new THREE.Vector3()
@@ -871,7 +917,12 @@ function SceneFog() {
 }
 
 // Main scene component
-function SceneContent({ restaurants, userLocation, onZoomToShop, returnState }) {
+function SceneContent({
+  restaurants,
+  userLocation,
+  onZoomToShop,
+  returnState,
+}) {
   const lightRef = useRef();
 
   useFrame((state) => {
@@ -1099,7 +1150,7 @@ export default function LowPolyScene({
       {/* Translucent Home Button */}
       <button
         onClick={handleResetCamera}
-        className="absolute top-18 right-4 z-[100] bg-white/80 backdrop-blur-md rounded-full p-3.5 shadow-xl hover:bg-white/95 transition-all duration-200 active:scale-95 pointer-events-auto border border-white/50"
+        className="absolute top-8 right-4 z-[100] bg-white/80 backdrop-blur-md rounded-full p-3.5 shadow-xl hover:bg-white/95 transition-all duration-200 active:scale-95 pointer-events-auto border border-white/50"
         aria-label="Return to player marker"
       >
         <Home className="w-5 h-5 text-gray-800" />
